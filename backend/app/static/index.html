@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>data_fin_model — живая финмодель</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#F6F7F5; --surface:#FFFFFF; --ink:#1C2522; --muted:#66726B;
+    --line:#E1E6E2; --brand:#14604D; --brand-soft:#E9F1ED;
+    --pos:#177A4F; --neg:#B5432E; --warn-bg:#FCF3DF; --warn-ink:#8A610F;
+    --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  a{color:var(--brand)}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  /* Шапка и учётная лента */
+  header{background:var(--surface);border-bottom:1px solid var(--line)}
+  .brandline{display:flex;align-items:baseline;gap:14px;padding:18px 0 10px}
+  .wordmark{font-family:var(--mono);font-weight:600;font-size:19px;letter-spacing:-.3px}
+  .wordmark b{color:var(--brand);font-weight:600}
+  .tagline{color:var(--muted);font-size:13px}
+  .ledger{font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    border-top:1px solid var(--line);padding:8px 0;display:flex;flex-wrap:wrap;gap:6px 0;font-variant-numeric:tabular-nums}
+  .ledger b{color:var(--ink);font-weight:500}
+  .ledger .warm{color:var(--warn-ink)}
+  .ledger span+span::before{content:"·";margin:0 10px;color:var(--line)}
+
+  /* Вкладки */
+  nav{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--line)}
+  nav button{appearance:none;border:0;background:none;font:inherit;font-weight:500;color:var(--muted);
+    padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  nav button:hover{color:var(--ink)}
+  nav button.active{color:var(--brand);border-color:var(--brand)}
+  nav button:focus-visible,select:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+  main{padding:22px 0 64px}
+  .view{display:none}.view.active{display:block}
+
+  /* Карточки и сетки */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+  .grid-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px}
+  .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .kpi .value{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .pos{color:var(--pos)} .neg{color:var(--neg)}
+  .grid-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid-charts .full{grid-column:1/-1}
+  @media (max-width:860px){.grid-charts{grid-template-columns:1fr}}
+  h2{font-size:14px;font-weight:600;margin-bottom:12px}
+  .chartbox{position:relative;height:260px}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    text-align:left;font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .desc{color:var(--muted);font-size:13px;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .badge{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .badge.review{background:var(--warn-bg);border-color:transparent;color:var(--warn-ink)}
+  .badge.confirmed{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+  .chip{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;
+    padding:6px 14px;font:inherit;font-size:13.5px;color:var(--muted);cursor:pointer}
+  .chip.active{background:var(--brand);border-color:var(--brand);color:#fff}
+  .toolbar input[type=search]{margin-left:auto;border:1px solid var(--line);border-radius:8px;
+    padding:7px 12px;font:inherit;font-size:13.5px;background:var(--surface);min-width:220px}
+  select.cat{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:7px;
+    padding:5px 8px;background:var(--surface);max-width:230px;color:var(--ink)}
+
+  /* Загрузка */
+  .dropzone{border:1.5px dashed var(--line);border-radius:10px;background:var(--surface);
+    padding:40px 24px;text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s}
+  .dropzone.drag{border-color:var(--brand);background:var(--brand-soft)}
+  .dropzone strong{color:var(--ink)}
+  .btn{appearance:none;border:0;border-radius:8px;background:var(--brand);color:#fff;
+    font:inherit;font-weight:500;padding:9px 18px;cursor:pointer}
+  .btn:hover{filter:brightness(1.07)}
+  .hint{font-size:13px;color:var(--muted);margin-top:10px}
+  .result{margin-top:14px;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+
+  .empty{padding:46px 20px;text-align:center;color:var(--muted)}
+  .empty .btn{margin-top:14px}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;font-size:13.5px;padding:10px 18px;border-radius:9px;
+    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){#toast,.dropzone{transition:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brandline">
+      <div class="wordmark">data_<b>fin</b>_model</div>
+      <div class="tagline">живая финансовая модель: выписка → ИИ → дашборд</div>
+    </div>
+    <nav>
+      <button class="active" data-view="dashboard">Дашборд</button>
+      <button data-view="operations">Операции</button>
+      <button data-view="upload">Загрузка данных</button>
+    </nav>
+  </div>
+  <div class="wrap"><div class="ledger" id="ledger"><span>данные ещё не загружены</span></div></div>
+</header>
+
+<main class="wrap">
+
+  <!-- ВКЛАДКА: ДАШБОРД -->
+  <section class="view active" id="view-dashboard">
+    <div id="dash-empty" class="card empty" hidden>
+      Операций пока нет. Загрузите первую банковскую выписку — модель и дашборд соберутся автоматически.
+      <br><button class="btn" onclick="switchView('upload')">Загрузить выписку</button>
+    </div>
+    <div id="dash-body" hidden>
+      <div class="grid-kpi">
+        <div class="card kpi"><div class="label">Выручка</div><div class="value" id="kpi-rev"></div><div class="sub">за весь период</div></div>
+        <div class="card kpi"><div class="label">Расходы</div><div class="value" id="kpi-exp"></div><div class="sub">за весь период</div></div>
+        <div class="card kpi"><div class="label">Чистая прибыль</div><div class="value" id="kpi-net"></div><div class="sub" id="kpi-margin"></div></div>
+        <div class="card kpi"><div class="label">Остаток денег</div><div class="value" id="kpi-cash"></div><div class="sub">накопленный поток</div></div>
+      </div>
+      <div class="grid-charts">
+        <div class="card full"><h2>Выручка и расходы по месяцам</h2><div class="chartbox"><canvas id="ch-pl"></canvas></div></div>
+        <div class="card"><h2>Денежный поток и остаток</h2><div class="chartbox"><canvas id="ch-cash"></canvas></div></div>
+        <div class="card"><h2>Структура расходов</h2><div class="chartbox"><canvas id="ch-exp"></canvas></div></div>
+        <div class="card full">
+          <h2>План / факт по статьям</h2>
+          <table>
+            <thead><tr><th>Статья</th><th class="num">Факт</th><th class="num">План</th><th class="num">Отклонение</th><th class="num">Доля</th></tr></thead>
+            <tbody id="planfact"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ВКЛАДКА: ОПЕРАЦИИ -->
+  <section class="view" id="view-operations">
+    <div class="toolbar">
+      <button class="chip active" data-status="">Все</button>
+      <button class="chip" data-status="needs_review">Требуют подтверждения</button>
+      <button class="chip" data-status="confirmed">Подтверждённые</button>
+      <input type="search" id="op-search" placeholder="Поиск по контрагенту или назначению">
+    </div>
+    <div class="card" style="padding:6px 8px">
+      <table>
+        <thead><tr><th>Дата</th><th>Контрагент</th><th>Назначение</th><th class="num">Сумма</th><th>Статья</th><th>Статус</th></tr></thead>
+        <tbody id="ops-body"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ВКЛАДКА: ЗАГРУЗКА -->
+  <section class="view" id="view-upload">
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Загрузить файл выписки">
+      <strong>Перетащите файл выписки</strong> или нажмите, чтобы выбрать<br>
+      <span style="font-family:var(--mono);font-size:12.5px">CSV · XLSX · 1CClientBankExchange (.txt)</span>
+      <input type="file" id="file-input" accept=".csv,.xlsx,.txt" hidden>
+    </div>
+    <p class="hint">Демо-файлы лежат в каталоге <code>samples/</code> репозитория. Повторная загрузка того же файла безопасна: дубликаты операций отсекаются автоматически.</p>
+    <div class="result" id="upload-result"></div>
+    <div class="card" style="margin-top:18px">
+      <h2>История загрузок</h2>
+      <table>
+        <thead><tr><th>Когда</th><th>Файл</th><th>Формат</th><th class="num">Импортировано</th><th class="num">Дубликаты</th><th class="num">К подтверждению</th></tr></thead>
+        <tbody id="imports-body"><tr><td colspan="6" class="empty">Пока не было загрузок</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const fmt = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0});
+const money = v => fmt.format(Math.round(v)) + ' ₽';
+const signedMoney = (v, dir) => (dir === 'in' ? '+' : '−') + money(Math.abs(v));
+const state = {categories: [], status: '', q: '', charts: {}};
+
+function toast(text){
+  const el = document.getElementById('toast');
+  el.textContent = text; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+async function api(path, options){
+  const response = await fetch('/api' + path, options);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || 'Ошибка запроса');
+  }
+  return response.json();
+}
+
+/* ---------- Навигация ---------- */
+function switchView(name){
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+}
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
+
+/* ---------- Учётная лента ---------- */
+function renderLedger(kpi, lastImportAt){
+  const el = document.getElementById('ledger');
+  if (!kpi || !kpi.operations_count){ el.innerHTML = '<span>данные ещё не загружены</span>'; return; }
+  const when = lastImportAt ? new Date(lastImportAt).toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  el.innerHTML =
+    `<span>данные обновлены <b>${when}</b></span>` +
+    `<span>операций: <b>${kpi.operations_count}</b></span>` +
+    `<span>${kpi.needs_review ? `<span class="warm">к подтверждению: <b>${kpi.needs_review}</b></span>` : 'все операции разобраны'}</span>`;
+}
+
+/* ---------- Дашборд ---------- */
+function makeChart(id, config){
+  if (state.charts[id]) state.charts[id].destroy();
+  state.charts[id] = new Chart(document.getElementById(id), config);
+}
+
+async function loadDashboard(){
+  const d = await api('/dashboard');
+  renderLedger(d.kpi, d.last_import_at);
+  const hasData = d.months.length > 0;
+  document.getElementById('dash-empty').hidden = hasData;
+  document.getElementById('dash-body').hidden = !hasData;
+  if (!hasData) return;
+
+  const k = d.kpi;
+  document.getElementById('kpi-rev').textContent = money(k.revenue_total);
+  document.getElementById('kpi-exp').textContent = money(k.expenses_total);
+  const net = document.getElementById('kpi-net');
+  net.textContent = money(k.net_profit);
+  net.className = 'value ' + (k.net_profit >= 0 ? 'pos' : 'neg');
+  document.getElementById('kpi-margin').textContent = 'маржинальность ' + k.margin_pct + '%';
+  document.getElementById('kpi-cash').textContent = money(k.cash_balance);
+
+  const labels = d.months.map(m => {
+    const [y, mo] = m.split('-');
+    return ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][+mo-1] + ' ' + y.slice(2);
+  });
+  const gridStyle = {color: '#EDF0ED'};
+  const moneyTicks = {callback: v => fmt.format(v)};
+
+  makeChart('ch-pl', {type:'line', data:{labels, datasets:[
+      {label:'Выручка', data:d.series.revenue, borderColor:'#14604D', backgroundColor:'#14604D', tension:.3, pointRadius:3},
+      {label:'Расходы', data:d.series.expenses, borderColor:'#B5432E', backgroundColor:'#B5432E', tension:.3, pointRadius:3},
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{labels:{boxWidth:10, boxHeight:10}}},
+      scales:{y:{grid:gridStyle, ticks:moneyTicks}, x:{grid:{display:false}}}}});
+
+  makeChart('ch-cash', {data:{labels, datasets:[
+      {type:'bar', label:'Поток за месяц', data:d.series.cash_flow,
+        backgroundColor:d.series.cash_flow.map(v => v >= 0 ? '#9CC3B4' : '#DCA89C')},
+      {type:'line', label:'Остаток', data:d.series.balance, borderColor:'#1C2522', tension:.3, pointRadius:3},
+    ]},
+    options:{maintainAspectRatio:false, plugins:{legend:{labels:{boxWidth:10, boxHeight:10}}},
+      scales:{y:{grid:gridStyle, ticks:moneyTicks}, x:{grid:{display:false}}}}});
+
+  makeChart('ch-exp', {type:'doughnut', data:{
+      labels: d.top_expenses.map(c => c.name),
+      datasets:[{data: d.top_expenses.map(c => c.total),
+        backgroundColor:['#14604D','#3E7D6B','#6F9B8C','#A0BAAF','#B5432E','#CD7A66','#D9A698','#C9B458']}]},
+    options:{maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:10, boxHeight:10, font:{size:11.5}}}}}});
+
+  const tbody = document.getElementById('planfact');
+  tbody.innerHTML = '';
+  const ordered = [...d.categories].sort((a, b) => (a.kind > b.kind ? 1 : -1) || b.fact_total - a.fact_total);
+  for (const c of ordered){
+    if (c.kind === 'transfer') continue;
+    const base = c.kind === 'income' ? k.revenue_total : k.expenses_total;
+    const share = base ? Math.round(c.fact_total / base * 100) : 0;
+    const devClass = c.plan_total === 0 ? '' :
+      (c.kind === 'income' ? (c.deviation >= 0 ? 'pos' : 'neg') : (c.deviation <= 0 ? 'pos' : 'neg'));
+    tbody.insertAdjacentHTML('beforeend',
+      `<tr><td>${c.name}</td><td class="num">${money(c.fact_total)}</td>` +
+      `<td class="num">${c.plan_total ? money(c.plan_total) : '—'}</td>` +
+      `<td class="num ${devClass}">${c.plan_total ? (c.deviation > 0 ? '+' : '') + money(c.deviation) : '—'}</td>` +
+      `<td class="num">${share}%</td></tr>`);
+  }
+}
+
+/* ---------- Операции ---------- */
+function categoryOptions(selected){
+  return state.categories
+    .map(c => `<option value="${c.code}" ${c.code === selected ? 'selected' : ''}>${c.name}</option>`)
+    .join('');
+}
+
+async function loadOperations(){
+  const params = new URLSearchParams();
+  if (state.status) params.set('status', state.status);
+  if (state.q) params.set('q', state.q);
+  const data = await api('/operations?' + params);
+  const tbody = document.getElementById('ops-body');
+  if (!data.items.length){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Операций не найдено</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.items.map(op => {
+    const badge = op.status === 'needs_review'
+      ? '<span class="badge review">к подтверждению</span>'
+      : op.status === 'confirmed'
+        ? '<span class="badge confirmed">подтверждена</span>'
+        : '<span class="badge">авто</span>';
+    return `<tr>
+      <td class="num">${op.date.split('-').reverse().join('.')}</td>
+      <td>${op.counterparty || '—'}</td>
+      <td class="desc" title="${(op.description || '').replaceAll('"', '&quot;')}">${op.description || '—'}</td>
+      <td class="num ${op.direction === 'in' ? 'pos' : ''}">${signedMoney(op.amount, op.direction)}</td>
+      <td><select class="cat" data-id="${op.id}">${categoryOptions(op.category_code)}</select></td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('select.cat').forEach(select => select.addEventListener('change', async () => {
+    try {
+      const result = await api('/operations/' + select.dataset.id, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({category_code: select.value, apply_to_similar: true}),
+      });
+      const extra = result.applied_to_similar ? `, применено ещё к ${result.applied_to_similar}` : '';
+      toast('Статья сохранена' + extra);
+      loadOperations(); loadDashboard();
+    } catch (err) { toast(err.message); }
+  }));
+}
+
+document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  state.status = chip.dataset.status;
+  loadOperations();
+}));
+document.getElementById('op-search').addEventListener('input', event => {
+  state.q = event.target.value.trim();
+  clearTimeout(state._searchT); state._searchT = setTimeout(loadOperations, 300);
+});
+
+/* ---------- Загрузка ---------- */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFile(fileInput.files[0]); });
+
+async function uploadFile(file){
+  const resultEl = document.getElementById('upload-result');
+  resultEl.textContent = 'Обработка файла «' + file.name + '»…';
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const r = await api('/imports/upload', {method: 'POST', body: form});
+    resultEl.innerHTML =
+      `формат: <b>${r.format}</b> · строк в файле: <b>${r.total_rows}</b> · ` +
+      `импортировано: <b>${r.imported}</b> · дубликатов: <b>${r.duplicates}</b> · ` +
+      `к подтверждению: <b>${r.needs_review}</b>` + (r.ai_used ? ' · ИИ-категоризация применена' : '');
+    toast('Выписка обработана: +' + r.imported + ' операций');
+    loadImports(); loadDashboard(); loadOperations();
+  } catch (err) {
+    resultEl.textContent = 'Ошибка: ' + err.message;
+  } finally {
+    fileInput.value = '';
+  }
+}
+
+async function loadImports(){
+  const logs = await api('/imports');
+  const tbody = document.getElementById('imports-body');
+  if (!logs.length) return;
+  tbody.innerHTML = logs.map(l =>
+    `<tr><td class="num">${new Date(l.created_at).toLocaleString('ru-RU')}</td>` +
+    `<td>${l.filename}</td><td>${l.format}</td>` +
+    `<td class="num">${l.imported}</td><td class="num">${l.duplicates}</td><td class="num">${l.needs_review}</td></tr>`
+  ).join('');
+}
+
+/* ---------- Старт ---------- */
+(async function init(){
+  try {
+    state.categories = await api('/categories');
+    await Promise.all([loadDashboard(), loadOperations(), loadImports()]);
+  } catch (err) { toast('Сервис недоступен: ' + err.message); }
+})();
+</script>
+</body>
+</html>

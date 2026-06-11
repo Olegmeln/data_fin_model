@@ -1,0 +1,279 @@
+"""REST API сервиса."""
+import hashlib
+from datetime import date, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from sqlalchemy.orm import Session
+
+from . import models
+from .categorization.ai import ai_categorize
+from .categorization.rules import categorize, learn_rule
+from .config import settings
+from .db import get_db
+from .finmodel.builder import build_dashboard
+from .parsers import ParserError, parse_statement
+from .schemas import ConfirmCategoryIn, PlanUpsertIn
+
+router = APIRouter()
+
+
+def _operation_hash(op_date: date, amount, direction: str, counterparty: str, description: str) -> str:
+    payload = f"{op_date.isoformat()}|{amount}|{direction}|{(counterparty or '')[:80]}|{(description or '')[:160]}"
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
+def _operation_to_dict(op: models.Operation) -> dict:
+    return {
+        "id": op.id,
+        "date": op.date.isoformat(),
+        "amount": float(op.amount),
+        "direction": op.direction,
+        "counterparty": op.counterparty,
+        "description": op.description,
+        "category_code": op.category.code if op.category else None,
+        "category_name": op.category.name if op.category else None,
+        "confidence": op.confidence,
+        "categorized_by": op.categorized_by,
+        "status": op.status,
+    }
+
+
+@router.get("/health")
+def health() -> dict:
+    return {"status": "ok", "ai_enabled": settings.ai_enabled}
+
+
+@router.get("/categories")
+def list_categories(db: Session = Depends(get_db)) -> list[dict]:
+    categories = db.query(models.Category).order_by(models.Category.id).all()
+    return [{"code": c.code, "name": c.name, "kind": c.kind} for c in categories]
+
+
+# ---------------------------------------------------------------- Импорт ----
+
+@router.post("/imports/upload")
+async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> dict:
+    """Загрузка выписки: парсинг → дедупликация → категоризация (правила + ИИ)."""
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Файл пуст.")
+
+    try:
+        fmt, parsed = parse_statement(file.filename, raw)
+    except ParserError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    log = models.ImportLog(filename=file.filename or "statement", fmt=fmt, total_rows=len(parsed))
+    db.add(log)
+    db.flush()
+
+    categories = db.query(models.Category).all()
+    category_by_code = {c.code: c for c in categories}
+    user_rules = db.query(models.Rule).all()
+
+    new_operations: list[models.Operation] = []
+    duplicates = 0
+    seen_hashes: set[str] = set()
+
+    for item in parsed:
+        op_hash = _operation_hash(item.date, item.amount, item.direction, item.counterparty, item.description)
+        if op_hash in seen_hashes:
+            duplicates += 1
+            continue
+        seen_hashes.add(op_hash)
+        if db.query(models.Operation.id).filter(models.Operation.source_hash == op_hash).first():
+            duplicates += 1
+            continue
+
+        code, confidence, source = categorize(item.direction, item.counterparty, item.description, user_rules)
+        category = category_by_code.get(code)
+        operation = models.Operation(
+            date=item.date,
+            amount=item.amount,
+            direction=item.direction,
+            counterparty=item.counterparty or None,
+            description=item.description or None,
+            category_id=category.id if category else None,
+            confidence=confidence,
+            categorized_by=source,
+            status="auto" if confidence >= settings.CONFIDENCE_THRESHOLD else "needs_review",
+            source_hash=op_hash,
+            import_id=log.id,
+        )
+        new_operations.append(operation)
+
+    # ИИ-проход по операциям с низкой уверенностью (если задан ключ API)
+    pending = [op for op in new_operations if op.status == "needs_review"]
+    if settings.ai_enabled and pending:
+        items = [
+            {
+                "id": index,
+                "direction": op.direction,
+                "amount": float(op.amount),
+                "counterparty": op.counterparty or "",
+                "description": (op.description or "")[:200],
+            }
+            for index, op in enumerate(pending)
+        ]
+        category_dicts = [{"code": c.code, "name": c.name, "kind": c.kind} for c in categories]
+        ai_results = await ai_categorize(items, category_dicts)
+        for index, (code, confidence) in ai_results.items():
+            operation = pending[index]
+            category = category_by_code.get(code)
+            if category is None:
+                continue
+            operation.category_id = category.id
+            operation.confidence = confidence
+            operation.categorized_by = "ai"
+            if confidence >= settings.CONFIDENCE_THRESHOLD:
+                operation.status = "auto"
+
+    db.add_all(new_operations)
+    log.imported = len(new_operations)
+    log.duplicates = duplicates
+    log.needs_review = sum(1 for op in new_operations if op.status == "needs_review")
+    db.commit()
+
+    return {
+        "import_id": log.id,
+        "format": fmt,
+        "total_rows": log.total_rows,
+        "imported": log.imported,
+        "duplicates": log.duplicates,
+        "needs_review": log.needs_review,
+        "ai_used": settings.ai_enabled and bool(pending),
+    }
+
+
+@router.get("/imports")
+def list_imports(db: Session = Depends(get_db)) -> list[dict]:
+    logs = db.query(models.ImportLog).order_by(models.ImportLog.created_at.desc()).limit(20).all()
+    return [
+        {
+            "id": log.id,
+            "filename": log.filename,
+            "format": log.fmt,
+            "imported": log.imported,
+            "duplicates": log.duplicates,
+            "needs_review": log.needs_review,
+            "created_at": log.created_at.isoformat(),
+        }
+        for log in logs
+    ]
+
+
+# ------------------------------------------------------------- Операции ----
+
+@router.get("/operations")
+def list_operations(
+    status: str | None = None,
+    month: str | None = None,
+    category: str | None = None,
+    q: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+) -> dict:
+    query = db.query(models.Operation)
+    if status:
+        query = query.filter(models.Operation.status == status)
+    if category:
+        query = query.join(models.Category).filter(models.Category.code == category)
+    if month:
+        try:
+            start = datetime.strptime(month, "%Y-%m").date()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Месяц задаётся в формате YYYY-MM.") from exc
+        end = date(start.year + (start.month == 12), start.month % 12 + 1, 1)
+        query = query.filter(models.Operation.date >= start, models.Operation.date < end)
+    if q:
+        pattern = f"%{q}%"
+        query = query.filter(
+            models.Operation.description.ilike(pattern) | models.Operation.counterparty.ilike(pattern)
+        )
+
+    total = query.count()
+    operations = (
+        query.order_by(models.Operation.date.desc(), models.Operation.id.desc())
+        .offset(offset)
+        .limit(min(limit, 500))
+        .all()
+    )
+    return {"total": total, "items": [_operation_to_dict(op) for op in operations]}
+
+
+@router.patch("/operations/{operation_id}")
+def confirm_category(
+    operation_id: int,
+    body: ConfirmCategoryIn,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Подтверждение/смена статьи. Создаёт правило и применяет его к похожим операциям."""
+    operation = db.query(models.Operation).get(operation_id)
+    if operation is None:
+        raise HTTPException(status_code=404, detail="Операция не найдена.")
+    category = db.query(models.Category).filter(models.Category.code == body.category_code).first()
+    if category is None:
+        raise HTTPException(status_code=404, detail="Статья не найдена.")
+
+    operation.category_id = category.id
+    operation.confidence = 1.0
+    operation.categorized_by = "user"
+    operation.status = "confirmed"
+    learn_rule(db, operation)
+
+    applied = 0
+    if body.apply_to_similar and operation.counterparty:
+        similar = (
+            db.query(models.Operation)
+            .filter(
+                models.Operation.id != operation.id,
+                models.Operation.counterparty == operation.counterparty,
+                models.Operation.status != "confirmed",
+            )
+            .all()
+        )
+        for other in similar:
+            other.category_id = category.id
+            other.confidence = 0.95
+            other.categorized_by = "rule"
+            other.status = "auto"
+            applied += 1
+
+    db.commit()
+    return {"operation": _operation_to_dict(operation), "applied_to_similar": applied}
+
+
+# ------------------------------------------------------- Дашборд и план ----
+
+@router.get("/dashboard")
+def dashboard(db: Session = Depends(get_db)) -> dict:
+    return build_dashboard(db)
+
+
+@router.put("/plan")
+def upsert_plan(body: PlanUpsertIn, db: Session = Depends(get_db)) -> dict:
+    """Внесение плановых значений по статьям (upsert по паре статья+месяц)."""
+    category_by_code = {c.code: c for c in db.query(models.Category).all()}
+    saved = 0
+    for item in body.items:
+        category = category_by_code.get(item.category_code)
+        if category is None:
+            raise HTTPException(status_code=404, detail=f"Статья {item.category_code} не найдена.")
+        try:
+            month = datetime.strptime(item.month, "%Y-%m").date()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Месяц задаётся в формате YYYY-MM.") from exc
+        plan = (
+            db.query(models.PlanValue)
+            .filter(models.PlanValue.category_id == category.id, models.PlanValue.month == month)
+            .first()
+        )
+        if plan is None:
+            plan = models.PlanValue(category_id=category.id, month=month, amount=item.amount)
+            db.add(plan)
+        else:
+            plan.amount = item.amount
+        saved += 1
+    db.commit()
+    return {"saved": saved}
