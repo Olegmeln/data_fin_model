@@ -19,10 +19,27 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 
+def _database_url() -> str:
+    """Определение строки подключения к БД.
+
+    Порядок: DATABASE_URL → POSTGRES_URL (так переменную называет интеграция
+    Vercel/Neon) → локальный SQLite. На Vercel файловая система доступна
+    только для чтения, поэтому запасной SQLite живёт в /tmp (данные
+    эфемерны — для постоянного хранения подключите Postgres).
+    """
+    url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or ""
+    if not url:
+        return "sqlite:////tmp/finmodel.db" if os.getenv("VERCEL") else "sqlite:///./finmodel.db"
+    # SQLAlchemy 2 не принимает устаревшую схему postgres:// (её выдают Neon/Heroku).
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
 class Settings:
     """Настройки сервиса."""
 
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./finmodel.db")
+    DATABASE_URL: str = _database_url()
 
     # ИИ-категоризация (необязательно). Без ключа работает движок правил.
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
