@@ -25,12 +25,16 @@
   .wordmark{font-family:var(--mono);font-weight:600;font-size:19px;letter-spacing:-.3px}
   .wordmark b{color:var(--brand);font-weight:600}
   .tagline{color:var(--muted);font-size:13px}
+  .ai-badge{margin-left:auto;font-family:var(--mono);font-size:11.5px;padding:3px 10px;border-radius:99px;
+    border:1px solid var(--line);color:var(--muted)}
+  .ai-badge.on{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
   .ledger{font-family:var(--mono);font-size:12.5px;color:var(--muted);
     border-top:1px solid var(--line);padding:8px 0;display:flex;flex-wrap:wrap;gap:6px 0;font-variant-numeric:tabular-nums}
   .ledger b{color:var(--ink);font-weight:500}
   .ledger .warm{color:var(--warn-ink)}
   .ledger .assume-ink{color:var(--assume)}
   .ledger span+span::before{content:"·";margin:0 10px;color:var(--line)}
+  #persist-banner{background:var(--warn-bg);color:var(--warn-ink);font-size:13px;padding:8px 0}
 
   nav{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--line);align-items:center}
   nav button.tab{appearance:none;border:0;background:none;font:inherit;font-weight:500;color:var(--muted);
@@ -47,8 +51,10 @@
   .grid-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px}
   .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
   .kpi .value{font-family:var(--mono);font-size:25px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .value.mid{font-size:21px}
   .kpi .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
   .pos{color:var(--pos)} .neg{color:var(--neg)}
+  .blocktitle{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:4px 0 10px}
   .grid-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .grid-charts .full{grid-column:1/-1}
   @media (max-width:860px){.grid-charts{grid-template-columns:1fr}}
@@ -91,13 +97,11 @@
   .empty{padding:46px 20px;text-align:center;color:var(--muted)}
   .empty .btn{margin:14px 6px 0}
 
-  /* Слоты данных */
   .slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px}
   .slot{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
   .slot .s-name{font-weight:500;font-size:14px}
   .slot .s-fmt{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:4px}
 
-  /* Сетка модели */
   .gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
   table.model{font-size:13px;min-width:760px}
   table.model th,table.model td{padding:7px 10px;border-bottom:1px solid var(--line)}
@@ -117,7 +121,6 @@
   .legend .l-assume i{background:var(--assume)}
   .legend .l-empty i{background:#D7DDD8}
 
-  /* Визард-опросник */
   #wizard{position:fixed;inset:0;background:rgba(28,37,34,.45);display:none;z-index:50;
     align-items:flex-start;justify-content:center;padding:7vh 16px;overflow:auto}
   #wizard.open{display:flex}
@@ -137,6 +140,11 @@
   .winput{display:flex;gap:8px;align-items:center}
   .winput input{flex:1;font:inherit;font-family:var(--mono);font-size:17px;border:1px solid var(--line);
     border-radius:10px;padding:11px 14px}
+  .wcustom{display:flex;flex-direction:column;gap:8px}
+  .wpair{display:flex;gap:8px}
+  .wpair input{flex:1;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+  .wpair .del{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;
+    width:38px;cursor:pointer;color:var(--muted)}
   .mic{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:10px;
     width:46px;height:46px;cursor:pointer;font-size:19px;line-height:1}
   .mic.rec{border-color:var(--neg);background:#FBEFEC;animation:pulse 1.1s infinite}
@@ -145,6 +153,9 @@
   .wnav{display:flex;gap:10px;margin-top:20px;align-items:center}
   .wnav .spacer{flex:1}
   .wdone-list{margin:14px 0;display:flex;flex-direction:column;gap:8px}
+  .ai-summary{background:var(--brand-soft);border-radius:10px;padding:12px 14px;font-size:13.5px;margin-top:12px}
+  .ai-summary b{font-family:var(--mono);font-size:12px}
+  .ai-off{background:var(--paper);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted);margin-top:12px}
   @media (prefers-reduced-motion:reduce){#toast,.dropzone,.mic{transition:none;animation:none}}
 
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
@@ -159,17 +170,19 @@
   <div class="wrap">
     <div class="brandline">
       <div class="wordmark">data_<b>fin</b>_model</div>
-      <div class="tagline">живая финансовая модель: опросник → данные → допущения → дашборд</div>
+      <div class="tagline">любой бизнес — инвестпроект: опросник → данные → допущения → модель</div>
+      <div class="ai-badge" id="ai-badge">ИИ: проверяю…</div>
     </div>
     <nav>
       <button class="tab active" data-view="dashboard">Дашборд</button>
       <button class="tab" data-view="model">Модель</button>
       <button class="tab" data-view="operations">Операции</button>
       <button class="tab" data-view="upload">Загрузка данных</button>
-      <div class="nav-right"><button class="btn ghost small" id="open-wizard">Опросник</button></div>
+      <div class="nav-right"><button class="btn small" id="open-export">Скачать модель .xlsx</button></div>
     </nav>
   </div>
   <div class="wrap"><div class="ledger" id="ledger"><span>данные ещё не загружены</span></div></div>
+  <div id="persist-banner" hidden><div class="wrap">⚠ База данных не подключена: всё, что вы введёте, исчезнет при перезапуске. На Vercel откройте Storage → Create Database → Neon (Postgres) и сделайте Redeploy.</div></div>
 </header>
 
 <main class="wrap">
@@ -177,10 +190,11 @@
   <!-- ДАШБОРД -->
   <section class="view active" id="view-dashboard">
     <div id="dash-empty" class="card empty" hidden>
-      Модель пока пуста. Пройдите короткий опросник — соберу каркас модели с допущениями,
-      а потом загрузите выписку, и допущения начнут вытесняться фактом.
+      <div style="font-size:17px;font-weight:600;color:var(--ink)">Создайте финансовую модель</div>
+      <div style="margin-top:6px">Получите готовый файл Excel: допущения со сценариями, помесячная модель на 36 месяцев,
+      NPV / IRR / окупаемость, матрица чувствительности и диаграммы. Все формулы живые.</div>
       <br>
-      <button class="btn" onclick="openWizard()">Пройти опросник</button>
+      <button class="btn" onclick="openExport()">Создать модель (.xlsx)</button>
       <button class="btn ghost" onclick="switchView('upload')">Загрузить выписку</button>
     </div>
     <div id="dash-body" hidden>
@@ -189,6 +203,12 @@
         <div class="card kpi"><div class="label">Расходы · горизонт</div><div class="value" id="kpi-exp"></div><div class="sub" id="kpi-exp-sub"></div></div>
         <div class="card kpi"><div class="label">Чистая прибыль</div><div class="value" id="kpi-net"></div><div class="sub" id="kpi-margin"></div></div>
         <div class="card kpi"><div class="label">Остаток на конец</div><div class="value" id="kpi-cash"></div><div class="sub">денежный поток нарастающим итогом</div></div>
+      </div>
+      <div class="blocktitle">Инвестиционный взгляд</div>
+      <div class="grid-kpi">
+        <div class="card kpi"><div class="label">NPV</div><div class="value mid" id="kpi-npv"></div><div class="sub" id="kpi-npv-sub"></div></div>
+        <div class="card kpi"><div class="label">IRR</div><div class="value mid" id="kpi-irr"></div><div class="sub">по потоку проекта без финансирования, годовых</div></div>
+        <div class="card kpi"><div class="label">Окупаемость</div><div class="value mid" id="kpi-payback"></div><div class="sub">по накопленному денежному потоку</div></div>
       </div>
       <div class="grid-charts">
         <div class="card full"><h2>Выручка и расходы по месяцам <span style="font-weight:400;color:var(--muted)">— пунктир: допущения</span></h2><div class="chartbox"><canvas id="ch-pl"></canvas></div></div>
@@ -208,8 +228,8 @@
   <!-- МОДЕЛЬ -->
   <section class="view" id="view-model">
     <div id="model-empty" class="card empty" hidden>
-      Сетка модели появится после опросника или загрузки данных.
-      <br><button class="btn" onclick="openWizard()">Пройти опросник</button>
+      Сетка появится после загрузки данных. Сам файл модели создаётся кнопкой «Скачать модель .xlsx».
+      <br><button class="btn" onclick="openExport()">Создать модель (.xlsx)</button>
     </div>
     <div id="model-body" hidden>
       <div class="legend">
@@ -274,18 +294,20 @@ const money = v => fmt.format(Math.round(v)) + ' ₽';
 const signedMoney = (v, dir) => (dir === 'in' ? '+' : '−') + money(Math.abs(v));
 const MONTHS_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 const monthLabel = m => { const [y, mo] = m.split('-'); return MONTHS_RU[+mo-1] + ' ' + y.slice(2); };
-const state = {categories: [], profile: null, survey: null, status: '', q: '', charts: {}};
+const state = {categories: [], profile: null, survey: null, health: null, status: '', q: '', charts: {}};
 
 function toast(text){
   const el = document.getElementById('toast');
   el.textContent = text; el.classList.add('show');
-  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2600);
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3200);
 }
 async function api(path, options){
-  const response = await fetch('/api' + path, options);
+  let response;
+  try { response = await fetch('/api' + path, options); }
+  catch (e) { throw new Error('нет соединения с сервером'); }
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || 'Ошибка запроса');
+    throw new Error((err.detail || 'ошибка запроса') + ' [HTTP ' + response.status + ']');
   }
   return response.json();
 }
@@ -295,7 +317,18 @@ function switchView(name){
 }
 document.querySelectorAll('nav button.tab').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
 
-/* ---------- Учётная лента ---------- */
+/* ---------- Учётная лента и статус ---------- */
+function renderHealth(){
+  const h = state.health;
+  const badge = document.getElementById('ai-badge');
+  if (!h){ badge.textContent = 'ИИ: недоступен'; return; }
+  badge.textContent = h.ai_enabled ? 'ИИ: подключён' : 'ИИ: выключен';
+  badge.classList.toggle('on', !!h.ai_enabled);
+  badge.title = h.ai_enabled
+    ? 'Модель собирает Claude: допущения уточняются ИИ'
+    : 'Добавьте ANTHROPIC_API_KEY в переменные окружения, чтобы модель собирал ИИ';
+  document.getElementById('persist-banner').hidden = h.persistent !== false;
+}
 function renderLedger(d){
   const el = document.getElementById('ledger');
   const k = d && d.kpi;
@@ -336,6 +369,15 @@ async function loadDashboard(){
   net.className = 'value ' + (k.net_profit >= 0 ? 'pos' : 'neg');
   document.getElementById('kpi-margin').textContent = 'маржинальность ' + k.margin_pct + '%';
   document.getElementById('kpi-cash').textContent = money(k.cash_balance);
+
+  const inv = k.invest || {};
+  const npvEl = document.getElementById('kpi-npv');
+  npvEl.textContent = inv.npv == null ? '—' : money(inv.npv);
+  npvEl.className = 'value mid ' + (inv.npv > 0 ? 'pos' : inv.npv < 0 ? 'neg' : '');
+  document.getElementById('kpi-npv-sub').textContent = 'ставка дисконтирования ' + (inv.discount_rate_pct || 20) + '%';
+  document.getElementById('kpi-irr').textContent = inv.irr_pct == null ? '—' : inv.irr_pct + '%';
+  document.getElementById('kpi-payback').textContent =
+    inv.payback_months == null ? 'за горизонтом' : (inv.payback_months === 0 ? 'сразу' : inv.payback_months + ' мес.');
 
   const labels = d.months.map(monthLabel);
   const origin = d.series.origin;
@@ -409,7 +451,7 @@ function renderModelGrid(d){
       const m = grid.months[i];
       if (c.origin === 'fact') return `<td class="cell"><span class="fact">${fmt.format(c.v)}</span></td>`;
       if (c.origin === 'assumption')
-        return `<td class="cell"><button data-code="${row.code}" data-month="${m}" data-v="${c.v}" title="${c.src === 'survey' ? 'Допущение из опросника' : 'Ваше допущение'}">${fmt.format(c.v)}</button></td>`;
+        return `<td class="cell"><button data-code="${row.code}" data-month="${m}" data-v="${c.v}" title="${c.src === 'survey' ? 'Допущение модели' : 'Ваше допущение'}">${fmt.format(c.v)}</button></td>`;
       return `<td class="cell"><button class="add" data-code="${row.code}" data-month="${m}" data-v="">—</button></td>`;
     }).join('');
     body.insertAdjacentHTML('beforeend',
@@ -523,7 +565,10 @@ async function uploadFile(file){
       (r.ai_used ? ' · ИИ-категоризация применена' : '');
     toast('Выписка обработана: +' + r.imported + ' операций');
     loadImports(); loadDashboard(); loadOperations();
-  } catch (err) { resultEl.textContent = 'Ошибка: ' + err.message; }
+  } catch (err) {
+    resultEl.textContent = 'Ошибка загрузки: ' + err.message;
+    toast('Ошибка загрузки: ' + err.message);
+  }
   finally { fileInput.value = ''; }
 }
 async function loadImports(){
@@ -541,21 +586,53 @@ const wiz = {open:false, idx:0, answers:{}, recog:null};
 const wizardEl = document.getElementById('wizard');
 const wcard = document.getElementById('wcard');
 
-function visibleQuestions(){
-  return state.survey.questions.filter(q => {
-    if (!q.show_if) return true;
-    return Object.entries(q.show_if).every(([key, val]) => wiz.answers[key] === val);
+function showIfOk(q){
+  if (!q.show_if) return true;
+  return Object.entries(q.show_if).every(([key, val]) => {
+    const answer = wiz.answers[key];
+    return Array.isArray(val) ? val.includes(answer) : answer === val;
   });
 }
+function visibleQuestions(){ return state.survey.questions.filter(showIfOk); }
 function openWizard(){
   if (!state.survey) return toast('Опросник ещё загружается');
   wiz.open = true; wiz.idx = 0;
   wiz.answers = state.profile ? {...state.profile.answers} : {};
+  delete wiz.answers._ai_summary;
   wizardEl.classList.add('open');
   renderWizard();
 }
 function closeWizard(){ stopVoice(); wiz.open = false; wizardEl.classList.remove('open'); }
-document.getElementById('open-wizard').addEventListener('click', openWizard);
+function openExport(){
+  wiz.open = true; wizardEl.classList.add('open'); stopVoice();
+  const suggested = (state.profile && state.profile.answers && state.profile.answers.industry)
+    ? '' : '';
+  wcard.innerHTML = `
+    <div class="wq">Создание финансовой модели</div>
+    <div class="whint">Файл Excel: «Допущения» со сценариями Пессимист/База/Оптимист, помесячная модель на 36 месяцев,
+    годовая сводка, дашборд с NPV / IRR / окупаемостью и диаграммами, матрица чувствительности, инструкция.
+    Все ключевые ячейки имеют имена — удобно работать с ИИ-агентом прямо в Excel.</div>
+    <div class="wbody"><div class="winput">
+      <input id="exp-title" type="text" placeholder="Название проекта" value="${suggested}">
+    </div></div>
+    <div class="wnav">
+      <button class="btn ghost" id="exp-close">Закрыть</button>
+      <div class="spacer"></div>
+      <button class="btn" id="exp-go">Скачать .xlsx</button>
+    </div>`;
+  const input = wcard.querySelector('#exp-title');
+  input.focus();
+  const go = () => {
+    const t = input.value.trim() || 'Новый проект';
+    window.location.href = '/api/model/export?title=' + encodeURIComponent(t);
+    toast('Модель «' + t + '» формируется — файл скачается сам');
+    setTimeout(closeWizard, 600);
+  };
+  wcard.querySelector('#exp-go').addEventListener('click', go);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  wcard.querySelector('#exp-close').addEventListener('click', closeWizard);
+}
+document.getElementById('open-export').addEventListener('click', openExport);
 wizardEl.addEventListener('click', e => { if (e.target === wizardEl) closeWizard(); });
 
 function renderWizard(){
@@ -567,7 +644,18 @@ function renderWizard(){
   let body = '';
   if (q.type === 'select'){
     body = '<div class="wopts">' + q.options.map(o =>
-      `<button class="wopt ${wiz.answers[q.id] === o.value ? 'sel' : ''}" data-value="${o.value}">${o.label}</button>`).join('') + '</div>';
+      `<button class="wopt ${wiz.answers[q.id] === o.value ? 'sel' : ''}" data-value="${o.value}" data-custom="${o.custom_input ? 1 : ''}">${o.label}</button>`).join('') + '</div>' +
+      `<div class="winput" id="wcustomwrap" ${wiz.answers[q.id] === 'other' ? '' : 'hidden'} style="margin-top:10px">
+        <input id="wcustominput" type="text" placeholder="Ваш вариант" value="${wiz.answers[q.id + '_custom'] || ''}">
+        <button class="btn small" id="wcustomok">Ок</button>
+      </div>`;
+  } else if (q.type === 'custom_list'){
+    const pairs = Array.isArray(wiz.answers[q.id]) ? wiz.answers[q.id] : [];
+    body = `<div class="wcustom" id="wpairs">` + pairs.map((p, i) =>
+      `<div class="wpair"><input data-i="${i}" data-k="name" placeholder="Название" value="${p.name || ''}">
+       <input data-i="${i}" data-k="value" placeholder="Значение" value="${p.value || ''}">
+       <button class="del" data-i="${i}" title="Удалить">×</button></div>`).join('') +
+      `</div><button class="btn ghost small" id="wpairadd" style="margin-top:10px">+ Добавить поле</button>`;
   } else {
     const val = wiz.answers[q.id] != null ? wiz.answers[q.id] : '';
     body = `<div class="winput">
@@ -578,21 +666,64 @@ function renderWizard(){
   wcard.innerHTML = `
     <div class="wprog">${progress}</div>
     <div class="wq">${q.text}</div>
-    ${q.hint && q.type !== 'select' ? '' : (q.hint ? `<div class="whint">${q.hint}</div>` : '')}
+    ${q.hint && (q.type === 'select' || q.type === 'custom_list') ? `<div class="whint">${q.hint}</div>` : ''}
     ${q.voice_hint ? `<div class="whint">${q.voice_hint}</div>` : ''}
     <div class="wbody">${body}</div>
     <div class="wtranscript" id="wtranscript"></div>
     <div class="wnav">
       ${wiz.idx > 0 ? '<button class="btn ghost" id="wback">Назад</button>' : '<button class="btn ghost" id="wclose">Закрыть</button>'}
       <div class="spacer"></div>
-      ${q.optional ? '<button class="btn ghost" id="wskip">Пропустить</button>' : ''}
-      ${q.type !== 'select' ? '<button class="btn" id="wnext">Далее</button>' : ''}
+      ${q.optional && q.type !== 'custom_list' ? '<button class="btn ghost" id="wskip">Пропустить</button>' : ''}
+      ${q.type !== 'select' ? '<button class="btn" id="wnext">' + (q.type === 'custom_list' ? 'Готово' : 'Далее') + '</button>' : ''}
     </div>`;
 
   if (q.type === 'select'){
+    const customWrap = wcard.querySelector('#wcustomwrap');
     wcard.querySelectorAll('.wopt').forEach(btn => btn.addEventListener('click', () => {
-      wiz.answers[q.id] = btn.dataset.value; wiz.idx++; renderWizard();
+      if (btn.dataset.custom){
+        wcard.querySelectorAll('.wopt').forEach(b => b.classList.toggle('sel', b === btn));
+        customWrap.hidden = false;
+        customWrap.querySelector('input').focus();
+        return;
+      }
+      wiz.answers[q.id] = btn.dataset.value;
+      delete wiz.answers[q.id + '_custom'];
+      wiz.idx++; renderWizard();
     }));
+    if (customWrap){
+      const apply = () => {
+        const text = customWrap.querySelector('input').value.trim();
+        if (!text) return toast('Введите свой вариант');
+        wiz.answers[q.id] = 'other';
+        wiz.answers[q.id + '_custom'] = text;
+        wiz.idx++; renderWizard();
+      };
+      customWrap.querySelector('#wcustomok').addEventListener('click', apply);
+      customWrap.querySelector('input').addEventListener('keydown', e => { if (e.key === 'Enter') apply(); });
+    }
+  } else if (q.type === 'custom_list'){
+    const readPairs = () => {
+      const pairs = [];
+      wcard.querySelectorAll('#wpairs .wpair').forEach(row => {
+        const name = row.querySelector('input[data-k=name]').value.trim();
+        const value = row.querySelector('input[data-k=value]').value.trim();
+        if (name) pairs.push({name, value});
+      });
+      return pairs;
+    };
+    wcard.querySelector('#wpairadd').addEventListener('click', () => {
+      wiz.answers[q.id] = [...readPairs(), {name: '', value: ''}];
+      renderWizard();
+    });
+    wcard.querySelectorAll('#wpairs .del').forEach(btn => btn.addEventListener('click', () => {
+      const pairs = readPairs(); pairs.splice(+btn.dataset.i, 1);
+      wiz.answers[q.id] = pairs; renderWizard();
+    }));
+    wcard.querySelector('#wnext').addEventListener('click', () => {
+      const pairs = readPairs();
+      if (pairs.length) wiz.answers[q.id] = pairs; else delete wiz.answers[q.id];
+      wiz.idx++; renderWizard();
+    });
   } else {
     const input = wcard.querySelector('#winput');
     input.focus();
@@ -617,15 +748,21 @@ function goNext(q){
   wiz.idx++; renderWizard();
 }
 async function finishWizard(){
-  wcard.innerHTML = '<div class="wq">Собираю модель…</div>';
+  const aiOn = state.health && state.health.ai_enabled;
+  wcard.innerHTML = `<div class="wq">${aiOn ? 'ИИ собирает модель…' : 'Собираю модель по отраслевым правилам…'}</div>
+    <div class="whint">${aiOn ? 'Claude уточняет допущения: сезонность, доли затрат, специфика вашего бизнеса. Обычно 10–20 секунд.' : ''}</div>`;
   try {
     const r = await api('/survey', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({answers: wiz.answers})});
     const slots = r.industry.slots.map(s => `<div class="slot"><div class="s-name">${s.name}</div><div class="s-fmt">${s.formats}</div></div>`).join('');
+    const aiBlock = r.ai_used
+      ? `<div class="ai-summary"><b>🤖 МОДЕЛЬ СОБРАЛ ИИ</b><br>${r.ai_summary || 'Допущения уточнены с учётом профиля бизнеса.'}</div>`
+      : `<div class="ai-off">Собрано по отраслевым правилам. Чтобы модель собирал ИИ (сезонность, реалистичные доли, ваша специфика) — добавьте ключ <code>ANTHROPIC_API_KEY</code> в переменные окружения сервера.</div>`;
     wcard.innerHTML = `
-      <div class="wq">Готово: каркас модели собран</div>
-      <div class="whint">Отрасль — <b>${r.industry.name}</b>. Создано допущений: <b>${r.assumptions_created}</b>.
-      Они уже на дашборде и в сетке модели; по мере загрузки данных факт будет вытеснять допущения.</div>
+      <div class="wq">Готово: модель собрана</div>
+      <div class="whint">Отрасль — <b>${r.industry.name}</b> · горизонт <b>${r.horizon} мес.</b> · допущений: <b>${r.assumptions_created}</b>.
+      NPV, IRR и окупаемость уже на дашборде; по мере загрузки данных факт будет вытеснять допущения.</div>
+      ${aiBlock}
       <div class="wq" style="font-size:15px;margin-top:18px">Что загрузить, чтобы заменить допущения фактом:</div>
       <div class="wdone-list">${slots}</div>
       <div class="wnav"><div class="spacer"></div>
@@ -665,6 +802,9 @@ function matchOption(q, transcript){
     invest: ['инвест', 'проект', 'строительств', 'парк'],
     existing: ['работает', 'действующ', 'есть'],
     new: ['запуск', 'новый', 'старт', 'открыва'],
+    ip: ['ип', 'индивидуальн'], ooo: ['ооо', 'общество с огранич'],
+    ao: ['ао', 'акционерн'], gk: ['гк', 'групп', 'холдинг'], self: ['самозанят'],
+    own: ['свои', 'собственн'], loan: ['кредит', 'займ'], investor: ['инвестор'], mixed: ['смешан'],
     usn6: ['шесть', '6', 'доход'], usn15: ['пятнадцать', '15', 'минус'],
     osno: ['осно', 'общая', 'ндс'], npd: ['патент', 'самозанят', 'нпд'], unknown: ['не знаю'],
   };
@@ -676,21 +816,24 @@ function matchOption(q, transcript){
 }
 function setupVoice(q){
   if (!SR) return;
-  const mic = wcard.querySelector('#wmic');
   const transcriptEl = wcard.querySelector('#wtranscript');
   if (q.type === 'select'){
-    // для селектов микрофон добавляем в навигацию
     const nav = wcard.querySelector('.wnav .spacer');
     const btn = document.createElement('button');
-    btn.className = 'mic'; btn.id = 'wmic2'; btn.title = 'Ответить голосом'; btn.textContent = '🎤';
+    btn.className = 'mic'; btn.title = 'Ответить голосом'; btn.textContent = '🎤';
     nav.parentElement.insertBefore(btn, nav.nextSibling);
     btn.addEventListener('click', () => toggleVoice(btn, transcriptEl, result => {
       const value = matchOption(q, result);
-      if (value){ wiz.answers[q.id] = value; wiz.idx++; renderWizard(); }
+      if (value){
+        const opt = q.options.find(o => o.value === value);
+        if (opt && opt.custom_input){ transcriptEl.textContent = 'Введите свой вариант текстом'; return; }
+        wiz.answers[q.id] = value; wiz.idx++; renderWizard();
+      }
       else transcriptEl.textContent = `Услышал: «${result}» — не понял вариант, нажмите кнопку`;
     }));
     return;
   }
+  const mic = wcard.querySelector('#wmic');
   if (!mic) return;
   mic.hidden = false;
   mic.addEventListener('click', () => toggleVoice(mic, transcriptEl, result => {
@@ -730,10 +873,11 @@ async function reloadAll(){
   await Promise.all([loadDashboard(), loadOperations(), loadImports()]);
 }
 (async function init(){
+  try { state.health = await api('/health'); } catch (e) { state.health = null; }
+  renderHealth();
   try {
     [state.categories, state.survey] = await Promise.all([api('/categories'), api('/survey')]);
     await reloadAll();
-    if (!state.profile && !(state.dash && state.dash.months.length)) openWizard();
   } catch (err) { toast('Сервис недоступен: ' + err.message); }
 })();
 </script>

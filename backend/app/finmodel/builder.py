@@ -3,7 +3,11 @@
 Правило слияния: для пары (статья, месяц) значением модели становится факт,
 если в этом месяце по статье есть хоть одна операция; иначе — допущение.
 Так допущения «вытесняются» фактом по мере загрузки данных.
+
+Любой бизнес рассматривается как инвестиционный проект, поэтому поверх
+денежного потока считаются NPV, IRR и срок окупаемости.
 """
+import json
 from collections import defaultdict
 from datetime import date
 
@@ -13,6 +17,41 @@ from .. import models
 from .industries import get_industry
 
 KIND_ORDER = {"income": 0, "expense": 1, "investing": 2, "financing": 3, "transfer": 9}
+
+
+def _npv(monthly_rate: float, flows: list[float]) -> float:
+    return sum(cf / (1 + monthly_rate) ** (i + 1) for i, cf in enumerate(flows))
+
+
+def _invest_metrics(flows: list[float], yearly_pct: float) -> dict:
+    """NPV (по месячной ставке из годовой), IRR (бисекция), окупаемость."""
+    empty = {"npv": None, "irr_pct": None, "payback_months": None, "discount_rate_pct": yearly_pct}
+    if not flows or not any(flows):
+        return empty
+    monthly_rate = (1 + yearly_pct / 100) ** (1 / 12) - 1
+    npv = round(_npv(monthly_rate, flows), 2)
+
+    irr_pct = None
+    low, high = -0.95, 5.0
+    if _npv(low, flows) * _npv(high, flows) < 0:
+        for _ in range(100):
+            mid = (low + high) / 2
+            if _npv(low, flows) * _npv(mid, flows) <= 0:
+                high = mid
+            else:
+                low = mid
+        irr_pct = round(((1 + (low + high) / 2) ** 12 - 1) * 100, 1)
+
+    cumulative, payback, was_negative = 0.0, None, False
+    for index, cash_flow in enumerate(flows):
+        cumulative += cash_flow
+        if cumulative < 0:
+            was_negative = True
+        elif was_negative and payback is None:
+            payback = index + 1
+    if not was_negative:
+        payback = 0  # инвестиционной фазы нет — поток положителен с первого месяца
+    return {"npv": npv, "irr_pct": irr_pct, "payback_months": payback, "discount_rate_pct": yearly_pct}
 
 
 def _month_key(d: date) -> str:
@@ -70,10 +109,12 @@ def build_dashboard(db: Session) -> dict:
 
     # --- Помесячные ряды (факт + допущения) -----------------------------------
     series_revenue, series_expenses, series_cash_flow, series_balance, series_origin = [], [], [], [], []
+    series_project_flow = []  # поток проекта без финансирования — база для NPV/IRR/окупаемости
     balance = 0.0
     for month in months:
         revenue = expenses = 0.0
         assumed_flow = 0.0
+        financing_net = 0.0
         uses_assumption = False
         for category in categories:
             if category.kind == "transfer":
@@ -88,12 +129,15 @@ def build_dashboard(db: Session) -> dict:
                 revenue += value
             elif category.kind == "expense":
                 expenses += value
+            if category.kind == "financing":
+                financing_net += signed(category, value)
         flow = fact_in[month] - fact_out[month] + assumed_flow
         balance += flow
         has_fact = month in fact_months
         series_revenue.append(round(revenue, 2))
         series_expenses.append(round(expenses, 2))
         series_cash_flow.append(round(flow, 2))
+        series_project_flow.append(round(flow - financing_net, 2))
         series_balance.append(round(balance, 2))
         series_origin.append("mixed" if has_fact and uses_assumption else ("fact" if has_fact else "assumption"))
 
@@ -163,6 +207,13 @@ def build_dashboard(db: Session) -> dict:
     needs_review = db.query(models.Operation).filter(models.Operation.status == "needs_review").count()
     last_import = db.query(models.ImportLog).order_by(models.ImportLog.created_at.desc()).first()
 
+    answers = json.loads(profile.answers_json or "{}") if profile else {}
+    try:
+        discount_rate_pct = float(str(answers.get("discount_rate") or 20).replace(",", "."))
+    except ValueError:
+        discount_rate_pct = 20.0
+    invest_metrics = _invest_metrics(series_project_flow, discount_rate_pct)
+
     return {
         "months": months,
         "kpi": {
@@ -178,6 +229,7 @@ def build_dashboard(db: Session) -> dict:
             "assumptions_count": len(assumptions),
             "fact_through": max(fact_months) if fact_months else None,
             "assumptions_through": max((key[1] for key in assumption_by_cell), default=None),
+            "invest": invest_metrics,
         },
         "series": {
             "revenue": series_revenue,

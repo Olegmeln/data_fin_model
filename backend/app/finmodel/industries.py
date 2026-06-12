@@ -136,12 +136,20 @@ INDUSTRIES = [
     },
 ]
 
-# Базовые правила, общие для всех отраслей (применяются, если отрасль не переопределила статью)
+# Базовые правила, общие для всех отраслей (применяются, если отрасль не переопределила статью).
+# Инвестиционная рамка действует для любого бизнеса: CAPEX, кредит и аннуитет
+# срабатывают у всех, если соответствующие ответы даны в опроснике.
 COMMON_RULES = [
     {"category": "REV_MAIN", "type": "answer", "answer": "monthly_revenue", "note": "Целевая месячная выручка из опросника"},
     {"category": "RENT", "type": "answer", "answer": "rent_monthly", "note": "Аренда из опросника"},
     {"category": "TAXES", "type": "tax", "note": "Эффективная ставка по налоговому режиму"},
     {"category": "BANK", "type": "pct_revenue", "value": 0.01, "min": 1500, "note": "Банковское обслуживание ~1% оборота"},
+    {"category": "CAPEX", "type": "capex_spread", "answer": "capex_total", "months": 6,
+     "note": "Стартовые вложения, распределённые на первые месяцы"},
+    {"category": "FIN_IN", "type": "one_time", "answer": "loan_amount", "month": 0,
+     "note": "Получение кредита"},
+    {"category": "FIN_OUT", "type": "annuity", "amount_answer": "loan_amount",
+     "rate_answer": "loan_rate", "term": 60, "note": "Аннуитетный платёж по кредиту"},
 ]
 
 # Эффективные ставки налога от выручки по режимам (упрощение для стартовых допущений)

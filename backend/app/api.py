@@ -11,9 +11,10 @@ from .categorization.ai import ai_categorize
 from .categorization.rules import categorize, learn_rule
 from .config import settings
 from .db import get_db
+from .finmodel.ai_builder import ai_build_assumptions
 from .finmodel.builder import build_dashboard
 from .finmodel.industries import INDUSTRIES, get_industry, industry_public
-from .finmodel.survey import build_survey, generate_assumptions
+from .finmodel.survey import build_survey, compute_rule_series, horizon_from, save_assumptions
 from .parsers import ParserError, parse_statement
 from .schemas import AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, SurveyAnswersIn
 
@@ -43,7 +44,60 @@ def _operation_to_dict(op: models.Operation) -> dict:
 
 @router.get("/health")
 def health() -> dict:
-    return {"status": "ok", "ai_enabled": settings.ai_enabled}
+    return {
+        "status": "ok",
+        "ai_enabled": settings.ai_enabled,
+        "db": settings.db_kind,
+        "persistent": settings.db_persistent,
+    }
+
+
+@router.get("/model/export")
+def export_model(title: str = "Новый проект", db: Session = Depends(get_db)):
+    """Скачивание файла финансовой модели (.xlsx) с живыми формулами."""
+    from urllib.parse import quote
+
+    from fastapi.responses import Response
+
+    from .finmodel.excel_export import export_model_bytes
+    from .finmodel.industries import TAX_RATES
+
+    drivers: dict = {}
+    profile = db.query(models.BusinessProfile).first()
+    if profile is not None:
+        answers = json.loads(profile.answers_json or "{}")
+
+        def num(key):
+            value = answers.get(key)
+            try:
+                return float(str(value).replace(" ", "").replace(",", ".")) if value not in (None, "") else None
+            except ValueError:
+                return None
+
+        mapping = {
+            "base_revenue": num("monthly_revenue"),
+            "payroll": num("payroll_monthly"),
+            "rent": num("rent_monthly"),
+            "capex_total": num("capex_total"),
+            "loan_amount": num("loan_amount"),
+        }
+        drivers = {key: value for key, value in mapping.items() if value}
+        if num("loan_rate"):
+            drivers["loan_rate"] = num("loan_rate") / 100
+        if num("discount_rate"):
+            drivers["discount_rate"] = num("discount_rate") / 100
+        if answers.get("tax_mode") in TAX_RATES:
+            drivers["tax_rate"] = TAX_RATES[answers["tax_mode"]][0]
+        if answers.get("business_age") == "new":
+            drivers["ramp_months"] = 4
+
+    content = export_model_bytes(title=title.strip() or "Новый проект", drivers=drivers)
+    filename = f"Финмодель_{title.strip() or 'проект'}.xlsx"
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=model.xlsx; filename*=UTF-8''{quote(filename)}"},
+    )
 
 
 @router.get("/categories")
@@ -62,12 +116,20 @@ def get_survey() -> dict:
 
 @router.post("/survey")
 def submit_survey(body: SurveyAnswersIn, db: Session = Depends(get_db)) -> dict:
-    """Сохранение ответов опросника и генерация стартовых допущений."""
+    """Сохранение ответов опросника и сборка модели: правила → уточнение ИИ."""
     answers = body.answers or {}
     industry_code = str(answers.get("industry") or "")
     industry = get_industry(industry_code)
     if industry is None:
         raise HTTPException(status_code=400, detail="Не выбрана отрасль (вопрос «industry»).")
+
+    horizon = horizon_from(answers)
+    draft_rows = compute_rule_series(industry, answers, horizon)
+    ai_result = ai_build_assumptions(industry, answers, horizon, draft_rows)
+    rows = ai_result["rows"] if ai_result else draft_rows
+    created = save_assumptions(db, rows, horizon)
+
+    answers["_ai_summary"] = ai_result["summary"] if ai_result else None
 
     profile = db.query(models.BusinessProfile).first()
     if profile is None:
@@ -76,11 +138,13 @@ def submit_survey(body: SurveyAnswersIn, db: Session = Depends(get_db)) -> dict:
     profile.industry_code = industry_code
     profile.answers_json = json.dumps(answers, ensure_ascii=False)
 
-    created = generate_assumptions(db, industry_code, answers)
     db.commit()
     return {
         "industry": industry_public(industry),
         "assumptions_created": created,
+        "horizon": horizon,
+        "ai_used": bool(ai_result),
+        "ai_summary": ai_result["summary"] if ai_result else None,
         "answers": answers,
     }
 

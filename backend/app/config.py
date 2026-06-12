@@ -41,6 +41,15 @@ class Settings:
 
     DATABASE_URL: str = _database_url()
 
+    @property
+    def db_kind(self) -> str:
+        return "postgres" if self.DATABASE_URL.startswith("postgresql") else "sqlite"
+
+    @property
+    def db_persistent(self) -> bool:
+        """На Vercel SQLite живёт в /tmp и обнуляется — данные не сохраняются."""
+        return not (os.getenv("VERCEL") and self.db_kind == "sqlite")
+
     # ИИ-категоризация (необязательно). Без ключа работает движок правил.
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "").strip()
     ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
