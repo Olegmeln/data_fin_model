@@ -1,5 +1,6 @@
 """REST API сервиса."""
 import hashlib
+import json
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -11,8 +12,10 @@ from .categorization.rules import categorize, learn_rule
 from .config import settings
 from .db import get_db
 from .finmodel.builder import build_dashboard
+from .finmodel.industries import INDUSTRIES, get_industry, industry_public
+from .finmodel.survey import build_survey, generate_assumptions
 from .parsers import ParserError, parse_statement
-from .schemas import ConfirmCategoryIn, PlanUpsertIn
+from .schemas import AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, SurveyAnswersIn
 
 router = APIRouter()
 
@@ -47,6 +50,126 @@ def health() -> dict:
 def list_categories(db: Session = Depends(get_db)) -> list[dict]:
     categories = db.query(models.Category).order_by(models.Category.id).all()
     return [{"code": c.code, "name": c.name, "kind": c.kind} for c in categories]
+
+
+# ------------------------------------------------- Опросник и допущения ----
+
+@router.get("/survey")
+def get_survey() -> dict:
+    """Структура интерактивного опросника (вопросы, ветвления, отрасли)."""
+    return build_survey()
+
+
+@router.post("/survey")
+def submit_survey(body: SurveyAnswersIn, db: Session = Depends(get_db)) -> dict:
+    """Сохранение ответов опросника и генерация стартовых допущений."""
+    answers = body.answers or {}
+    industry_code = str(answers.get("industry") or "")
+    industry = get_industry(industry_code)
+    if industry is None:
+        raise HTTPException(status_code=400, detail="Не выбрана отрасль (вопрос «industry»).")
+
+    profile = db.query(models.BusinessProfile).first()
+    if profile is None:
+        profile = models.BusinessProfile(industry_code=industry_code)
+        db.add(profile)
+    profile.industry_code = industry_code
+    profile.answers_json = json.dumps(answers, ensure_ascii=False)
+
+    created = generate_assumptions(db, industry_code, answers)
+    db.commit()
+    return {
+        "industry": industry_public(industry),
+        "assumptions_created": created,
+        "answers": answers,
+    }
+
+
+@router.get("/profile")
+def get_profile(db: Session = Depends(get_db)) -> dict:
+    """Текущий профиль бизнеса (или null, если опросник не пройден)."""
+    profile = db.query(models.BusinessProfile).first()
+    if profile is None:
+        return {"profile": None}
+    industry = get_industry(profile.industry_code)
+    return {
+        "profile": {
+            "industry": industry_public(industry) if industry else {"code": profile.industry_code},
+            "answers": json.loads(profile.answers_json or "{}"),
+            "updated_at": profile.updated_at.isoformat() if profile.updated_at else None,
+        }
+    }
+
+
+@router.get("/industries")
+def list_industries() -> list[dict]:
+    return [industry_public(i) for i in INDUSTRIES]
+
+
+@router.get("/assumptions")
+def list_assumptions(db: Session = Depends(get_db)) -> list[dict]:
+    items = (
+        db.query(models.Assumption)
+        .order_by(models.Assumption.month, models.Assumption.category_id)
+        .all()
+    )
+    return [
+        {
+            "id": a.id,
+            "category_code": a.category.code,
+            "category_name": a.category.name,
+            "month": a.month.strftime("%Y-%m"),
+            "amount": float(a.amount),
+            "source": a.source,
+            "note": a.note,
+        }
+        for a in items
+    ]
+
+
+@router.put("/assumptions")
+def upsert_assumptions(body: AssumptionUpsertIn, db: Session = Depends(get_db)) -> dict:
+    """Правка допущений пользователем (приоритетнее сгенерированных опросником)."""
+    category_by_code = {c.code: c for c in db.query(models.Category).all()}
+    saved = 0
+    for item in body.items:
+        category = category_by_code.get(item.category_code)
+        if category is None:
+            raise HTTPException(status_code=404, detail=f"Статья {item.category_code} не найдена.")
+        try:
+            month = datetime.strptime(item.month, "%Y-%m").date()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Месяц задаётся в формате YYYY-MM.") from exc
+        assumption = (
+            db.query(models.Assumption)
+            .filter(models.Assumption.category_id == category.id, models.Assumption.month == month)
+            .first()
+        )
+        if item.amount <= 0:
+            if assumption is not None:
+                db.delete(assumption)
+                saved += 1
+            continue
+        if assumption is None:
+            assumption = models.Assumption(category_id=category.id, month=month, amount=item.amount)
+            db.add(assumption)
+        assumption.amount = item.amount
+        assumption.source = "user"
+        if item.note is not None:
+            assumption.note = item.note
+        saved += 1
+    db.commit()
+    return {"saved": saved}
+
+
+@router.delete("/assumptions/{assumption_id}")
+def delete_assumption(assumption_id: int, db: Session = Depends(get_db)) -> dict:
+    assumption = db.query(models.Assumption).get(assumption_id)
+    if assumption is None:
+        raise HTTPException(status_code=404, detail="Допущение не найдено.")
+    db.delete(assumption)
+    db.commit()
+    return {"deleted": assumption_id}
 
 
 # ---------------------------------------------------------------- Импорт ----

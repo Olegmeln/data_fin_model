@@ -28,13 +28,21 @@ def get_db():
 
 
 def init_db() -> None:
-    """Создание таблиц и наполнение справочника статей при первом запуске."""
+    """Создание таблиц и наполнение справочника статей.
+
+    Идемпотентно: недостающие статьи досоздаются и на существующей базе
+    (важно при обновлении версии на Vercel/Postgres).
+    """
     from . import models  # noqa: F401  (регистрация моделей)
     from .finmodel.template import DEFAULT_CATEGORIES
 
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
-        if db.query(models.Category).first() is None:
-            for item in DEFAULT_CATEGORIES:
+        existing = {code for (code,) in db.query(models.Category.code).all()}
+        added = False
+        for item in DEFAULT_CATEGORIES:
+            if item["code"] not in existing:
                 db.add(models.Category(code=item["code"], name=item["name"], kind=item["kind"]))
+                added = True
+        if added:
             db.commit()

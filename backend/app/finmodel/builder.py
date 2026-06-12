@@ -1,10 +1,18 @@
-"""Сборка финансовой модели и данных дашборда из операций."""
+"""Сборка финансовой модели: факт из операций + допущения с происхождением.
+
+Правило слияния: для пары (статья, месяц) значением модели становится факт,
+если в этом месяце по статье есть хоть одна операция; иначе — допущение.
+Так допущения «вытесняются» фактом по мере загрузки данных.
+"""
 from collections import defaultdict
 from datetime import date
 
 from sqlalchemy.orm import Session
 
 from .. import models
+from .industries import get_industry
+
+KIND_ORDER = {"income": 0, "expense": 1, "investing": 2, "financing": 3, "transfer": 9}
 
 
 def _month_key(d: date) -> str:
@@ -12,80 +20,144 @@ def _month_key(d: date) -> str:
 
 
 def build_dashboard(db: Session) -> dict:
-    """Агрегирует операции в помесячную модель: KPI, ряды, план/факт по статьям."""
     operations: list[models.Operation] = db.query(models.Operation).all()
     categories: list[models.Category] = db.query(models.Category).order_by(models.Category.id).all()
+    assumptions: list[models.Assumption] = db.query(models.Assumption).all()
     plan_values: list[models.PlanValue] = db.query(models.PlanValue).all()
+    profile: models.BusinessProfile | None = db.query(models.BusinessProfile).first()
 
-    months = sorted({_month_key(op.date) for op in operations})
+    category_by_id = {c.id: c for c in categories}
 
-    # Помесячные агрегаты
-    revenue = defaultdict(float)        # доходные статьи
-    expenses = defaultdict(float)       # расходные статьи
-    cash_in = defaultdict(float)        # все поступления, кроме внутренних переводов
-    cash_out = defaultdict(float)       # все списания, кроме внутренних переводов
-    by_category: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    # --- Факт по операциям ---------------------------------------------------
+    fact_by_cell: dict[tuple[int, str], float] = defaultdict(float)   # (категория, месяц) → сумма
+    fact_in: dict[str, float] = defaultdict(float)                    # поступления без переводов
+    fact_out: dict[str, float] = defaultdict(float)                   # списания без переводов
+    fact_months: set[str] = set()
 
     for op in operations:
         month = _month_key(op.date)
         amount = float(op.amount)
+        fact_months.add(month)
         kind = op.category.kind if op.category else None
-
         if kind != "transfer":
             if op.direction == "in":
-                cash_in[month] += amount
+                fact_in[month] += amount
             else:
-                cash_out[month] += amount
-
-        if kind == "income":
-            revenue[month] += amount
-        elif kind == "expense":
-            expenses[month] += amount
-
+                fact_out[month] += amount
         if op.category_id:
-            by_category[op.category_id][month] += amount
+            fact_by_cell[(op.category_id, month)] += amount
 
-    # Денежный поток и накопленный остаток
-    cash_flow, balance_series = [], []
+    # --- Допущения ------------------------------------------------------------
+    assumption_by_cell: dict[tuple[int, str], models.Assumption] = {}
+    for a in assumptions:
+        assumption_by_cell[(a.category_id, _month_key(a.month))] = a
+
+    months = sorted(fact_months | {key[1] for key in assumption_by_cell})
+
+    def cell(category_id: int, month: str) -> tuple[float | None, str | None, str | None]:
+        """Значение ячейки модели: (сумма, происхождение, источник допущения)."""
+        if (category_id, month) in fact_by_cell:
+            return round(fact_by_cell[(category_id, month)], 2), "fact", None
+        assumption = assumption_by_cell.get((category_id, month))
+        if assumption is not None:
+            return float(assumption.amount), "assumption", assumption.source
+        return None, None, None
+
+    def signed(category: models.Category, value: float) -> float:
+        if category.kind == "income" or category.code == "FIN_IN":
+            return value
+        return -value
+
+    # --- Помесячные ряды (факт + допущения) -----------------------------------
+    series_revenue, series_expenses, series_cash_flow, series_balance, series_origin = [], [], [], [], []
     balance = 0.0
     for month in months:
-        flow = cash_in[month] - cash_out[month]
+        revenue = expenses = 0.0
+        assumed_flow = 0.0
+        uses_assumption = False
+        for category in categories:
+            if category.kind == "transfer":
+                continue
+            value, origin, _ = cell(category.id, month)
+            if value is None:
+                continue
+            if origin == "assumption":
+                uses_assumption = True
+                assumed_flow += signed(category, value)
+            if category.kind == "income":
+                revenue += value
+            elif category.kind == "expense":
+                expenses += value
+        flow = fact_in[month] - fact_out[month] + assumed_flow
         balance += flow
-        cash_flow.append(round(flow, 2))
-        balance_series.append(round(balance, 2))
+        has_fact = month in fact_months
+        series_revenue.append(round(revenue, 2))
+        series_expenses.append(round(expenses, 2))
+        series_cash_flow.append(round(flow, 2))
+        series_balance.append(round(balance, 2))
+        series_origin.append("mixed" if has_fact and uses_assumption else ("fact" if has_fact else "assumption"))
 
-    # План по статьям и месяцам
-    plan_by_category: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
-    for plan in plan_values:
-        plan_by_category[plan.category_id][_month_key(plan.month)] += float(plan.amount)
+    # --- Сетка модели (статьи × месяцы) ----------------------------------------
+    industry = get_industry(profile.industry_code) if profile else None
+    key_codes = set(industry["key_categories"]) if industry else set()
+    used_ids = {key[0] for key in fact_by_cell} | {key[0] for key in assumption_by_cell}
 
-    categories_out = []
-    for category in categories:
-        fact_monthly = {m: round(by_category[category.id].get(m, 0.0), 2) for m in months}
-        plan_monthly = {m: round(plan_by_category[category.id].get(m, 0.0), 2) for m in months}
-        fact_total = round(sum(fact_monthly.values()), 2)
-        plan_total = round(sum(plan_monthly.values()), 2)
-        if fact_total == 0 and plan_total == 0:
+    grid_rows = []
+    for category in sorted(categories, key=lambda c: (KIND_ORDER.get(c.kind, 5), c.id)):
+        if category.kind == "transfer":
             continue
-        categories_out.append({
+        if category.code not in key_codes and category.id not in used_ids:
+            continue
+        cells = []
+        fact_total = assumed_total = 0.0
+        for month in months:
+            value, origin, source = cell(category.id, month)
+            cells.append({"v": value, "origin": origin, "src": source})
+            if origin == "fact":
+                fact_total += value
+            elif origin == "assumption":
+                assumed_total += value
+        grid_rows.append({
             "code": category.code,
             "name": category.name,
             "kind": category.kind,
-            "fact_monthly": fact_monthly,
-            "plan_monthly": plan_monthly,
-            "fact_total": fact_total,
-            "plan_total": plan_total,
-            "deviation": round(fact_total - plan_total, 2),
+            "cells": cells,
+            "fact_total": round(fact_total, 2),
+            "assumed_total": round(assumed_total, 2),
+            "value_total": round(fact_total + assumed_total, 2),
         })
 
-    revenue_total = round(sum(revenue.values()), 2)
-    expenses_total = round(sum(expenses.values()), 2)
+    # --- Итоги по статьям, план/факт, структура расходов -----------------------
+    plan_by_category: dict[int, float] = defaultdict(float)
+    for plan in plan_values:
+        plan_by_category[plan.category_id] += float(plan.amount)
+
+    categories_out = []
+    for row in grid_rows:
+        category = next(c for c in categories if c.code == row["code"])
+        plan_total = round(plan_by_category.get(category.id, 0.0), 2)
+        categories_out.append({
+            "code": row["code"], "name": row["name"], "kind": row["kind"],
+            "fact_total": row["fact_total"], "assumed_total": row["assumed_total"],
+            "value_total": row["value_total"], "plan_total": plan_total,
+            "deviation": round(row["value_total"] - plan_total, 2),
+        })
+
+    revenue_total = round(sum(series_revenue), 2)
+    expenses_total = round(sum(series_expenses), 2)
+    revenue_fact = round(sum(
+        v for (cat_id, _), v in fact_by_cell.items()
+        if category_by_id[cat_id].kind == "income"
+    ), 2)
+    expenses_fact = round(sum(
+        v for (cat_id, _), v in fact_by_cell.items()
+        if category_by_id[cat_id].kind == "expense"
+    ), 2)
     net_profit = round(revenue_total - expenses_total, 2)
 
     top_expenses = sorted(
-        (c for c in categories_out if c["kind"] == "expense"),
-        key=lambda c: c["fact_total"],
-        reverse=True,
+        (c for c in categories_out if c["kind"] == "expense" and c["value_total"] > 0),
+        key=lambda c: c["value_total"], reverse=True,
     )[:8]
 
     needs_review = db.query(models.Operation).filter(models.Operation.status == "needs_review").count()
@@ -98,19 +170,25 @@ def build_dashboard(db: Session) -> dict:
             "expenses_total": expenses_total,
             "net_profit": net_profit,
             "margin_pct": round(net_profit / revenue_total * 100, 1) if revenue_total else 0.0,
-            "cash_balance": balance_series[-1] if balance_series else 0.0,
+            "cash_balance": series_balance[-1] if series_balance else 0.0,
+            "revenue_fact": revenue_fact,
+            "expenses_fact": expenses_fact,
             "operations_count": len(operations),
             "needs_review": needs_review,
+            "assumptions_count": len(assumptions),
+            "fact_through": max(fact_months) if fact_months else None,
+            "assumptions_through": max((key[1] for key in assumption_by_cell), default=None),
         },
         "series": {
-            "revenue": [round(revenue[m], 2) for m in months],
-            "expenses": [round(expenses[m], 2) for m in months],
-            "cash_flow": cash_flow,
-            "balance": balance_series,
+            "revenue": series_revenue,
+            "expenses": series_expenses,
+            "cash_flow": series_cash_flow,
+            "balance": series_balance,
+            "origin": series_origin,
         },
+        "model_grid": {"months": months, "rows": grid_rows},
         "categories": categories_out,
-        "top_expenses": [
-            {"name": c["name"], "total": c["fact_total"]} for c in top_expenses
-        ],
+        "top_expenses": [{"name": c["name"], "total": c["value_total"]} for c in top_expenses],
+        "industry": ({"code": industry["code"], "name": industry["name"]} if industry else None),
         "last_import_at": last_import.created_at.isoformat() if last_import else None,
     }

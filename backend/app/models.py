@@ -85,3 +85,37 @@ class PlanValue(Base):
     category = relationship("Category", lazy="joined")
     month = Column(Date, nullable=False)  # первое число месяца
     amount = Column(Numeric(14, 2), nullable=False, default=0)
+
+
+class BusinessProfile(Base):
+    """Профиль бизнеса — результат интерактивного опросника."""
+
+    __tablename__ = "business_profiles"
+
+    id = Column(Integer, primary_key=True)
+    industry_code = Column(String(32), nullable=False)
+    answers_json = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Assumption(Base):
+    """Допущение: предполагаемое значение статьи на месяц, пока нет факта.
+
+    Жизненный цикл: появился факт за месяц — допущение вытесняется им на
+    дашборде и в модели, но сохраняется для истории. Источник: опросник
+    (source='survey') или правка пользователя (source='user', приоритетнее).
+    """
+
+    __tablename__ = "assumptions"
+    __table_args__ = (UniqueConstraint("category_id", "month", name="uq_assumption_cat_month"),)
+
+    id = Column(Integer, primary_key=True)
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
+    category = relationship("Category", lazy="joined")
+    month = Column(Date, nullable=False)  # первое число месяца
+    amount = Column(Numeric(14, 2), nullable=False)
+    source = Column(String(16), nullable=False, default="user")  # survey | user
+    note = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
