@@ -27,7 +27,7 @@ class ImportLog(Base):
 
     id = Column(Integer, primary_key=True)
     filename = Column(String(255), nullable=False)
-    fmt = Column(String(16), nullable=False)  # csv | xlsx | 1c
+    fmt = Column(String(16), nullable=False)  # csv | xlsx | 1c | pdf | zip
     total_rows = Column(Integer, default=0)
     imported = Column(Integer, default=0)
     duplicates = Column(Integer, default=0)
