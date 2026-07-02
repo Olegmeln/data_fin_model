@@ -62,5 +62,24 @@ class Settings:
     def ai_enabled(self) -> bool:
         return bool(self.ANTHROPIC_API_KEY)
 
+    # --- Google Sheets (двусторонняя синхронизация модели, необязательно) ---
+    # Без client id/secret интеграция выключена; UI и API отвечают, что Google
+    # не настроен. Так же, как с ANTHROPIC_API_KEY, ключи не хранятся в коде.
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+    GOOGLE_REDIRECT_URI: str = os.getenv(
+        "GOOGLE_REDIRECT_URI", "http://localhost:8000/api/google/callback"
+    ).strip()
+    # spreadsheets — чтение/запись таблиц; drive.file — доступ только к файлам,
+    # созданным приложением (минимально необходимый scope, не весь Диск).
+    GOOGLE_SCOPES: tuple[str, ...] = (
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.file",
+    )
+
+    @property
+    def google_enabled(self) -> bool:
+        return bool(self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_SECRET)
+
 
 settings = Settings()

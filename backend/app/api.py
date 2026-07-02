@@ -59,37 +59,11 @@ def export_model(title: str = "Новый проект", db: Session = Depends(g
 
     from fastapi.responses import Response
 
+    from .finmodel.drivers import drivers_from_profile
     from .finmodel.excel_export import export_model_bytes
-    from .finmodel.industries import TAX_RATES
 
-    drivers: dict = {}
     profile = db.query(models.BusinessProfile).first()
-    if profile is not None:
-        answers = json.loads(profile.answers_json or "{}")
-
-        def num(key):
-            value = answers.get(key)
-            try:
-                return float(str(value).replace(" ", "").replace(",", ".")) if value not in (None, "") else None
-            except ValueError:
-                return None
-
-        mapping = {
-            "base_revenue": num("monthly_revenue"),
-            "payroll": num("payroll_monthly"),
-            "rent": num("rent_monthly"),
-            "capex_total": num("capex_total"),
-            "loan_amount": num("loan_amount"),
-        }
-        drivers = {key: value for key, value in mapping.items() if value}
-        if num("loan_rate"):
-            drivers["loan_rate"] = num("loan_rate") / 100
-        if num("discount_rate"):
-            drivers["discount_rate"] = num("discount_rate") / 100
-        if answers.get("tax_mode") in TAX_RATES:
-            drivers["tax_rate"] = TAX_RATES[answers["tax_mode"]][0]
-        if answers.get("business_age") == "new":
-            drivers["ramp_months"] = 4
+    drivers = drivers_from_profile(profile)
 
     content = export_model_bytes(title=title.strip() or "Новый проект", drivers=drivers)
     filename = f"Финмодель_{title.strip() or 'проект'}.xlsx"
@@ -464,3 +438,96 @@ def upsert_plan(body: PlanUpsertIn, db: Session = Depends(get_db)) -> dict:
         saved += 1
     db.commit()
     return {"saved": saved}
+
+
+# ------------------------------------------------ Google Sheets (синхронизация) ----
+
+@router.get("/google/status")
+def google_status(db: Session = Depends(get_db)) -> dict:
+    """Настроена ли интеграция, подключён ли аккаунт, есть ли связанная таблица."""
+    from .finmodel import google_client
+
+    link = db.query(models.SheetLink).first()
+    connected = settings.google_enabled and google_client.is_connected(db)
+    sheet = None
+    if link is not None:
+        sheet = {
+            "url": link.url,
+            "title": link.title,
+            "last_pushed_at": link.last_pushed_at.isoformat() if link.last_pushed_at else None,
+            "last_pulled_at": link.last_pulled_at.isoformat() if link.last_pulled_at else None,
+        }
+    return {"configured": settings.google_enabled, "connected": connected, "sheet": sheet}
+
+
+@router.get("/google/auth")
+def google_auth():
+    """Перенаправление пользователя на экран согласия Google."""
+    from fastapi.responses import RedirectResponse
+
+    from .finmodel import google_client
+
+    try:
+        auth_url, _state = google_client.build_auth_url()
+    except google_client.GoogleNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return RedirectResponse(auth_url)
+
+
+@router.get("/google/callback")
+def google_callback(
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Обратный вызов OAuth: обмен кода на токены и возврат в интерфейс."""
+    from fastapi.responses import RedirectResponse
+
+    from .finmodel import google_client
+
+    if error:
+        raise HTTPException(status_code=400, detail=f"Google вернул ошибку авторизации: {error}")
+    if not code:
+        raise HTTPException(status_code=400, detail="Не передан код авторизации.")
+    try:
+        google_client.exchange_code(db, code=code, state=state)
+    except google_client.GoogleNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 — сетевые/OAuth ошибки показываем как 400
+        raise HTTPException(status_code=400, detail=f"Не удалось обменять код на токен: {exc}") from exc
+    return RedirectResponse(url="/?google=connected")
+
+
+@router.post("/google/disconnect")
+def google_disconnect(db: Session = Depends(get_db)) -> dict:
+    from .finmodel import google_client
+
+    google_client.disconnect(db)
+    return {"connected": False}
+
+
+@router.post("/sheets/push")
+def sheets_push(title: str = "Финмодель", db: Session = Depends(get_db)) -> dict:
+    """Создать/обновить Google-таблицу модели (полный .xlsx → конвертация в Sheet)."""
+    from .finmodel import google_client, sheets_sync
+
+    try:
+        return sheets_sync.push_model(db, title=title.strip() or "Финмодель")
+    except google_client.GoogleNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except google_client.GoogleNotConnected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post("/sheets/pull")
+def sheets_pull(db: Session = Depends(get_db)) -> dict:
+    """Прочитать драйверы-входы из связанной таблицы обратно в профиль."""
+    from .finmodel import google_client, sheets_sync
+
+    try:
+        return sheets_sync.pull_edits(db)
+    except google_client.GoogleNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except google_client.GoogleNotConnected as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

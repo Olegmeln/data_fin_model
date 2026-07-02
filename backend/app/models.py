@@ -119,3 +119,37 @@ class Assumption(Base):
     note = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class GoogleCredential(Base):
+    """OAuth-токены Google для двусторонней синхронизации.
+
+    MVP single-tenant: одна строка на всё приложение (полноценные
+    пользователи/рабочие пространства — отдельный пункт дорожной карты).
+    """
+
+    __tablename__ = "google_credentials"
+
+    id = Column(Integer, primary_key=True)
+    token = Column(Text, nullable=True)            # access token
+    refresh_token = Column(Text, nullable=True)    # долгоживущий refresh token
+    token_uri = Column(String(255), nullable=True)
+    scopes = Column(Text, nullable=True)           # список scope через пробел
+    expiry = Column(DateTime, nullable=True)       # срок действия access token (UTC)
+    email = Column(String(255), nullable=True)     # почта подключённого аккаунта
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SheetLink(Base):
+    """Связанная Google-таблица модели (MVP single-tenant: одна строка)."""
+
+    __tablename__ = "sheet_links"
+
+    id = Column(Integer, primary_key=True)
+    spreadsheet_id = Column(String(128), nullable=False)
+    url = Column(String(512), nullable=True)
+    title = Column(String(255), nullable=True)
+    last_pushed_at = Column(DateTime, nullable=True)
+    last_pulled_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
