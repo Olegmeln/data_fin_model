@@ -35,3 +35,9 @@ _STATIC_DIR = Path(__file__).parent / "static"
 def index() -> FileResponse:
     """Демо-интерфейс (один HTML-файл, без сборки)."""
     return FileResponse(_STATIC_DIR / "index.html")
+
+
+@app.get("/legacy", include_in_schema=False)
+def legacy() -> FileResponse:
+    """Прежний демо-интерфейс (сохранён на время перехода на новый UX)."""
+    return FileResponse(_STATIC_DIR / "legacy.html")

@@ -1,885 +1,358 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="ru" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>data_fin_model — живая финмодель</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>data_fin_model — рабочий стол финмодели</title>
 <style>
-  :root{
-    --paper:#F6F7F5; --surface:#FFFFFF; --ink:#1C2522; --muted:#66726B;
-    --line:#E1E6E2; --brand:#14604D; --brand-soft:#E9F1ED;
-    --pos:#177A4F; --neg:#B5432E; --warn-bg:#FCF3DF; --warn-ink:#8A610F;
-    --assume:#9A6A12; --assume-bg:#FBF4E3;
-    --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'Inter',system-ui,sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
-  a{color:var(--brand)}
-  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+:root{
+  --bg:#f7f6f3; --surface:#fff; --surface-2:#f2f0ec; --text:#201e1b; --muted:#6d675f;
+  --border:#e7e2da; --accent:#c96442; --accent-ink:#fff; --accent-soft:#f4e7e0;
+  --fact:#2f855a; --fact-bg:#eaf5ee; --assume:#2b6cb0; --assume-bg:#e9f0fb;
+  --shadow:0 1px 2px rgba(30,25,20,.06),0 10px 30px rgba(30,25,20,.06);
+  --radius:16px; --radius-sm:10px;
+}
+html[data-theme="dark"]{
+  --bg:#1a1917; --surface:#232220; --surface-2:#2b2a27; --text:#eceae7; --muted:#a29c94;
+  --border:#34322d; --accent:#e08a68; --accent-ink:#1a1917; --accent-soft:#3a2b23;
+  --fact:#68d391; --fact-bg:#22332a; --assume:#7cb0f0; --assume-bg:#232f40;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+  padding-bottom:84px;transition:background .25s,color .25s}
+button{font:inherit;cursor:pointer}
+.hidden{display:none!important}
 
-  header{background:var(--surface);border-bottom:1px solid var(--line)}
-  .brandline{display:flex;align-items:baseline;gap:14px;padding:18px 0 10px;flex-wrap:wrap}
-  .wordmark{font-family:var(--mono);font-weight:600;font-size:19px;letter-spacing:-.3px}
-  .wordmark b{color:var(--brand);font-weight:600}
-  .tagline{color:var(--muted);font-size:13px}
-  .ai-badge{margin-left:auto;font-family:var(--mono);font-size:11.5px;padding:3px 10px;border-radius:99px;
-    border:1px solid var(--line);color:var(--muted)}
-  .ai-badge.on{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
-  .ledger{font-family:var(--mono);font-size:12.5px;color:var(--muted);
-    border-top:1px solid var(--line);padding:8px 0;display:flex;flex-wrap:wrap;gap:6px 0;font-variant-numeric:tabular-nums}
-  .ledger b{color:var(--ink);font-weight:500}
-  .ledger .warm{color:var(--warn-ink)}
-  .ledger .assume-ink{color:var(--assume)}
-  .ledger span+span::before{content:"·";margin:0 10px;color:var(--line)}
-  #persist-banner{background:var(--warn-bg);color:var(--warn-ink);font-size:13px;padding:8px 0}
+/* top bar */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:12px 22px;background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:11px;font-weight:650;letter-spacing:-.01em}
+.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#e8a37f);
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:var(--shadow)}
+.brand small{display:block;font-weight:450;color:var(--muted);font-size:11.5px;letter-spacing:0}
+.top-actions{display:flex;align-items:center;gap:8px}
+.chip-btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);transition:.15s}
+.chip-btn:hover{border-color:var(--accent);color:var(--accent)}
+.chip-btn.ghost{background:transparent}
+.icon-btn{width:36px;height:36px;border-radius:999px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text);display:grid;place-items:center;font-size:16px;transition:.15s}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.gchip{font-size:12.5px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;background:var(--muted)}
+.dot.on{background:var(--fact)}
 
-  nav{display:flex;gap:4px;margin:18px 0 0;border-bottom:1px solid var(--line);align-items:center}
-  nav button.tab{appearance:none;border:0;background:none;font:inherit;font-weight:500;color:var(--muted);
-    padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
-  nav button.tab:hover{color:var(--ink)}
-  nav button.tab.active{color:var(--brand);border-color:var(--brand)}
-  .nav-right{margin-left:auto;display:flex;gap:8px;padding-bottom:6px}
-  button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* workspace */
+.workspace{max-width:1180px;margin:0 auto;padding:26px 22px 8px}
 
-  main{padding:22px 0 64px}
-  .view{display:none}.view.active{display:block}
+/* composer */
+.composer{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:14px 14px 12px;transition:border-color .15s,box-shadow .15s}
+.composer.drag{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.composer textarea{width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);
+  font:inherit;font-size:16px;min-height:26px;max-height:180px;padding:6px 8px}
+.composer textarea::placeholder{color:var(--muted)}
+.composer-row{display:flex;align-items:center;gap:8px;padding-top:6px}
+.composer-row .spacer{flex:1}
+.send{width:40px;height:40px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);
+  font-size:17px;display:grid;place-items:center;transition:.15s}
+.send:hover{filter:brightness(1.05)}
+.mic.rec{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--accent-soft)}50%{box-shadow:0 0 0 6px var(--accent-soft)}}
 
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
-  .grid-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:14px}
-  .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
-  .kpi .value{font-family:var(--mono);font-size:25px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
-  .kpi .value.mid{font-size:21px}
-  .kpi .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
-  .pos{color:var(--pos)} .neg{color:var(--neg)}
-  .blocktitle{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:4px 0 10px}
-  .grid-charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .grid-charts .full{grid-column:1/-1}
-  @media (max-width:860px){.grid-charts{grid-template-columns:1fr}}
-  h2{font-size:14px;font-weight:600;margin-bottom:12px}
-  .chartbox{position:relative;height:260px}
+/* hero */
+.hero{text-align:center;padding:40px 0 10px}
+.hero h1{font-size:30px;letter-spacing:-.02em;margin:0 0 8px}
+.hero p{color:var(--muted);margin:0 auto 26px;max-width:520px}
+.hero .composer{max-width:720px;margin:0 auto;text-align:left}
+.suggest{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:16px}
+.suggest button{background:var(--surface-2);border:1px solid var(--border);border-radius:999px;
+  padding:9px 15px;color:var(--text);font-size:13.5px;transition:.15s}
+.suggest button:hover{border-color:var(--accent);color:var(--accent)}
+.transcript{min-height:18px;color:var(--accent);font-size:13px;padding:2px 8px}
 
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th{font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
-    text-align:left;font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
-  td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-  tr:last-child td{border-bottom:0}
-  td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-  .desc{color:var(--muted);font-size:13px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* model view */
+.section-head{display:flex;align-items:center;gap:12px;margin:22px 2px 12px}
+.section-head h2{font-size:18px;margin:0;letter-spacing:-.01em}
+.section-head .spacer{flex:1}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-top:6px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 15px;box-shadow:var(--shadow)}
+.kpi .lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
+.kpi .val{font-size:21px;font-weight:680;letter-spacing:-.01em}
+.kpi .val.pos{color:var(--fact)} .kpi .val.neg{color:#c0392b}
 
-  .badge{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
-  .badge.review{background:var(--warn-bg);border-color:transparent;color:var(--warn-ink)}
-  .badge.confirmed{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
+.grid-card{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden}
+.grid-toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.grid-toolbar input.title{border:1px solid var(--border);background:var(--surface-2);color:var(--text);
+  border-radius:9px;padding:8px 11px;font:inherit;min-width:200px}
+.grid-wrap{overflow:auto;max-height:64vh}
+table.model{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px;white-space:nowrap}
+table.model th,table.model td{padding:8px 11px;border-bottom:1px solid var(--border);text-align:right}
+table.model thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);color:var(--muted);
+  font-weight:600;text-align:right;border-bottom:1px solid var(--border)}
+table.model th.rowname,table.model td.rowname{position:sticky;left:0;z-index:1;text-align:left;
+  background:var(--surface);min-width:210px;max-width:260px;overflow:hidden;text-overflow:ellipsis;font-weight:520}
+table.model thead th.rowname{z-index:3;background:var(--surface-2)}
+tr.group td{background:var(--surface-2);color:var(--muted);font-weight:650;text-transform:uppercase;
+  letter-spacing:.04em;font-size:11px;text-align:left;position:sticky;left:0}
+td.cell{cursor:text;color:var(--text)}
+td.cell.fact{background:var(--fact-bg);color:var(--fact);font-weight:600}
+td.cell.assume{background:var(--assume-bg);color:var(--assume)}
+td.cell.empty{color:var(--muted)}
+td.cell:focus{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+td.total{font-weight:680;background:var(--surface-2)}
+.legend{display:flex;gap:16px;padding:9px 14px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.sw.fact{background:var(--fact)} .sw.assume{background:var(--assume)}
 
-  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
-  .chip{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;
-    padding:6px 14px;font:inherit;font-size:13.5px;color:var(--muted);cursor:pointer}
-  .chip.active{background:var(--brand);border-color:var(--brand);color:#fff}
-  .toolbar input[type=search]{margin-left:auto;border:1px solid var(--line);border-radius:8px;
-    padding:7px 12px;font:inherit;font-size:13.5px;background:var(--surface);min-width:220px}
-  select.cat{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:7px;
-    padding:5px 8px;background:var(--surface);max-width:230px;color:var(--ink)}
+/* dock */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:25;background:color-mix(in srgb,var(--surface) 92%,transparent);
+  backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;overflow-x:auto}
+.dock .dlabel{font-size:12px;color:var(--muted);white-space:nowrap;margin-right:2px}
+.doc{display:inline-flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:7px 11px;white-space:nowrap;box-shadow:var(--shadow)}
+.doc .fmt{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:2px 6px;border-radius:5px}
+.doc .fn{font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis}
+.doc .meta{font-size:11px;color:var(--muted)}
 
-  .btn{appearance:none;border:0;border-radius:8px;background:var(--brand);color:#fff;
-    font:inherit;font-weight:500;padding:9px 18px;cursor:pointer}
-  .btn:hover{filter:brightness(1.07)}
-  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
-  .btn.small{padding:6px 13px;font-size:13.5px}
-
-  .dropzone{border:1.5px dashed var(--line);border-radius:10px;background:var(--surface);
-    padding:40px 24px;text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s}
-  .dropzone.drag{border-color:var(--brand);background:var(--brand-soft)}
-  .dropzone strong{color:var(--ink)}
-  .hint{font-size:13px;color:var(--muted);margin-top:10px}
-  .result{margin-top:14px;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
-  .empty{padding:46px 20px;text-align:center;color:var(--muted)}
-  .empty .btn{margin:14px 6px 0}
-
-  .slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:16px}
-  .slot{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-  .slot .s-name{font-weight:500;font-size:14px}
-  .slot .s-fmt{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:4px}
-
-  .gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
-  table.model{font-size:13px;min-width:760px}
-  table.model th,table.model td{padding:7px 10px;border-bottom:1px solid var(--line)}
-  table.model th:first-child,table.model td:first-child{position:sticky;left:0;background:var(--surface);
-    min-width:210px;border-right:1px solid var(--line);z-index:1}
-  table.model td.cell{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:96px}
-  .cell .fact{color:var(--ink)}
-  .cell button{appearance:none;border:0;background:none;font:inherit;cursor:pointer;padding:0;
-    color:var(--assume);border-bottom:1px dashed var(--assume)}
-  .cell button.add{color:#B6BDB8;border-bottom:1px dashed var(--line)}
-  .cell input{width:96px;font:inherit;font-family:var(--mono);text-align:right;
-    border:1px solid var(--brand);border-radius:6px;padding:2px 6px}
-  .kindrow td{background:var(--paper);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
-  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:10px 2px 14px}
-  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
-  .legend .l-fact i{background:var(--ink)}
-  .legend .l-assume i{background:var(--assume)}
-  .legend .l-empty i{background:#D7DDD8}
-
-  #wizard{position:fixed;inset:0;background:rgba(28,37,34,.45);display:none;z-index:50;
-    align-items:flex-start;justify-content:center;padding:7vh 16px;overflow:auto}
-  #wizard.open{display:flex}
-  .wcard{background:var(--surface);border-radius:14px;max-width:620px;width:100%;padding:28px 30px;
-    box-shadow:0 24px 60px rgba(20,30,26,.25)}
-  .wprog{display:flex;gap:6px;margin-bottom:18px}
-  .wprog i{height:4px;border-radius:2px;background:var(--line);flex:1}
-  .wprog i.done{background:var(--brand)}
-  .wq{font-size:19px;font-weight:600;line-height:1.35}
-  .whint{color:var(--muted);font-size:13.5px;margin-top:6px}
-  .wbody{margin:18px 0 6px}
-  .wopts{display:flex;flex-direction:column;gap:8px}
-  .wopt{appearance:none;text-align:left;border:1px solid var(--line);background:var(--surface);
-    border-radius:10px;padding:11px 14px;font:inherit;cursor:pointer}
-  .wopt:hover{border-color:var(--brand)}
-  .wopt.sel{border-color:var(--brand);background:var(--brand-soft)}
-  .winput{display:flex;gap:8px;align-items:center}
-  .winput input{flex:1;font:inherit;font-family:var(--mono);font-size:17px;border:1px solid var(--line);
-    border-radius:10px;padding:11px 14px}
-  .wcustom{display:flex;flex-direction:column;gap:8px}
-  .wpair{display:flex;gap:8px}
-  .wpair input{flex:1;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:9px 12px}
-  .wpair .del{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:8px;
-    width:38px;cursor:pointer;color:var(--muted)}
-  .mic{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:10px;
-    width:46px;height:46px;cursor:pointer;font-size:19px;line-height:1}
-  .mic.rec{border-color:var(--neg);background:#FBEFEC;animation:pulse 1.1s infinite}
-  @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(181,67,46,.15)}}
-  .wtranscript{font-size:13px;color:var(--muted);min-height:18px;margin-top:8px;font-style:italic}
-  .wnav{display:flex;gap:10px;margin-top:20px;align-items:center}
-  .wnav .spacer{flex:1}
-  .wdone-list{margin:14px 0;display:flex;flex-direction:column;gap:8px}
-  .ai-summary{background:var(--brand-soft);border-radius:10px;padding:12px 14px;font-size:13.5px;margin-top:12px}
-  .ai-summary b{font-family:var(--mono);font-size:12px}
-  .ai-off{background:var(--paper);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted);margin-top:12px}
-  @media (prefers-reduced-motion:reduce){#toast,.dropzone,.mic{transition:none;animation:none}}
-
-  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
-    background:var(--ink);color:#fff;font-size:13.5px;padding:10px 18px;border-radius:9px;
-    opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90}
-  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* toast */
+#toasts{position:fixed;top:16px;right:16px;z-index:60;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);
+  border-radius:10px;padding:11px 14px;box-shadow:var(--shadow);max-width:340px;font-size:13.5px;animation:slide .2s ease}
+.toast.ok{border-left-color:var(--fact)} .toast.err{border-left-color:#c0392b}
+@keyframes slide{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
 </style>
 </head>
 <body>
-
-<header>
-  <div class="wrap">
-    <div class="brandline">
-      <div class="wordmark">data_<b>fin</b>_model</div>
-      <div class="tagline">любой бизнес — инвестпроект: опросник → данные → допущения → модель</div>
-      <div class="ai-badge" id="ai-badge">ИИ: проверяю…</div>
-    </div>
-    <nav>
-      <button class="tab active" data-view="dashboard">Дашборд</button>
-      <button class="tab" data-view="model">Модель</button>
-      <button class="tab" data-view="operations">Операции</button>
-      <button class="tab" data-view="upload">Загрузка данных</button>
-      <div class="nav-right"><button class="btn small" id="open-export">Скачать модель .xlsx</button></div>
-    </nav>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">₽</div>
+    <div>data_fin_model<small>рабочий стол финмодели</small></div>
   </div>
-  <div class="wrap"><div class="ledger" id="ledger"><span>данные ещё не загружены</span></div></div>
-  <div id="persist-banner" hidden><div class="wrap">⚠ База данных не подключена: всё, что вы введёте, исчезнет при перезапуске. На Vercel откройте Storage → Create Database → Neon (Postgres) и сделайте Redeploy.</div></div>
+  <div class="top-actions">
+    <span id="gchip" class="gchip hidden"><span class="dot" id="gdot"></span><span id="gtext"></span></span>
+    <button id="gbtn" class="chip-btn hidden"></button>
+    <a class="chip-btn ghost" href="/legacy" title="Прежний интерфейс">Классический вид</a>
+    <button id="themeBtn" class="icon-btn" title="Сменить тему">◐</button>
+  </div>
 </header>
 
-<main class="wrap">
-
-  <!-- ДАШБОРД -->
-  <section class="view active" id="view-dashboard">
-    <div id="dash-empty" class="card empty" hidden>
-      <div style="font-size:17px;font-weight:600;color:var(--ink)">Создайте финансовую модель</div>
-      <div style="margin-top:6px">Получите готовый файл Excel: допущения со сценариями, помесячная модель на 36 месяцев,
-      NPV / IRR / окупаемость, матрица чувствительности и диаграммы. Все формулы живые.</div>
-      <br>
-      <button class="btn" onclick="openExport()">Создать модель (.xlsx)</button>
-      <button class="btn ghost" onclick="switchView('upload')">Загрузить выписку</button>
-    </div>
-    <div id="dash-body" hidden>
-      <div class="grid-kpi">
-        <div class="card kpi"><div class="label">Выручка · горизонт</div><div class="value" id="kpi-rev"></div><div class="sub" id="kpi-rev-sub"></div></div>
-        <div class="card kpi"><div class="label">Расходы · горизонт</div><div class="value" id="kpi-exp"></div><div class="sub" id="kpi-exp-sub"></div></div>
-        <div class="card kpi"><div class="label">Чистая прибыль</div><div class="value" id="kpi-net"></div><div class="sub" id="kpi-margin"></div></div>
-        <div class="card kpi"><div class="label">Остаток на конец</div><div class="value" id="kpi-cash"></div><div class="sub">денежный поток нарастающим итогом</div></div>
-      </div>
-      <div class="blocktitle">Инвестиционный взгляд</div>
-      <div class="grid-kpi">
-        <div class="card kpi"><div class="label">NPV</div><div class="value mid" id="kpi-npv"></div><div class="sub" id="kpi-npv-sub"></div></div>
-        <div class="card kpi"><div class="label">IRR</div><div class="value mid" id="kpi-irr"></div><div class="sub">по потоку проекта без финансирования, годовых</div></div>
-        <div class="card kpi"><div class="label">Окупаемость</div><div class="value mid" id="kpi-payback"></div><div class="sub">по накопленному денежному потоку</div></div>
-      </div>
-      <div class="grid-charts">
-        <div class="card full"><h2>Выручка и расходы по месяцам <span style="font-weight:400;color:var(--muted)">— пунктир: допущения</span></h2><div class="chartbox"><canvas id="ch-pl"></canvas></div></div>
-        <div class="card"><h2>Денежный поток и остаток</h2><div class="chartbox"><canvas id="ch-cash"></canvas></div></div>
-        <div class="card"><h2>Структура расходов · горизонт</h2><div class="chartbox"><canvas id="ch-exp"></canvas></div></div>
-        <div class="card full">
-          <h2>Статьи за горизонт</h2>
-          <table>
-            <thead><tr><th>Статья</th><th class="num">Факт</th><th class="num">Допущения</th><th class="num">Итого</th><th class="num">Доля</th></tr></thead>
-            <tbody id="planfact"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- МОДЕЛЬ -->
-  <section class="view" id="view-model">
-    <div id="model-empty" class="card empty" hidden>
-      Сетка появится после загрузки данных. Сам файл модели создаётся кнопкой «Скачать модель .xlsx».
-      <br><button class="btn" onclick="openExport()">Создать модель (.xlsx)</button>
-    </div>
-    <div id="model-body" hidden>
-      <div class="legend">
-        <span class="l-fact"><i></i>факт из операций</span>
-        <span class="l-assume"><i></i>допущение — нажмите, чтобы изменить</span>
-        <span class="l-empty"><i></i>пусто — нажмите, чтобы задать</span>
-      </div>
-      <div class="gridwrap"><table class="model"><thead id="model-head"></thead><tbody id="model-rows"></tbody></table></div>
-    </div>
-  </section>
-
-  <!-- ОПЕРАЦИИ -->
-  <section class="view" id="view-operations">
-    <div class="toolbar">
-      <button class="chip active" data-status="">Все</button>
-      <button class="chip" data-status="needs_review">Требуют подтверждения</button>
-      <button class="chip" data-status="confirmed">Подтверждённые</button>
-      <input type="search" id="op-search" placeholder="Поиск по контрагенту или назначению">
-    </div>
-    <div class="card" style="padding:6px 8px">
-      <table>
-        <thead><tr><th>Дата</th><th>Контрагент</th><th>Назначение</th><th class="num">Сумма</th><th>Статья</th><th>Статус</th></tr></thead>
-        <tbody id="ops-body"><tr><td colspan="6" class="empty">Загрузка…</td></tr></tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- ЗАГРУЗКА -->
-  <section class="view" id="view-upload">
-    <div id="slots-block" hidden>
-      <h2 id="slots-title" style="margin-bottom:10px"></h2>
-      <div class="slots" id="slots"></div>
-    </div>
-    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Загрузить файл выписки">
-      <strong>Перетащите файл выписки</strong> или нажмите, чтобы выбрать<br>
-      <span style="font-family:var(--mono);font-size:12.5px">CSV · XLSX · 1CClientBankExchange (.txt)</span>
-      <input type="file" id="file-input" accept=".csv,.xlsx,.txt" hidden>
-    </div>
-    <p class="hint">Демо-файлы лежат в каталоге <code>samples/</code> репозитория. Повторная загрузка того же файла безопасна: дубликаты отсекаются. Загруженный факт автоматически вытесняет допущения тех же месяцев.</p>
-    <div class="result" id="upload-result"></div>
-    <div class="card" style="margin-top:18px">
-      <h2>История загрузок</h2>
-      <table>
-        <thead><tr><th>Когда</th><th>Файл</th><th>Формат</th><th class="num">Импортировано</th><th class="num">Дубликаты</th><th class="num">К подтверждению</th></tr></thead>
-        <tbody id="imports-body"><tr><td colspan="6" class="empty">Пока не было загрузок</td></tr></tbody>
-      </table>
-    </div>
-  </section>
-
+<main class="workspace">
+  <section id="composerWrap"></section>
+  <section id="content"></section>
 </main>
 
-<!-- ВИЗАРД-ОПРОСНИК -->
-<div id="wizard" role="dialog" aria-modal="true">
-  <div class="wcard" id="wcard"></div>
-</div>
-
-<div id="toast" role="status"></div>
+<div id="dock" class="dock hidden"></div>
+<div id="toasts"></div>
+<input type="file" id="fileInput" multiple class="hidden"
+       accept=".csv,.xlsx,.txt,.pdf,.zip"/>
 
 <script>
-const fmt = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0});
-const money = v => fmt.format(Math.round(v)) + ' ₽';
-const signedMoney = (v, dir) => (dir === 'in' ? '+' : '−') + money(Math.abs(v));
-const MONTHS_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-const monthLabel = m => { const [y, mo] = m.split('-'); return MONTHS_RU[+mo-1] + ' ' + y.slice(2); };
-const state = {categories: [], profile: null, survey: null, health: null, status: '', q: '', charts: {}};
+const $=s=>document.querySelector(s);
+const state={dash:null,imports:[],google:null,title:'Финмодель',rec:null};
+const nf=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0});
+const money=n=>(n==null||isNaN(n))?'—':nf.format(Math.round(n))+' ₽';
+const MON=['','янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const KIND={income:'Доходы',expense:'Расходы',investing:'Инвестиции',financing:'Финансирование'};
+const fmtMonth=m=>{const[y,mo]=m.split('-');return MON[+mo]+' '+y.slice(2);};
+const escapeHtml=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function parseAmount(s){if(s==null)return null;s=String(s).replace(/ /g,'').replace(/\s/g,'').replace('₽','').replace(',','.');if(s===''||s==='—')return 0;const v=parseFloat(s);return isNaN(v)?null:v;}
+async function api(path,opts){const r=await fetch('/api'+path,opts);if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch(e){}throw new Error(d||('HTTP '+r.status));}const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text();}
+function toast(msg,kind){const t=document.createElement('div');t.className='toast '+(kind||'');t.textContent=msg;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),4200);}
 
-function toast(text){
-  const el = document.getElementById('toast');
-  el.textContent = text; el.classList.add('show');
-  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3200);
-}
-async function api(path, options){
-  let response;
-  try { response = await fetch('/api' + path, options); }
-  catch (e) { throw new Error('нет соединения с сервером'); }
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error((err.detail || 'ошибка запроса') + ' [HTTP ' + response.status + ']');
-  }
-  return response.json();
-}
-function switchView(name){
-  document.querySelectorAll('nav button.tab').forEach(b => b.classList.toggle('active', b.dataset.view === name));
-  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
-}
-document.querySelectorAll('nav button.tab').forEach(b => b.addEventListener('click', () => switchView(b.dataset.view)));
+/* theme */
+function loadTheme(){document.documentElement.dataset.theme=localStorage.getItem('dfm-theme')||'light';}
+function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('dfm-theme',t);}
 
-/* ---------- Учётная лента и статус ---------- */
-function renderHealth(){
-  const h = state.health;
-  const badge = document.getElementById('ai-badge');
-  if (!h){ badge.textContent = 'ИИ: недоступен'; return; }
-  badge.textContent = h.ai_enabled ? 'ИИ: подключён' : 'ИИ: выключен';
-  badge.classList.toggle('on', !!h.ai_enabled);
-  badge.title = h.ai_enabled
-    ? 'Модель собирает Claude: допущения уточняются ИИ'
-    : 'Добавьте ANTHROPIC_API_KEY в переменные окружения, чтобы модель собирал ИИ';
-  document.getElementById('persist-banner').hidden = h.persistent !== false;
-}
-function renderLedger(d){
-  const el = document.getElementById('ledger');
-  const k = d && d.kpi;
-  if (!k || (!k.operations_count && !k.assumptions_count)){
-    el.innerHTML = '<span>данные ещё не загружены — начните с опросника</span>'; return;
-  }
-  const parts = [];
-  if (d.industry) parts.push(`отрасль: <b>${d.industry.name}</b>`);
-  if (k.fact_through) parts.push(`факт до <b>${monthLabel(k.fact_through)}</b> (${k.operations_count} операций)`);
-  if (k.assumptions_through) parts.push(`<span class="assume-ink">допущения до <b>${monthLabel(k.assumptions_through)}</b> (${k.assumptions_count})</span>`);
-  parts.push(k.needs_review ? `<span class="warm">к подтверждению: <b>${k.needs_review}</b></span>` : 'операции разобраны');
-  el.innerHTML = parts.map(p => `<span>${p}</span>`).join('');
+/* composer (built once) */
+function initUI(){
+  $('#composerWrap').innerHTML=`
+    <div id="heroHead" class="hero" style="padding-bottom:0">
+      <h1>С чего начнём финмодель?</h1>
+      <p>Загрузите банковскую выписку (CSV, Excel, PDF, 1С или ZIP) или расскажите о бизнесе голосом — модель соберётся и развернётся здесь как таблица.</p>
+    </div>
+    <div class="composer" id="composer" style="max-width:760px;margin:0 auto">
+      <textarea id="ta" rows="1" placeholder="Опишите бизнес или перетащите сюда выписку…"></textarea>
+      <div class="composer-row">
+        <button class="icon-btn" id="attachBtn" title="Прикрепить документ">📎</button>
+        <button class="icon-btn mic" id="micBtn" title="Голосовой ввод">🎙</button>
+        <div class="transcript" id="transcript"></div>
+        <div class="spacer"></div>
+        <button class="send" id="sendBtn" title="Построить модель">→</button>
+      </div>
+    </div>
+    <div class="suggest" id="suggest">
+      <button data-a="attach">📎 Загрузить выписку</button>
+      <button data-a="voice">🎙 Рассказать голосом</button>
+      <button data-a="demo">Построить модель</button>
+    </div>`;
+  const ta=$('#ta');
+  ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,180)+'px';});
+  $('#attachBtn').onclick=()=>$('#fileInput').click();
+  $('#sendBtn').onclick=send;
+  $('#micBtn').onclick=toggleMic;
+  $('#themeBtn').onclick=toggleTheme;
+  $('#fileInput').onchange=e=>upload(e.target.files);
+  $('#suggest').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;({attach:()=>$('#fileInput').click(),voice:toggleMic,demo:send}[b.dataset.a]||(()=>{}))();});
+  const comp=$('#composer');
+  ['dragover','dragenter'].forEach(ev=>comp.addEventListener(ev,e=>{e.preventDefault();comp.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>comp.addEventListener(ev,e=>{e.preventDefault();comp.classList.remove('drag');}));
+  comp.addEventListener('drop',e=>{if(e.dataTransfer.files.length)upload(e.dataTransfer.files);});
 }
 
-/* ---------- Дашборд ---------- */
-function makeChart(id, config){
-  if (state.charts[id]) state.charts[id].destroy();
-  state.charts[id] = new Chart(document.getElementById(id), config);
-}
-async function loadDashboard(){
-  const d = await api('/dashboard');
-  state.dash = d;
-  renderLedger(d);
-  const hasData = d.months.length > 0;
-  document.getElementById('dash-empty').hidden = hasData;
-  document.getElementById('dash-body').hidden = !hasData;
-  renderModelGrid(d);
-  renderSlots();
-  if (!hasData) return;
-
-  const k = d.kpi;
-  document.getElementById('kpi-rev').textContent = money(k.revenue_total);
-  document.getElementById('kpi-rev-sub').textContent = 'из них факт ' + money(k.revenue_fact);
-  document.getElementById('kpi-exp').textContent = money(k.expenses_total);
-  document.getElementById('kpi-exp-sub').textContent = 'из них факт ' + money(k.expenses_fact);
-  const net = document.getElementById('kpi-net');
-  net.textContent = money(k.net_profit);
-  net.className = 'value ' + (k.net_profit >= 0 ? 'pos' : 'neg');
-  document.getElementById('kpi-margin').textContent = 'маржинальность ' + k.margin_pct + '%';
-  document.getElementById('kpi-cash').textContent = money(k.cash_balance);
-
-  const inv = k.invest || {};
-  const npvEl = document.getElementById('kpi-npv');
-  npvEl.textContent = inv.npv == null ? '—' : money(inv.npv);
-  npvEl.className = 'value mid ' + (inv.npv > 0 ? 'pos' : inv.npv < 0 ? 'neg' : '');
-  document.getElementById('kpi-npv-sub').textContent = 'ставка дисконтирования ' + (inv.discount_rate_pct || 20) + '%';
-  document.getElementById('kpi-irr').textContent = inv.irr_pct == null ? '—' : inv.irr_pct + '%';
-  document.getElementById('kpi-payback').textContent =
-    inv.payback_months == null ? 'за горизонтом' : (inv.payback_months === 0 ? 'сразу' : inv.payback_months + ' мес.');
-
-  const labels = d.months.map(monthLabel);
-  const origin = d.series.origin;
-  const dash = ctx => (origin[ctx.p1DataIndex] !== 'fact' || origin[ctx.p0DataIndex] !== 'fact') ? [6,5] : undefined;
-  const gridStyle = {color: '#EDF0ED'};
-  const moneyTicks = {callback: v => fmt.format(v)};
-
-  makeChart('ch-pl', {type:'line', data:{labels, datasets:[
-      {label:'Выручка', data:d.series.revenue, borderColor:'#14604D', backgroundColor:'#14604D', tension:.3,
-        pointRadius: origin.map(o => o==='fact'?3:2.5),
-        pointStyle: origin.map(o => o==='fact'?'circle':'rectRot'),
-        segment:{borderDash: dash}},
-      {label:'Расходы', data:d.series.expenses, borderColor:'#B5432E', backgroundColor:'#B5432E', tension:.3,
-        pointRadius: origin.map(o => o==='fact'?3:2.5),
-        pointStyle: origin.map(o => o==='fact'?'circle':'rectRot'),
-        segment:{borderDash: dash}},
-    ]},
-    options:{maintainAspectRatio:false, plugins:{legend:{labels:{boxWidth:10, boxHeight:10}}},
-      scales:{y:{grid:gridStyle, ticks:moneyTicks}, x:{grid:{display:false}}}}});
-
-  makeChart('ch-cash', {data:{labels, datasets:[
-      {type:'bar', label:'Поток за месяц', data:d.series.cash_flow,
-        backgroundColor:d.series.cash_flow.map((v,i) => {
-          const base = v >= 0 ? '156,195,180' : '220,168,156';
-          return `rgba(${base},${origin[i]==='fact'?0.95:0.45})`;
-        })},
-      {type:'line', label:'Остаток', data:d.series.balance, borderColor:'#1C2522', tension:.3, pointRadius:2.5,
-        segment:{borderDash: dash}},
-    ]},
-    options:{maintainAspectRatio:false, plugins:{legend:{labels:{boxWidth:10, boxHeight:10}}},
-      scales:{y:{grid:gridStyle, ticks:moneyTicks}, x:{grid:{display:false}}}}});
-
-  makeChart('ch-exp', {type:'doughnut', data:{
-      labels: d.top_expenses.map(c => c.name),
-      datasets:[{data: d.top_expenses.map(c => c.total),
-        backgroundColor:['#14604D','#3E7D6B','#6F9B8C','#A0BAAF','#B5432E','#CD7A66','#D9A698','#C9B458']}]},
-    options:{maintainAspectRatio:false, plugins:{legend:{position:'right', labels:{boxWidth:10, boxHeight:10, font:{size:11.5}}}}}});
-
-  const tbody = document.getElementById('planfact');
-  tbody.innerHTML = '';
-  for (const c of d.categories){
-    const base = c.kind === 'income' ? k.revenue_total : (c.kind === 'expense' ? k.expenses_total : 0);
-    const share = base ? Math.round(c.value_total / base * 100) + '%' : '—';
-    tbody.insertAdjacentHTML('beforeend',
-      `<tr><td>${c.name}</td><td class="num">${c.fact_total ? money(c.fact_total) : '—'}</td>` +
-      `<td class="num" style="color:var(--assume)">${c.assumed_total ? money(c.assumed_total) : '—'}</td>` +
-      `<td class="num"><b>${money(c.value_total)}</b></td><td class="num">${share}</td></tr>`);
-  }
+function render(){
+  const rows=(state.dash&&state.dash.model_grid&&state.dash.model_grid.rows)||[];
+  const hasData=rows.length>0;
+  $('#heroHead').classList.toggle('hidden',hasData);
+  $('#suggest').classList.toggle('hidden',hasData);
+  renderGoogle();
+  renderDock();
+  $('#content').innerHTML=hasData?modelHTML():'';
+  if(hasData)wireGrid();
 }
 
-/* ---------- Сетка модели ---------- */
-const KIND_LABEL = {income:'Доходы', expense:'Расходы', investing:'Инвестиции', financing:'Финансирование'};
-function renderModelGrid(d){
-  const grid = d.model_grid;
-  const has = grid && grid.rows.length > 0;
-  document.getElementById('model-empty').hidden = has;
-  document.getElementById('model-body').hidden = !has;
-  if (!has) return;
-  document.getElementById('model-head').innerHTML =
-    '<tr><th>Статья</th>' + grid.months.map(m => `<th class="num">${monthLabel(m)}</th>`).join('') + '<th class="num">Итого</th></tr>';
-  const body = document.getElementById('model-rows');
-  body.innerHTML = '';
-  let lastKind = null;
-  for (const row of grid.rows){
-    if (row.kind !== lastKind){
-      lastKind = row.kind;
-      body.insertAdjacentHTML('beforeend',
-        `<tr class="kindrow"><td>${KIND_LABEL[row.kind] || row.kind}</td><td colspan="${grid.months.length + 1}"></td></tr>`);
-    }
-    const cells = row.cells.map((c, i) => {
-      const m = grid.months[i];
-      if (c.origin === 'fact') return `<td class="cell"><span class="fact">${fmt.format(c.v)}</span></td>`;
-      if (c.origin === 'assumption')
-        return `<td class="cell"><button data-code="${row.code}" data-month="${m}" data-v="${c.v}" title="${c.src === 'survey' ? 'Допущение модели' : 'Ваше допущение'}">${fmt.format(c.v)}</button></td>`;
-      return `<td class="cell"><button class="add" data-code="${row.code}" data-month="${m}" data-v="">—</button></td>`;
+function modelHTML(){
+  const k=state.dash.kpi,inv=k.invest||{};
+  const cards=[
+    ['Выручка (модель)',money(k.revenue_total),''],
+    ['Расходы',money(k.expenses_total),''],
+    ['Чистая прибыль',money(k.net_profit),k.net_profit>=0?'pos':'neg'],
+    ['Маржа',(k.margin_pct==null?'—':k.margin_pct+'%'),k.margin_pct>=0?'pos':'neg'],
+    ['Остаток на счёте',money(k.cash_balance),''],
+    ['NPV проекта',inv.npv!=null?money(inv.npv):'—',inv.npv==null?'':(inv.npv>=0?'pos':'neg')],
+  ].map(([l,v,c])=>`<div class="kpi"><div class="lbl">${l}</div><div class="val ${c}">${v}</div></div>`).join('');
+  return `
+    <div class="section-head"><h2>Финмодель</h2>
+      ${state.dash.industry?`<span class="gchip">· ${escapeHtml(state.dash.industry.name)}</span>`:''}
+      <div class="spacer"></div></div>
+    <div class="kpis">${cards}</div>
+    <div class="grid-card">
+      <div class="grid-toolbar">
+        <input class="title" id="modelTitle" value="${escapeHtml(state.title)}"/>
+        <div class="spacer"></div>
+        <button class="chip-btn" id="exportBtn">⬇ Скачать .xlsx</button>
+        <span id="sheetsBtns"></span>
+      </div>
+      <div class="grid-wrap">${gridTableHTML()}</div>
+      <div class="legend">
+        <span><span class="sw fact"></span> факт из выписки (не редактируется)</span>
+        <span><span class="sw assume"></span> допущение — кликните и измените</span>
+        <span>Пустую ячейку тоже можно заполнить</span>
+      </div>
+    </div>`;
+}
+
+function gridTableHTML(){
+  const g=state.dash.model_grid,months=g.months;
+  const head=`<thead><tr><th class="rowname">Статья</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Итого</th></tr></thead>`;
+  let body='',lastKind=null;
+  g.rows.forEach(row=>{
+    if(row.kind!==lastKind){lastKind=row.kind;body+=`<tr class="group"><td colspan="${months.length+2}">${KIND[row.kind]||row.kind}</td></tr>`;}
+    const cells=row.cells.map((c,i)=>{
+      const editable=c.origin!=='fact';
+      const cls=c.origin==='fact'?'fact':(c.origin==='assumption'?'assume':'empty');
+      return `<td class="cell ${cls}" data-code="${row.code}" data-month="${months[i]}" ${editable?'contenteditable="true"':''}>${c.v?money(c.v):'—'}</td>`;
     }).join('');
-    body.insertAdjacentHTML('beforeend',
-      `<tr><td>${row.name}</td>${cells}<td class="cell"><b>${fmt.format(row.value_total)}</b></td></tr>`);
-  }
-  body.querySelectorAll('.cell button').forEach(btn => btn.addEventListener('click', () => editCell(btn)));
-}
-function editCell(btn){
-  const td = btn.parentElement;
-  const code = btn.dataset.code, month = btn.dataset.month, current = btn.dataset.v;
-  td.innerHTML = `<input type="text" inputmode="numeric" value="${current}">`;
-  const input = td.querySelector('input');
-  input.focus(); input.select();
-  const save = async () => {
-    const raw = input.value.replace(/[\s\u00a0]/g, '').replace(',', '.');
-    const amount = raw === '' ? 0 : parseFloat(raw);
-    if (isNaN(amount)) { toast('Нужно число'); return loadDashboard(); }
-    try {
-      await api('/assumptions', {method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({items:[{category_code: code, month, amount}]})});
-      toast(amount > 0 ? 'Допущение сохранено' : 'Допущение удалено');
-    } catch (e){ toast(e.message); }
-    loadDashboard();
-  };
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape'){ input.value = current; input.blur(); }});
-  input.addEventListener('blur', save, {once: true});
-}
-
-/* ---------- Слоты данных ---------- */
-function renderSlots(){
-  const block = document.getElementById('slots-block');
-  const p = state.profile;
-  if (!p || !p.industry || !p.industry.slots){ block.hidden = true; return; }
-  block.hidden = false;
-  document.getElementById('slots-title').textContent = 'Какие данные нужны · ' + p.industry.name;
-  document.getElementById('slots').innerHTML = p.industry.slots.map(s =>
-    `<div class="slot"><div class="s-name">${s.name}</div><div class="s-fmt">${s.formats}</div></div>`).join('');
-}
-
-/* ---------- Операции ---------- */
-function categoryOptions(selected){
-  return state.categories
-    .map(c => `<option value="${c.code}" ${c.code === selected ? 'selected' : ''}>${c.name}</option>`).join('');
-}
-async function loadOperations(){
-  const params = new URLSearchParams();
-  if (state.status) params.set('status', state.status);
-  if (state.q) params.set('q', state.q);
-  const data = await api('/operations?' + params);
-  const tbody = document.getElementById('ops-body');
-  if (!data.items.length){
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Операций не найдено</td></tr>'; return;
-  }
-  tbody.innerHTML = data.items.map(op => {
-    const badge = op.status === 'needs_review' ? '<span class="badge review">к подтверждению</span>'
-      : op.status === 'confirmed' ? '<span class="badge confirmed">подтверждена</span>'
-      : '<span class="badge">авто</span>';
-    return `<tr>
-      <td class="num">${op.date.split('-').reverse().join('.')}</td>
-      <td>${op.counterparty || '—'}</td>
-      <td class="desc" title="${(op.description || '').replaceAll('"', '&quot;')}">${op.description || '—'}</td>
-      <td class="num ${op.direction === 'in' ? 'pos' : ''}">${signedMoney(op.amount, op.direction)}</td>
-      <td><select class="cat" data-id="${op.id}">${categoryOptions(op.category_code)}</select></td>
-      <td>${badge}</td></tr>`;
-  }).join('');
-  tbody.querySelectorAll('select.cat').forEach(select => select.addEventListener('change', async () => {
-    try {
-      const result = await api('/operations/' + select.dataset.id, {
-        method: 'PATCH', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({category_code: select.value, apply_to_similar: true}),
-      });
-      const extra = result.applied_to_similar ? `, применено ещё к ${result.applied_to_similar}` : '';
-      toast('Статья сохранена' + extra);
-      loadOperations(); loadDashboard();
-    } catch (err) { toast(err.message); }
-  }));
-}
-document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  chip.classList.add('active');
-  state.status = chip.dataset.status;
-  loadOperations();
-}));
-document.getElementById('op-search').addEventListener('input', event => {
-  state.q = event.target.value.trim();
-  clearTimeout(state._searchT); state._searchT = setTimeout(loadOperations, 300);
-});
-
-/* ---------- Загрузка файлов ---------- */
-const dropzone = document.getElementById('dropzone');
-const fileInput = document.getElementById('file-input');
-dropzone.addEventListener('click', () => fileInput.click());
-dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
-dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
-dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
-dropzone.addEventListener('drop', e => {
-  e.preventDefault(); dropzone.classList.remove('drag');
-  if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', () => { if (fileInput.files.length) uploadFile(fileInput.files[0]); });
-async function uploadFile(file){
-  const resultEl = document.getElementById('upload-result');
-  resultEl.textContent = 'Обработка файла «' + file.name + '»…';
-  const form = new FormData();
-  form.append('file', file);
-  try {
-    const r = await api('/imports/upload', {method: 'POST', body: form});
-    resultEl.innerHTML =
-      `формат: <b>${r.format}</b> · строк: <b>${r.total_rows}</b> · импортировано: <b>${r.imported}</b> · ` +
-      `дубликатов: <b>${r.duplicates}</b> · к подтверждению: <b>${r.needs_review}</b>` +
-      (r.ai_used ? ' · ИИ-категоризация применена' : '');
-    toast('Выписка обработана: +' + r.imported + ' операций');
-    loadImports(); loadDashboard(); loadOperations();
-  } catch (err) {
-    resultEl.textContent = 'Ошибка загрузки: ' + err.message;
-    toast('Ошибка загрузки: ' + err.message);
-  }
-  finally { fileInput.value = ''; }
-}
-async function loadImports(){
-  const logs = await api('/imports');
-  const tbody = document.getElementById('imports-body');
-  if (!logs.length) return;
-  tbody.innerHTML = logs.map(l =>
-    `<tr><td class="num">${new Date(l.created_at).toLocaleString('ru-RU')}</td>` +
-    `<td>${l.filename}</td><td>${l.format}</td>` +
-    `<td class="num">${l.imported}</td><td class="num">${l.duplicates}</td><td class="num">${l.needs_review}</td></tr>`).join('');
-}
-
-/* ==================== ВИЗАРД-ОПРОСНИК ==================== */
-const wiz = {open:false, idx:0, answers:{}, recog:null};
-const wizardEl = document.getElementById('wizard');
-const wcard = document.getElementById('wcard');
-
-function showIfOk(q){
-  if (!q.show_if) return true;
-  return Object.entries(q.show_if).every(([key, val]) => {
-    const answer = wiz.answers[key];
-    return Array.isArray(val) ? val.includes(answer) : answer === val;
+    body+=`<tr><td class="rowname" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>${cells}<td class="total">${money(row.value_total)}</td></tr>`;
   });
-}
-function visibleQuestions(){ return state.survey.questions.filter(showIfOk); }
-function openWizard(){
-  if (!state.survey) return toast('Опросник ещё загружается');
-  wiz.open = true; wiz.idx = 0;
-  wiz.answers = state.profile ? {...state.profile.answers} : {};
-  delete wiz.answers._ai_summary;
-  wizardEl.classList.add('open');
-  renderWizard();
-}
-function closeWizard(){ stopVoice(); wiz.open = false; wizardEl.classList.remove('open'); }
-function openExport(){
-  wiz.open = true; wizardEl.classList.add('open'); stopVoice();
-  const suggested = (state.profile && state.profile.answers && state.profile.answers.industry)
-    ? '' : '';
-  wcard.innerHTML = `
-    <div class="wq">Создание финансовой модели</div>
-    <div class="whint">Файл Excel: «Допущения» со сценариями Пессимист/База/Оптимист, помесячная модель на 36 месяцев,
-    годовая сводка, дашборд с NPV / IRR / окупаемостью и диаграммами, матрица чувствительности, инструкция.
-    Все ключевые ячейки имеют имена — удобно работать с ИИ-агентом прямо в Excel.</div>
-    <div class="wbody"><div class="winput">
-      <input id="exp-title" type="text" placeholder="Название проекта" value="${suggested}">
-    </div></div>
-    <div class="wnav">
-      <button class="btn ghost" id="exp-close">Закрыть</button>
-      <div class="spacer"></div>
-      <button class="btn" id="exp-go">Скачать .xlsx</button>
-    </div>`;
-  const input = wcard.querySelector('#exp-title');
-  input.focus();
-  const go = () => {
-    const t = input.value.trim() || 'Новый проект';
-    window.location.href = '/api/model/export?title=' + encodeURIComponent(t);
-    toast('Модель «' + t + '» формируется — файл скачается сам');
-    setTimeout(closeWizard, 600);
-  };
-  wcard.querySelector('#exp-go').addEventListener('click', go);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
-  wcard.querySelector('#exp-close').addEventListener('click', closeWizard);
-}
-document.getElementById('open-export').addEventListener('click', openExport);
-wizardEl.addEventListener('click', e => { if (e.target === wizardEl) closeWizard(); });
-
-function renderWizard(){
-  stopVoice();
-  const questions = visibleQuestions();
-  if (wiz.idx >= questions.length) return finishWizard();
-  const q = questions[wiz.idx];
-  const progress = questions.map((_, i) => `<i class="${i < wiz.idx ? 'done' : ''}"></i>`).join('');
-  let body = '';
-  if (q.type === 'select'){
-    body = '<div class="wopts">' + q.options.map(o =>
-      `<button class="wopt ${wiz.answers[q.id] === o.value ? 'sel' : ''}" data-value="${o.value}" data-custom="${o.custom_input ? 1 : ''}">${o.label}</button>`).join('') + '</div>' +
-      `<div class="winput" id="wcustomwrap" ${wiz.answers[q.id] === 'other' ? '' : 'hidden'} style="margin-top:10px">
-        <input id="wcustominput" type="text" placeholder="Ваш вариант" value="${wiz.answers[q.id + '_custom'] || ''}">
-        <button class="btn small" id="wcustomok">Ок</button>
-      </div>`;
-  } else if (q.type === 'custom_list'){
-    const pairs = Array.isArray(wiz.answers[q.id]) ? wiz.answers[q.id] : [];
-    body = `<div class="wcustom" id="wpairs">` + pairs.map((p, i) =>
-      `<div class="wpair"><input data-i="${i}" data-k="name" placeholder="Название" value="${p.name || ''}">
-       <input data-i="${i}" data-k="value" placeholder="Значение" value="${p.value || ''}">
-       <button class="del" data-i="${i}" title="Удалить">×</button></div>`).join('') +
-      `</div><button class="btn ghost small" id="wpairadd" style="margin-top:10px">+ Добавить поле</button>`;
-  } else {
-    const val = wiz.answers[q.id] != null ? wiz.answers[q.id] : '';
-    body = `<div class="winput">
-      <input id="winput" type="text" inputmode="numeric" placeholder="${q.hint || 'Введите число'}" value="${val}">
-      <button class="mic" id="wmic" title="Ответить голосом" hidden>🎤</button>
-    </div>`;
-  }
-  wcard.innerHTML = `
-    <div class="wprog">${progress}</div>
-    <div class="wq">${q.text}</div>
-    ${q.hint && (q.type === 'select' || q.type === 'custom_list') ? `<div class="whint">${q.hint}</div>` : ''}
-    ${q.voice_hint ? `<div class="whint">${q.voice_hint}</div>` : ''}
-    <div class="wbody">${body}</div>
-    <div class="wtranscript" id="wtranscript"></div>
-    <div class="wnav">
-      ${wiz.idx > 0 ? '<button class="btn ghost" id="wback">Назад</button>' : '<button class="btn ghost" id="wclose">Закрыть</button>'}
-      <div class="spacer"></div>
-      ${q.optional && q.type !== 'custom_list' ? '<button class="btn ghost" id="wskip">Пропустить</button>' : ''}
-      ${q.type !== 'select' ? '<button class="btn" id="wnext">' + (q.type === 'custom_list' ? 'Готово' : 'Далее') + '</button>' : ''}
-    </div>`;
-
-  if (q.type === 'select'){
-    const customWrap = wcard.querySelector('#wcustomwrap');
-    wcard.querySelectorAll('.wopt').forEach(btn => btn.addEventListener('click', () => {
-      if (btn.dataset.custom){
-        wcard.querySelectorAll('.wopt').forEach(b => b.classList.toggle('sel', b === btn));
-        customWrap.hidden = false;
-        customWrap.querySelector('input').focus();
-        return;
-      }
-      wiz.answers[q.id] = btn.dataset.value;
-      delete wiz.answers[q.id + '_custom'];
-      wiz.idx++; renderWizard();
-    }));
-    if (customWrap){
-      const apply = () => {
-        const text = customWrap.querySelector('input').value.trim();
-        if (!text) return toast('Введите свой вариант');
-        wiz.answers[q.id] = 'other';
-        wiz.answers[q.id + '_custom'] = text;
-        wiz.idx++; renderWizard();
-      };
-      customWrap.querySelector('#wcustomok').addEventListener('click', apply);
-      customWrap.querySelector('input').addEventListener('keydown', e => { if (e.key === 'Enter') apply(); });
-    }
-  } else if (q.type === 'custom_list'){
-    const readPairs = () => {
-      const pairs = [];
-      wcard.querySelectorAll('#wpairs .wpair').forEach(row => {
-        const name = row.querySelector('input[data-k=name]').value.trim();
-        const value = row.querySelector('input[data-k=value]').value.trim();
-        if (name) pairs.push({name, value});
-      });
-      return pairs;
-    };
-    wcard.querySelector('#wpairadd').addEventListener('click', () => {
-      wiz.answers[q.id] = [...readPairs(), {name: '', value: ''}];
-      renderWizard();
-    });
-    wcard.querySelectorAll('#wpairs .del').forEach(btn => btn.addEventListener('click', () => {
-      const pairs = readPairs(); pairs.splice(+btn.dataset.i, 1);
-      wiz.answers[q.id] = pairs; renderWizard();
-    }));
-    wcard.querySelector('#wnext').addEventListener('click', () => {
-      const pairs = readPairs();
-      if (pairs.length) wiz.answers[q.id] = pairs; else delete wiz.answers[q.id];
-      wiz.idx++; renderWizard();
-    });
-  } else {
-    const input = wcard.querySelector('#winput');
-    input.focus();
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') goNext(q); });
-    wcard.querySelector('#wnext').addEventListener('click', () => goNext(q));
-  }
-  const back = wcard.querySelector('#wback');
-  if (back) back.addEventListener('click', () => { wiz.idx--; renderWizard(); });
-  const close = wcard.querySelector('#wclose');
-  if (close) close.addEventListener('click', closeWizard);
-  const skip = wcard.querySelector('#wskip');
-  if (skip) skip.addEventListener('click', () => { delete wiz.answers[q.id]; wiz.idx++; renderWizard(); });
-  setupVoice(q);
-}
-function goNext(q){
-  const input = wcard.querySelector('#winput');
-  const parsed = parseSpokenNumber(input.value);
-  if (q.type === 'number' && parsed == null && !q.optional){ toast('Нужно число — цифрами или голосом'); return; }
-  if (parsed != null) wiz.answers[q.id] = parsed;
-  else if (input.value.trim()) wiz.answers[q.id] = input.value.trim();
-  else delete wiz.answers[q.id];
-  wiz.idx++; renderWizard();
-}
-async function finishWizard(){
-  const aiOn = state.health && state.health.ai_enabled;
-  wcard.innerHTML = `<div class="wq">${aiOn ? 'ИИ собирает модель…' : 'Собираю модель по отраслевым правилам…'}</div>
-    <div class="whint">${aiOn ? 'Claude уточняет допущения: сезонность, доли затрат, специфика вашего бизнеса. Обычно 10–20 секунд.' : ''}</div>`;
-  try {
-    const r = await api('/survey', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({answers: wiz.answers})});
-    const slots = r.industry.slots.map(s => `<div class="slot"><div class="s-name">${s.name}</div><div class="s-fmt">${s.formats}</div></div>`).join('');
-    const aiBlock = r.ai_used
-      ? `<div class="ai-summary"><b>🤖 МОДЕЛЬ СОБРАЛ ИИ</b><br>${r.ai_summary || 'Допущения уточнены с учётом профиля бизнеса.'}</div>`
-      : `<div class="ai-off">Собрано по отраслевым правилам. Чтобы модель собирал ИИ (сезонность, реалистичные доли, ваша специфика) — добавьте ключ <code>ANTHROPIC_API_KEY</code> в переменные окружения сервера.</div>`;
-    wcard.innerHTML = `
-      <div class="wq">Готово: модель собрана</div>
-      <div class="whint">Отрасль — <b>${r.industry.name}</b> · горизонт <b>${r.horizon} мес.</b> · допущений: <b>${r.assumptions_created}</b>.
-      NPV, IRR и окупаемость уже на дашборде; по мере загрузки данных факт будет вытеснять допущения.</div>
-      ${aiBlock}
-      <div class="wq" style="font-size:15px;margin-top:18px">Что загрузить, чтобы заменить допущения фактом:</div>
-      <div class="wdone-list">${slots}</div>
-      <div class="wnav"><div class="spacer"></div>
-        <button class="btn ghost" id="wgoupload">К загрузке данных</button>
-        <button class="btn" id="wgomodel">Открыть модель</button></div>`;
-    wcard.querySelector('#wgomodel').addEventListener('click', () => { closeWizard(); switchView('model'); });
-    wcard.querySelector('#wgoupload').addEventListener('click', () => { closeWizard(); switchView('upload'); });
-    await reloadAll();
-  } catch (e){
-    wcard.innerHTML = `<div class="wq">Не получилось: ${e.message}</div>
-      <div class="wnav"><div class="spacer"></div><button class="btn" id="wretry">Назад</button></div>`;
-    wcard.querySelector('#wretry').addEventListener('click', () => { wiz.idx = 0; renderWizard(); });
-  }
+  return `<table class="model">${head}<tbody>${body}</tbody></table>`;
 }
 
-/* ---------- Голосовой ввод (Web Speech API) ---------- */
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-function parseSpokenNumber(text){
-  if (text == null) return null;
-  const s = String(text).toLowerCase();
-  const compact = s.replace(/[\s\u00a0]/g, '');
-  const m = compact.match(/\d+(?:[.,]\d+)?/);
-  if (!m) return null;
-  let n = parseFloat(m[0].replace(',', '.'));
-  if (/миллион|млн/.test(s) && n < 10000) n *= 1e6;
-  else if (/тысяч|тыс/.test(s) && n < 100000) n *= 1e3;
-  return n;
-}
-function matchOption(q, transcript){
-  const t = transcript.toLowerCase();
-  const synonyms = {
-    services: ['услуг', 'агентств', 'консалт', 'сервис'],
-    retail: ['розниц', 'магазин', 'торговл', 'маркетплейс', 'екоммерс', 'e-com'],
-    food: ['общепит', 'кафе', 'ресторан', 'кофейн', 'бар', 'столов'],
-    saas: ['подписк', 'саас', 'sa as', 'софт', 'приложени', 'айти', 'it'],
-    production: ['производств', 'завод', 'опт', 'цех'],
-    invest: ['инвест', 'проект', 'строительств', 'парк'],
-    existing: ['работает', 'действующ', 'есть'],
-    new: ['запуск', 'новый', 'старт', 'открыва'],
-    ip: ['ип', 'индивидуальн'], ooo: ['ооо', 'общество с огранич'],
-    ao: ['ао', 'акционерн'], gk: ['гк', 'групп', 'холдинг'], self: ['самозанят'],
-    own: ['свои', 'собственн'], loan: ['кредит', 'займ'], investor: ['инвестор'], mixed: ['смешан'],
-    usn6: ['шесть', '6', 'доход'], usn15: ['пятнадцать', '15', 'минус'],
-    osno: ['осно', 'общая', 'ндс'], npd: ['патент', 'самозанят', 'нпд'], unknown: ['не знаю'],
-  };
-  for (const option of q.options){
-    const keys = [option.label.toLowerCase(), ...(synonyms[option.value] || [])];
-    if (keys.some(k => t.includes(k))) return option.value;
-  }
-  return null;
-}
-function setupVoice(q){
-  if (!SR) return;
-  const transcriptEl = wcard.querySelector('#wtranscript');
-  if (q.type === 'select'){
-    const nav = wcard.querySelector('.wnav .spacer');
-    const btn = document.createElement('button');
-    btn.className = 'mic'; btn.title = 'Ответить голосом'; btn.textContent = '🎤';
-    nav.parentElement.insertBefore(btn, nav.nextSibling);
-    btn.addEventListener('click', () => toggleVoice(btn, transcriptEl, result => {
-      const value = matchOption(q, result);
-      if (value){
-        const opt = q.options.find(o => o.value === value);
-        if (opt && opt.custom_input){ transcriptEl.textContent = 'Введите свой вариант текстом'; return; }
-        wiz.answers[q.id] = value; wiz.idx++; renderWizard();
-      }
-      else transcriptEl.textContent = `Услышал: «${result}» — не понял вариант, нажмите кнопку`;
-    }));
-    return;
-  }
-  const mic = wcard.querySelector('#wmic');
-  if (!mic) return;
-  mic.hidden = false;
-  mic.addEventListener('click', () => toggleVoice(mic, transcriptEl, result => {
-    const input = wcard.querySelector('#winput');
-    const n = parseSpokenNumber(result);
-    if (n != null){ input.value = fmt.format(n); transcriptEl.textContent = `Услышал: «${result}»`; }
-    else { transcriptEl.textContent = `Услышал: «${result}» — не разобрал число, попробуйте цифрами`; }
-  }));
-}
-function toggleVoice(btn, transcriptEl, onResult){
-  if (wiz.recog){ stopVoice(); return; }
-  const recognition = new SR();
-  recognition.lang = 'ru-RU';
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-  wiz.recog = recognition; wiz.recBtn = btn;
-  btn.classList.add('rec');
-  transcriptEl.textContent = 'Слушаю…';
-  recognition.onresult = e => {
-    const last = e.results[e.results.length - 1];
-    transcriptEl.textContent = '«' + last[0].transcript.trim() + '»';
-    if (last.isFinal){ const text = last[0].transcript.trim(); stopVoice(); onResult(text); }
-  };
-  recognition.onerror = () => { transcriptEl.textContent = 'Микрофон недоступен — введите вручную'; stopVoice(); };
-  recognition.onend = () => stopVoice();
-  recognition.start();
-}
-function stopVoice(){
-  if (wiz.recog){ try { wiz.recog.onend = null; wiz.recog.stop(); } catch(e){} wiz.recog = null; }
-  if (wiz.recBtn){ wiz.recBtn.classList.remove('rec'); wiz.recBtn = null; }
+function wireGrid(){
+  $('#exportBtn').onclick=()=>{const t=($('#modelTitle').value||'Финмодель').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
+  $('#modelTitle').addEventListener('change',e=>state.title=e.target.value.trim()||'Финмодель');
+  document.querySelectorAll('td.cell[contenteditable]').forEach(td=>{
+    td.addEventListener('focus',()=>{if(td.textContent.trim()==='—')td.textContent='';});
+    td.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();td.blur();}});
+    td.addEventListener('blur',()=>saveCell(td));
+  });
+  renderSheetsButtons();
 }
 
-/* ---------- Старт ---------- */
-async function reloadAll(){
-  const profileData = await api('/profile');
-  state.profile = profileData.profile;
-  await Promise.all([loadDashboard(), loadOperations(), loadImports()]);
+async function saveCell(td){
+  const amount=parseAmount(td.textContent);
+  if(amount===null){toast('Не число — правка отменена','err');return refreshAll();}
+  try{
+    await api('/assumptions',{method:'PUT',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items:[{category_code:td.dataset.code,month:td.dataset.month,amount}]})});
+    toast('Сохранено · '+fmtMonth(td.dataset.month),'ok');
+    await refreshAll();
+  }catch(err){toast('Ошибка сохранения: '+err.message,'err');refreshAll();}
 }
-(async function init(){
-  try { state.health = await api('/health'); } catch (e) { state.health = null; }
-  renderHealth();
-  try {
-    [state.categories, state.survey] = await Promise.all([api('/categories'), api('/survey')]);
-    await reloadAll();
-  } catch (err) { toast('Сервис недоступен: ' + err.message); }
-})();
+
+async function upload(files){
+  files=[...files];if(!files.length)return;
+  toast('Загрузка: '+files.map(f=>f.name).join(', '));
+  let imp=0,dup=0,fail=0;
+  for(const f of files){
+    const fd=new FormData();fd.append('file',f);
+    try{const r=await api('/imports/upload',{method:'POST',body:fd});imp+=r.imported;dup+=r.duplicates;}
+    catch(err){fail++;toast(f.name+': '+err.message,'err');}
+  }
+  toast(`Импортировано ${imp}, дублей ${dup}`+(fail?`, ошибок ${fail}`:''),fail?'err':'ok');
+  await refreshAll();
+  if($('#content').innerHTML)$('#content').scrollIntoView({behavior:'smooth'});
+}
+
+async function refreshAll(){
+  try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}
+  try{state.imports=await api('/imports');}catch(e){state.imports=[];}
+  render();
+}
+async function refreshGoogle(){try{state.google=await api('/google/status');}catch(e){state.google=null;}}
+
+function renderGoogle(){
+  const g=state.google,chip=$('#gchip'),btn=$('#gbtn');
+  if(!g||!g.configured){chip.classList.add('hidden');btn.classList.add('hidden');return;}
+  chip.classList.remove('hidden');
+  $('#gdot').className='dot'+(g.connected?' on':'');
+  $('#gtext').textContent=g.connected?'Google подключён':'Google не подключён';
+  if(!g.connected){btn.classList.remove('hidden');btn.textContent='Подключить Google';btn.onclick=()=>location.href='/api/google/auth';}
+  else btn.classList.add('hidden');
+}
+function renderSheetsButtons(){
+  const host=$('#sheetsBtns');if(!host)return;const g=state.google;
+  if(!g||!g.configured||!g.connected){host.innerHTML='';return;}
+  host.innerHTML=`<button class="chip-btn" id="pushBtn">↗ В Google Sheets</button> <button class="chip-btn ghost" id="pullBtn">Забрать правки</button>`;
+  $('#pushBtn').onclick=async()=>{try{toast('Отправляю в Google Sheets…');const t=($('#modelTitle').value||'Финмодель').trim();const r=await api('/sheets/push?title='+encodeURIComponent(t),{method:'POST'});toast('Готово — таблица открыта','ok');window.open(r.url,'_blank');}catch(e){toast('Ошибка: '+e.message,'err');}};
+  $('#pullBtn').onclick=async()=>{try{toast('Читаю правки из таблицы…');const r=await api('/sheets/pull',{method:'POST'});const n=Object.keys(r.updated||{}).length;toast(n?('Обновлено входов: '+n):'Изменений нет','ok');await refreshAll();}catch(e){toast('Ошибка: '+e.message,'err');}};
+}
+
+function renderDock(){
+  const dock=$('#dock'),list=state.imports||[];
+  if(!list.length){dock.classList.add('hidden');return;}
+  dock.classList.remove('hidden');
+  dock.innerHTML=`<span class="dlabel">Документы</span>`+list.slice(0,14).map(d=>
+    `<div class="doc"><span class="fmt">${escapeHtml(d.format)}</span><span class="fn" title="${escapeHtml(d.filename)}">${escapeHtml(d.filename)}</span><span class="meta">+${d.imported}</span></div>`
+  ).join('');
+}
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function toggleMic(){
+  if(!SR){toast('Голосовой ввод недоступен в этом браузере','err');return;}
+  if(state.rec){state.rec.stop();return;}
+  const rec=new SR();rec.lang='ru-RU';rec.interimResults=true;rec.continuous=false;
+  state.rec=rec;$('#micBtn').classList.add('rec');
+  const ta=$('#ta'),base=ta.value;
+  rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;$('#transcript').textContent=s;ta.value=(base?base+' ':'')+s;};
+  rec.onerror=()=>{toast('Микрофон недоступен','err');stopMic();};
+  rec.onend=stopMic;rec.start();
+}
+function stopMic(){if(state.rec){try{state.rec.stop()}catch(e){}}state.rec=null;$('#micBtn').classList.remove('rec');$('#transcript').textContent='';}
+
+function send(){
+  const rows=(state.dash&&state.dash.model_grid&&state.dash.model_grid.rows)||[];
+  if(rows.length){$('#content').scrollIntoView({behavior:'smooth'});toast('Модель ниже — редактируйте ячейки прямо в таблице');return;}
+  toast('Прикрепите выписку — и модель развернётся здесь');
+  $('#fileInput').click();
+}
+
+loadTheme();initUI();refreshGoogle().then(refreshAll);
 </script>
 </body>
 </html>

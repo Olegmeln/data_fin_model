@@ -1,3 +1,7 @@
 
 # Vercel
 .vercel/
+
+__pycache__/
+*.pyc
+*.db
