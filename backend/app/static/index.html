@@ -1,358 +1,305 @@
 <!doctype html>
-<html lang="ru" data-theme="light">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>data_fin_model — рабочий стол финмодели</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>data_fin_model — financial workspace</title>
 <style>
-:root{
-  --bg:#f7f6f3; --surface:#fff; --surface-2:#f2f0ec; --text:#201e1b; --muted:#6d675f;
-  --border:#e7e2da; --accent:#c96442; --accent-ink:#fff; --accent-soft:#f4e7e0;
-  --fact:#2f855a; --fact-bg:#eaf5ee; --assume:#2b6cb0; --assume-bg:#e9f0fb;
-  --shadow:0 1px 2px rgba(30,25,20,.06),0 10px 30px rgba(30,25,20,.06);
-  --radius:16px; --radius-sm:10px;
-}
-html[data-theme="dark"]{
-  --bg:#1a1917; --surface:#232220; --surface-2:#2b2a27; --text:#eceae7; --muted:#a29c94;
-  --border:#34322d; --accent:#e08a68; --accent-ink:#1a1917; --accent-soft:#3a2b23;
-  --fact:#68d391; --fact-bg:#22332a; --assume:#7cb0f0; --assume-bg:#232f40;
-  --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4);
-}
+:root{--bg:#f7f6f3;--surface:#fff;--surface-2:#f2f0ec;--text:#201e1b;--muted:#6d675f;--border:#e7e2da;
+ --accent:#c96442;--accent-ink:#fff;--accent-soft:#f4e7e0;--fact:#2f855a;--fact-bg:#eaf5ee;--assume:#2b6cb0;--assume-bg:#e9f0fb;
+ --shadow:0 1px 2px rgba(30,25,20,.06),0 10px 30px rgba(30,25,20,.06);--r:14px;--r2:9px}
+html[data-theme="dark"]{--bg:#171614;--surface:#211f1d;--surface-2:#2a2825;--text:#eceae7;--muted:#a29c94;--border:#332f2a;
+ --accent:#e08a68;--accent-ink:#171614;--accent-soft:#3a2b23;--fact:#68d391;--fact-bg:#22332a;--assume:#7cb0f0;--assume-bg:#232f40;
+ --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);
-  font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
-  padding-bottom:84px;transition:background .25s,color .25s}
-button{font:inherit;cursor:pointer}
-.hidden{display:none!important}
-
-/* top bar */
-.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
-  gap:12px;padding:12px 22px;background:color-mix(in srgb,var(--bg) 82%,transparent);
-  backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.brand{display:flex;align-items:center;gap:11px;font-weight:650;letter-spacing:-.01em}
-.logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#e8a37f);
-  display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;box-shadow:var(--shadow)}
-.brand small{display:block;font-weight:450;color:var(--muted);font-size:11.5px;letter-spacing:0}
-.top-actions{display:flex;align-items:center;gap:8px}
-.chip-btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border-radius:999px;
-  border:1px solid var(--border);background:var(--surface);color:var(--text);transition:.15s}
-.chip-btn:hover{border-color:var(--accent);color:var(--accent)}
-.chip-btn.ghost{background:transparent}
-.icon-btn{width:36px;height:36px;border-radius:999px;border:1px solid var(--border);background:var(--surface);
-  color:var(--text);display:grid;place-items:center;font-size:16px;transition:.15s}
-.icon-btn:hover{border-color:var(--accent);color:var(--accent)}
-.gchip{font-size:12.5px;color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;background:var(--muted)}
-.dot.on{background:var(--fact)}
-
-/* workspace */
-.workspace{max-width:1180px;margin:0 auto;padding:26px 22px 8px}
-
-/* composer */
-.composer{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:var(--shadow);padding:14px 14px 12px;transition:border-color .15s,box-shadow .15s}
+body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif}
+button{font:inherit;cursor:pointer}.hidden{display:none!important}
+.app{display:grid;grid-template-columns:250px 1fr;height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.side-top{display:flex;align-items:center;gap:10px;padding:14px 16px}
+.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#e8a37f);display:grid;place-items:center;color:#fff;font-weight:800}
+.brand b{font-weight:650}.brand small{display:block;color:var(--muted);font-size:11px}
+.newbtn{margin:4px 12px 8px;height:38px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.search{margin:0 12px 8px;height:34px;border:1px solid var(--border);background:var(--surface-2);border-radius:9px;color:var(--text);padding:0 11px;font:inherit}
+.plabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 18px 4px}
+.projects{flex:1;overflow:auto;padding:0 8px}
+.proj{padding:9px 11px;border-radius:9px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.proj:hover{background:var(--surface-2)}.proj.active{background:var(--accent-soft)}
+.proj .pn{font-weight:550;font-size:13.5px}.proj .pm{font-size:11.5px;color:var(--muted);display:flex;gap:7px}
+.tag{font-size:10.5px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--muted)}
+.side-foot{border-top:1px solid var(--border);padding:10px 12px;display:flex;align-items:center;gap:10px}
+.ava{width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:12px}
+.gear{margin-left:auto;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.ptitle{font-size:16px;font-weight:650;border:0;background:transparent;color:var(--text);min-width:200px}
+.sp{flex:1}
+.btn{height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text);display:inline-flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}.btn.acc{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}.dot.on{background:var(--fact)}
+.tabs{display:flex;gap:4px;padding:8px 16px 0;border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:8px 14px;border-radius:9px 9px 0 0;color:var(--muted);border:1px solid transparent;border-bottom:0;white-space:nowrap;background:transparent}
+.tab:hover{color:var(--text)}.tab.active{color:var(--accent);background:var(--surface);border-color:var(--border)}
+.content{flex:1;overflow:auto;padding:20px}.wrap{max-width:1060px;margin:0 auto}
+.composer{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;max-width:720px;margin:0 auto}
 .composer.drag{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
-.composer textarea{width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);
-  font:inherit;font-size:16px;min-height:26px;max-height:180px;padding:6px 8px}
-.composer textarea::placeholder{color:var(--muted)}
-.composer-row{display:flex;align-items:center;gap:8px;padding-top:6px}
-.composer-row .spacer{flex:1}
-.send{width:40px;height:40px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);
-  font-size:17px;display:grid;place-items:center;transition:.15s}
-.send:hover{filter:brightness(1.05)}
-.mic.rec{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);animation:pulse 1.2s infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--accent-soft)}50%{box-shadow:0 0 0 6px var(--accent-soft)}}
-
-/* hero */
-.hero{text-align:center;padding:40px 0 10px}
-.hero h1{font-size:30px;letter-spacing:-.02em;margin:0 0 8px}
-.hero p{color:var(--muted);margin:0 auto 26px;max-width:520px}
-.hero .composer{max-width:720px;margin:0 auto;text-align:left}
-.suggest{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:16px}
-.suggest button{background:var(--surface-2);border:1px solid var(--border);border-radius:999px;
-  padding:9px 15px;color:var(--text);font-size:13.5px;transition:.15s}
-.suggest button:hover{border-color:var(--accent);color:var(--accent)}
-.transcript{min-height:18px;color:var(--accent);font-size:13px;padding:2px 8px}
-
-/* model view */
-.section-head{display:flex;align-items:center;gap:12px;margin:22px 2px 12px}
-.section-head h2{font-size:18px;margin:0;letter-spacing:-.01em}
-.section-head .spacer{flex:1}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-top:6px}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 15px;box-shadow:var(--shadow)}
-.kpi .lbl{font-size:12px;color:var(--muted);margin-bottom:6px}
-.kpi .val{font-size:21px;font-weight:680;letter-spacing:-.01em}
-.kpi .val.pos{color:var(--fact)} .kpi .val.neg{color:#c0392b}
-
-.grid-card{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:var(--shadow);overflow:hidden}
-.grid-toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.grid-toolbar input.title{border:1px solid var(--border);background:var(--surface-2);color:var(--text);
-  border-radius:9px;padding:8px 11px;font:inherit;min-width:200px}
-.grid-wrap{overflow:auto;max-height:64vh}
-table.model{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px;white-space:nowrap}
-table.model th,table.model td{padding:8px 11px;border-bottom:1px solid var(--border);text-align:right}
-table.model thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);color:var(--muted);
-  font-weight:600;text-align:right;border-bottom:1px solid var(--border)}
-table.model th.rowname,table.model td.rowname{position:sticky;left:0;z-index:1;text-align:left;
-  background:var(--surface);min-width:210px;max-width:260px;overflow:hidden;text-overflow:ellipsis;font-weight:520}
-table.model thead th.rowname{z-index:3;background:var(--surface-2)}
-tr.group td{background:var(--surface-2);color:var(--muted);font-weight:650;text-transform:uppercase;
-  letter-spacing:.04em;font-size:11px;text-align:left;position:sticky;left:0}
-td.cell{cursor:text;color:var(--text)}
-td.cell.fact{background:var(--fact-bg);color:var(--fact);font-weight:600}
-td.cell.assume{background:var(--assume-bg);color:var(--assume)}
-td.cell.empty{color:var(--muted)}
+.composer textarea{width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);font:inherit;font-size:16px;min-height:44px}
+.crow{display:flex;gap:8px;align-items:center}.icon{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
+.icon.rec{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.send{width:40px;height:40px;border-radius:11px;border:0;background:var(--accent);color:var(--accent-ink);font-size:17px}
+.hero h1{font-size:26px;text-align:center;margin:6px 0 20px;letter-spacing:-.02em}
+.transcript{min-height:16px;color:var(--accent);font-size:13px;padding:0 6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:13px 15px;box-shadow:var(--shadow)}
+.kpi .l{font-size:12px;color:var(--muted)}.kpi .v{font-size:20px;font-weight:680;margin-top:5px}.v.pos{color:var(--fact)}.v.neg{color:#c0392b}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.card h3{margin:0;padding:13px 16px;font-size:14px;border-bottom:1px solid var(--border)}.card .bd{padding:14px 16px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th,td{padding:8px 11px;border-bottom:1px solid var(--border);text-align:right}
+th:first-child,td:first-child{text-align:left}
+thead th{background:var(--surface-2);color:var(--muted);font-weight:600;position:sticky;top:0;z-index:1}
+td.cell{cursor:text}td.cell.f{background:var(--fact-bg);color:var(--fact);font-weight:600}td.cell.a{background:var(--assume-bg);color:var(--assume)}td.cell.e{color:var(--muted)}
 td.cell:focus{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
-td.total{font-weight:680;background:var(--surface-2)}
-.legend{display:flex;gap:16px;padding:9px 14px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);flex-wrap:wrap}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
-.sw.fact{background:var(--fact)} .sw.assume{background:var(--assume)}
-
-/* dock */
-.dock{position:fixed;left:0;right:0;bottom:0;z-index:25;background:color-mix(in srgb,var(--surface) 92%,transparent);
-  backdrop-filter:blur(10px);border-top:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;overflow-x:auto}
-.dock .dlabel{font-size:12px;color:var(--muted);white-space:nowrap;margin-right:2px}
-.doc{display:inline-flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;padding:7px 11px;white-space:nowrap;box-shadow:var(--shadow)}
-.doc .fmt{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:2px 6px;border-radius:5px}
-.doc .fn{font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis}
-.doc .meta{font-size:11px;color:var(--muted)}
-
-/* toast */
+tr.grp td{background:var(--surface-2);color:var(--muted);text-transform:uppercase;font-size:11px;letter-spacing:.04em;text-align:left;font-weight:650}
+.gridwrap{overflow:auto;max-height:62vh}
+.rowname{position:sticky;left:0;background:var(--surface);z-index:1;font-weight:520;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+thead th.rowname{z-index:2;background:var(--surface-2)}
+.total{font-weight:680;background:var(--surface-2)}
+.legend{display:flex;gap:14px;padding:9px 16px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.legend b{width:11px;height:11px;border-radius:3px;display:inline-block;vertical-align:-1px;margin-right:5px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:6px}.fg label{font-size:12.5px;color:var(--muted)}
+.fg input,.fg select{height:38px;border:1px solid var(--border);background:var(--surface-2);border-radius:9px;color:var(--text);padding:0 11px;font:inherit}
+.fsec{grid-column:1/-1;font-weight:650;margin-top:6px;display:flex;align-items:center;gap:8px}.fsec::after{content:"";flex:1;height:1px;background:var(--border)}
+.docgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.doc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:13px;box-shadow:var(--shadow)}
+.doc .fmt{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:5px}
+.doc .n{font-weight:550;margin:8px 0 3px}.doc .m{font-size:12px;color:var(--muted)}
+.src{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.srcbtn{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:9px;padding:9px 13px}.srcbtn:hover{border-color:var(--accent);color:var(--accent)}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+.badge{font-size:10.5px;background:var(--accent-soft);color:var(--accent);border-radius:5px;padding:2px 7px;margin-left:8px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:40}.ov.open{display:block}
+.panel{position:fixed;top:0;right:0;height:100%;width:400px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);transform:translateX(100%);transition:.22s;display:flex;flex-direction:column}
+.ov.open .panel{transform:none}
+.panel-h{display:flex;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);font-weight:650}
+.panel-b{overflow:auto;padding:6px 0}.sitem{padding:13px 18px;border-bottom:1px solid var(--border)}
+.sitem .st{font-weight:550;margin-bottom:3px}.sitem .sd{font-size:12.5px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px}
+.seg button{border:0;background:var(--surface);color:var(--muted);padding:6px 12px}.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.conn{display:flex;align-items:center;gap:10px;margin-top:8px}.conn .st2{font-size:12px;color:var(--muted);margin-left:auto}
 #toasts{position:fixed;top:16px;right:16px;z-index:60;display:flex;flex-direction:column;gap:8px}
-.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);
-  border-radius:10px;padding:11px 14px;box-shadow:var(--shadow);max-width:340px;font-size:13.5px;animation:slide .2s ease}
-.toast.ok{border-left-color:var(--fact)} .toast.err{border-left-color:#c0392b}
-@keyframes slide{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
-</style>
-</head>
+.toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:11px 14px;box-shadow:var(--shadow);max-width:340px;font-size:13.5px}
+.toast.ok{border-left-color:var(--fact)}.toast.err{border-left-color:#c0392b}
+</style></head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <div class="logo">₽</div>
-    <div>data_fin_model<small>рабочий стол финмодели</small></div>
-  </div>
-  <div class="top-actions">
-    <span id="gchip" class="gchip hidden"><span class="dot" id="gdot"></span><span id="gtext"></span></span>
-    <button id="gbtn" class="chip-btn hidden"></button>
-    <a class="chip-btn ghost" href="/legacy" title="Прежний интерфейс">Классический вид</a>
-    <button id="themeBtn" class="icon-btn" title="Сменить тему">◐</button>
-  </div>
-</header>
-
-<main class="workspace">
-  <section id="composerWrap"></section>
-  <section id="content"></section>
-</main>
-
-<div id="dock" class="dock hidden"></div>
+<div class="app">
+  <aside class="side">
+    <div class="side-top"><div class="logo">₽</div><div class="brand"><b>data_fin_model</b><small>financial workspace</small></div></div>
+    <button class="newbtn" id="newProject">＋ New project</button>
+    <input class="search" placeholder="Search projects…"/>
+    <div class="plabel">Projects</div>
+    <div class="projects" id="projects"></div>
+    <div class="side-foot"><div class="ava">ME</div><div style="font-size:13px">You<div class="note" style="margin:0">Workspace</div></div>
+      <button class="gear" id="gear" title="Settings">⚙</button></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <input class="ptitle" id="ptitle" value="Financial model"/>
+      <span id="gchip" class="chip hidden"><span class="dot" id="gdot"></span><span id="gtext"></span></span>
+      <div class="sp"></div>
+      <button class="btn" id="theme">◐ Theme</button>
+      <button class="btn" id="exportBtn">⬇ Export .xlsx</button>
+      <button class="btn acc" id="gbtn" style="display:none"></button>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="content"><div class="wrap" id="view"></div></div>
+  </main>
+</div>
+<div class="ov" id="ov"><div class="panel">
+  <div class="panel-h">Settings<div class="sp" style="flex:1"></div><button class="icon" id="closeSet">✕</button></div>
+  <div class="panel-b" id="settings"></div>
+</div></div>
 <div id="toasts"></div>
-<input type="file" id="fileInput" multiple class="hidden"
-       accept=".csv,.xlsx,.txt,.pdf,.zip"/>
-
+<input type="file" id="fileInput" multiple class="hidden" accept=".csv,.xlsx,.txt,.pdf,.zip"/>
 <script>
 const $=s=>document.querySelector(s);
-const state={dash:null,imports:[],google:null,title:'Финмодель',rec:null};
-const nf=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0});
-const money=n=>(n==null||isNaN(n))?'—':nf.format(Math.round(n))+' ₽';
-const MON=['','янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-const KIND={income:'Доходы',expense:'Расходы',investing:'Инвестиции',financing:'Финансирование'};
+const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
+const money=n=>(n==null||isNaN(n))?'—':'₽ '+nf.format(Math.round(n));
+const MON=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const KIND={income:'Income',expense:'Expenses',investing:'Investments',financing:'Financing'};
 const fmtMonth=m=>{const[y,mo]=m.split('-');return MON[+mo]+' '+y.slice(2);};
-const escapeHtml=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function parseAmount(s){if(s==null)return null;s=String(s).replace(/ /g,'').replace(/\s/g,'').replace('₽','').replace(',','.');if(s===''||s==='—')return 0;const v=parseFloat(s);return isNaN(v)?null:v;}
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function parseAmount(s){if(s==null)return null;s=String(s).replace(/[₽\s ]/g,'').replace(',','.');if(s===''||s==='—')return 0;const v=parseFloat(s);return isNaN(v)?null:v;}
 async function api(path,opts){const r=await fetch('/api'+path,opts);if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch(e){}throw new Error(d||('HTTP '+r.status));}const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text();}
-function toast(msg,kind){const t=document.createElement('div');t.className='toast '+(kind||'');t.textContent=msg;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),4200);}
-
-/* theme */
+function toast(m,k){const t=document.createElement('div');t.className='toast '+(k||'');t.textContent=m;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),4200);}
 function loadTheme(){document.documentElement.dataset.theme=localStorage.getItem('dfm-theme')||'light';}
 function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('dfm-theme',t);}
 
-/* composer (built once) */
-function initUI(){
-  $('#composerWrap').innerHTML=`
-    <div id="heroHead" class="hero" style="padding-bottom:0">
-      <h1>С чего начнём финмодель?</h1>
-      <p>Загрузите банковскую выписку (CSV, Excel, PDF, 1С или ZIP) или расскажите о бизнесе голосом — модель соберётся и развернётся здесь как таблица.</p>
-    </div>
-    <div class="composer" id="composer" style="max-width:760px;margin:0 auto">
-      <textarea id="ta" rows="1" placeholder="Опишите бизнес или перетащите сюда выписку…"></textarea>
-      <div class="composer-row">
-        <button class="icon-btn" id="attachBtn" title="Прикрепить документ">📎</button>
-        <button class="icon-btn mic" id="micBtn" title="Голосовой ввод">🎙</button>
-        <div class="transcript" id="transcript"></div>
-        <div class="spacer"></div>
-        <button class="send" id="sendBtn" title="Построить модель">→</button>
-      </div>
-    </div>
-    <div class="suggest" id="suggest">
-      <button data-a="attach">📎 Загрузить выписку</button>
-      <button data-a="voice">🎙 Рассказать голосом</button>
-      <button data-a="demo">Построить модель</button>
-    </div>`;
-  const ta=$('#ta');
-  ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,180)+'px';});
-  $('#attachBtn').onclick=()=>$('#fileInput').click();
-  $('#sendBtn').onclick=send;
-  $('#micBtn').onclick=toggleMic;
-  $('#themeBtn').onclick=toggleTheme;
-  $('#fileInput').onchange=e=>upload(e.target.files);
-  $('#suggest').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;({attach:()=>$('#fileInput').click(),voice:toggleMic,demo:send}[b.dataset.a]||(()=>{}))();});
-  const comp=$('#composer');
-  ['dragover','dragenter'].forEach(ev=>comp.addEventListener(ev,e=>{e.preventDefault();comp.classList.add('drag');}));
-  ['dragleave','drop'].forEach(ev=>comp.addEventListener(ev,e=>{e.preventDefault();comp.classList.remove('drag');}));
-  comp.addEventListener('drop',e=>{if(e.dataTransfer.files.length)upload(e.dataTransfer.files);});
+const state={dash:null,imports:[],google:null,tab:'Overview',title:'Financial model',rec:null};
+const TABS=['Overview','Model','Parameters','CAPEX','Staff','Documents'];
+
+function renderProjects(){
+  const ind=state.dash&&state.dash.industry?state.dash.industry.name:'Not set';
+  const ops=state.dash?state.dash.kpi.operations_count:0;
+  const status=ops>0?'facts loaded':'draft';
+  $('#projects').innerHTML=`<div class="proj active"><div class="pn">${esc($('#ptitle').value)}</div>
+    <div class="pm"><span class="tag">${esc(ind)}</span><span>${status}</span></div></div>
+    <div class="note" style="padding:8px 11px">Multiple projects are on the roadmap (backend is single-workspace for now).</div>`;
+}
+function renderTabs(){$('#tabs').innerHTML=TABS.map(t=>`<button class="tab ${t===state.tab?'active':''}" data-t="${t}">${t}</button>`).join('');
+  document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{state.tab=el.dataset.t;renderTabs();renderView();});}
+
+function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
+  const cards=[['Revenue (model)',money(k.revenue_total),''],['Expenses',money(k.expenses_total),''],
+    ['Net profit',money(k.net_profit),k.net_profit>=0?'pos':'neg'],['Margin',(k.margin_pct==null?'—':k.margin_pct+'%'),k.margin_pct>=0?'pos':'neg'],
+    ['Cash balance',money(k.cash_balance),''],['NPV',inv.npv!=null?money(inv.npv):'—',inv.npv==null?'':(inv.npv>=0?'pos':'neg')]];
+  return `<div class="kpis">${cards.map(([l,v,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div></div>`).join('')}</div>`;}
+
+function overviewHTML(){
+  const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
+  return `${has?'':'<div class="hero"><h1>What shall we model?</h1></div>'}
+   <div class="composer" id="composer"><textarea id="ta" placeholder="Describe the business or drop a bank statement here…"></textarea>
+     <div class="crow"><button class="icon" id="attach" title="Attach">📎</button><button class="icon" id="mic" title="Voice">🎙</button>
+       <div class="transcript" id="tr"></div><div class="sp" style="flex:1"></div><button class="send" id="send">→</button></div></div>
+   ${has?('<div style="height:18px"></div>'+kpisHTML()+summaryCard()):''}`;
+}
+function summaryCard(){const k=state.dash.kpi;return `<div class="card"><h3>Project summary</h3>
+  <div class="bd" style="color:var(--muted)">${k.operations_count} operations processed · ${state.imports.length} document(s) loaded${state.dash.industry?(' · industry: '+esc(state.dash.industry.name)):''}. Edit assumptions in the Model tab.</div></div>`;}
+
+function gridHTML(){const g=state.dash&&state.dash.model_grid;
+  if(!g||!g.rows.length)return `<div class="card"><div class="bd" style="color:var(--muted)">No model yet — upload a bank statement in the Overview tab.</div></div>`;
+  const months=g.months;let b='',lk=null;
+  g.rows.forEach(r=>{if(r.kind!==lk){lk=r.kind;b+=`<tr class="grp"><td colspan="${months.length+2}">${KIND[r.kind]||r.kind}</td></tr>`;}
+    const cells=r.cells.map((c,i)=>{const ed=c.origin!=='fact';const cls=c.origin==='fact'?'f':(c.origin==='assumption'?'a':'e');
+      return `<td class="cell ${cls}" data-code="${r.code}" data-month="${months[i]}" ${ed?'contenteditable="true"':''}>${c.v?money(c.v):'—'}</td>`;}).join('');
+    b+=`<tr><td class="rowname" title="${esc(r.name)}">${esc(r.name)}</td>${cells}<td class="total">${money(r.value_total)}</td></tr>`;});
+  return `<div class="card"><div class="gridwrap"><table><thead><tr><th class="rowname">Line item</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${b}</tbody></table></div>
+   <div class="legend"><span><b style="background:var(--fact)"></b>fact from statement (locked)</span><span><b style="background:var(--assume)"></b>assumption — click to edit</span><span>empty cells are editable too</span></div></div>`;}
+
+function paramsHTML(){return `<div class="card"><h3>Model parameters<span class="badge">preview</span></h3><div class="bd">
+  <div class="form">
+   <div class="fsec">Project</div>
+   <div class="fg"><label>Planning horizon</label><select><option>12 months</option><option>24 months</option><option selected>36 months</option></select></div>
+   <div class="fg"><label>Currency</label><select><option>RUB ₽</option><option>USD $</option><option>EUR €</option></select></div>
+   <div class="fsec">Rates &amp; taxes</div>
+   <div class="fg"><label>Discount rate, %/yr</label><input value="20"/></div>
+   <div class="fg"><label>Indexation, %/yr</label><input value="8"/></div>
+   <div class="fg"><label>Tax mode</label><select><option>USN 6%</option><option>USN 15%</option><option>OSNO (profit tax)</option></select></div>
+   <div class="fg"><label>Profit tax, %</label><input value="20"/></div>
+   <div class="fsec">Financing</div>
+   <div class="fg"><label>Loan amount</label><input value="0"/></div>
+   <div class="fg"><label>Loan rate, %/yr</label><input value="17"/></div>
+   <div class="fg"><label>Loan term, months</label><input value="60"/></div>
+   <div class="fg"><label>Base revenue / month</label><input value="1 000 000"/></div>
+  </div>
+  <p class="note">Preview only for now — model inputs are currently driven by the questionnaire and edited directly in the Model grid. A dedicated parameters-save endpoint is on the roadmap.</p></div></div>`;}
+
+function capexHTML(){return `<div class="card"><h3>CAPEX &amp; estimate<span class="badge">preview</span></h3><div class="gridwrap"><table>
+  <thead><tr><th>Item</th><th>Cost</th><th>Month</th><th>Depreciation</th></tr></thead><tbody>
+  <tr><td>Equipment</td><td>${money(0)}</td><td style="text-align:right">1</td><td style="text-align:right">—</td></tr>
+  </tbody></table></div><div class="bd"><button class="btn">＋ Add item</button> <button class="srcbtn">Import estimate .xlsx</button>
+  <p class="note">CAPEX schedule &amp; depreciation are on the roadmap; the Excel export already builds a full CAPEX sheet.</p></div></div>`;}
+
+function staffHTML(){return `<div class="card"><h3>Headcount plan<span class="badge">preview</span></h3><div class="gridwrap"><table>
+  <thead><tr><th>Role</th><th>Count</th><th>Salary</th><th>Contributions,%</th><th>Total / mo</th></tr></thead><tbody>
+  <tr><td>—</td><td>0</td><td>${money(0)}</td><td>30.2</td><td>${money(0)}</td></tr>
+  </tbody></table></div><div class="bd"><button class="btn">＋ Add role</button>
+  <p class="note">Headcount planning endpoint is on the roadmap.</p></div></div>`;}
+
+function docsHTML(){const list=state.imports||[];
+  return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">Documents</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">＋ Upload</button></div>
+   <div class="docgrid">${list.length?list.map(d=>`<div class="doc"><span class="fmt">${esc(d.format)}</span><div class="n">${esc(d.filename)}</div><div class="m">+${d.imported} rows · ${d.duplicates} dup</div></div>`).join(''):'<div class="note">No documents yet — upload a bank statement.</div>'}</div>
+   <div class="card" style="margin-top:16px"><h3>Connect a data source</h3><div class="bd"><div class="src">
+     <button class="srcbtn" id="up3">📄 Upload files (CSV/XLSX/PDF/ZIP)</button>
+     <button class="srcbtn">🧾 1C exchange / archive <span class="badge">soon</span></button>
+     <button class="srcbtn">🏭 ERP (1C:ERP, SAP) <span class="badge">soon</span></button>
+     <button class="srcbtn">🗄 SQL warehouse <span class="badge">soon</span></button>
+   </div><p class="note">Any source normalizes into a single operations schema; the model updates automatically.</p></div></div>`;}
+
+function renderView(){
+  const map={Overview:overviewHTML,Model:gridHTML,Parameters:paramsHTML,CAPEX:capexHTML,Staff:staffHTML,Documents:docsHTML};
+  $('#view').innerHTML=(map[state.tab]||overviewHTML)();
+  if(state.tab==='Overview')wireComposer();
+  if(state.tab==='Model')wireGrid();
+  if(state.tab==='Documents'){const u=()=>$('#fileInput').click();['#up2','#up3'].forEach(id=>{const el=$(id);if(el)el.onclick=u;});}
 }
 
-function render(){
-  const rows=(state.dash&&state.dash.model_grid&&state.dash.model_grid.rows)||[];
-  const hasData=rows.length>0;
-  $('#heroHead').classList.toggle('hidden',hasData);
-  $('#suggest').classList.toggle('hidden',hasData);
-  renderGoogle();
-  renderDock();
-  $('#content').innerHTML=hasData?modelHTML():'';
-  if(hasData)wireGrid();
+function wireComposer(){
+  const comp=$('#composer'),ta=$('#ta');if(!comp)return;
+  $('#attach').onclick=()=>$('#fileInput').click();
+  $('#send').onclick=send;$('#mic').onclick=toggleMic;
+  ['dragover','dragenter'].forEach(e=>comp.addEventListener(e,ev=>{ev.preventDefault();comp.classList.add('drag');}));
+  ['dragleave','drop'].forEach(e=>comp.addEventListener(e,ev=>{ev.preventDefault();comp.classList.remove('drag');}));
+  comp.addEventListener('drop',ev=>{if(ev.dataTransfer.files.length)upload(ev.dataTransfer.files);});
 }
-
-function modelHTML(){
-  const k=state.dash.kpi,inv=k.invest||{};
-  const cards=[
-    ['Выручка (модель)',money(k.revenue_total),''],
-    ['Расходы',money(k.expenses_total),''],
-    ['Чистая прибыль',money(k.net_profit),k.net_profit>=0?'pos':'neg'],
-    ['Маржа',(k.margin_pct==null?'—':k.margin_pct+'%'),k.margin_pct>=0?'pos':'neg'],
-    ['Остаток на счёте',money(k.cash_balance),''],
-    ['NPV проекта',inv.npv!=null?money(inv.npv):'—',inv.npv==null?'':(inv.npv>=0?'pos':'neg')],
-  ].map(([l,v,c])=>`<div class="kpi"><div class="lbl">${l}</div><div class="val ${c}">${v}</div></div>`).join('');
-  return `
-    <div class="section-head"><h2>Финмодель</h2>
-      ${state.dash.industry?`<span class="gchip">· ${escapeHtml(state.dash.industry.name)}</span>`:''}
-      <div class="spacer"></div></div>
-    <div class="kpis">${cards}</div>
-    <div class="grid-card">
-      <div class="grid-toolbar">
-        <input class="title" id="modelTitle" value="${escapeHtml(state.title)}"/>
-        <div class="spacer"></div>
-        <button class="chip-btn" id="exportBtn">⬇ Скачать .xlsx</button>
-        <span id="sheetsBtns"></span>
-      </div>
-      <div class="grid-wrap">${gridTableHTML()}</div>
-      <div class="legend">
-        <span><span class="sw fact"></span> факт из выписки (не редактируется)</span>
-        <span><span class="sw assume"></span> допущение — кликните и измените</span>
-        <span>Пустую ячейку тоже можно заполнить</span>
-      </div>
-    </div>`;
-}
-
-function gridTableHTML(){
-  const g=state.dash.model_grid,months=g.months;
-  const head=`<thead><tr><th class="rowname">Статья</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Итого</th></tr></thead>`;
-  let body='',lastKind=null;
-  g.rows.forEach(row=>{
-    if(row.kind!==lastKind){lastKind=row.kind;body+=`<tr class="group"><td colspan="${months.length+2}">${KIND[row.kind]||row.kind}</td></tr>`;}
-    const cells=row.cells.map((c,i)=>{
-      const editable=c.origin!=='fact';
-      const cls=c.origin==='fact'?'fact':(c.origin==='assumption'?'assume':'empty');
-      return `<td class="cell ${cls}" data-code="${row.code}" data-month="${months[i]}" ${editable?'contenteditable="true"':''}>${c.v?money(c.v):'—'}</td>`;
-    }).join('');
-    body+=`<tr><td class="rowname" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>${cells}<td class="total">${money(row.value_total)}</td></tr>`;
-  });
-  return `<table class="model">${head}<tbody>${body}</tbody></table>`;
-}
-
 function wireGrid(){
-  $('#exportBtn').onclick=()=>{const t=($('#modelTitle').value||'Финмодель').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
-  $('#modelTitle').addEventListener('change',e=>state.title=e.target.value.trim()||'Финмодель');
   document.querySelectorAll('td.cell[contenteditable]').forEach(td=>{
     td.addEventListener('focus',()=>{if(td.textContent.trim()==='—')td.textContent='';});
     td.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();td.blur();}});
-    td.addEventListener('blur',()=>saveCell(td));
-  });
-  renderSheetsButtons();
+    td.addEventListener('blur',()=>saveCell(td));});
 }
+async function saveCell(td){const amount=parseAmount(td.textContent);
+  if(amount===null){toast('Not a number — edit cancelled','err');return refreshAll();}
+  try{await api('/assumptions',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:[{category_code:td.dataset.code,month:td.dataset.month,amount}]})});
+    toast('Saved · '+fmtMonth(td.dataset.month),'ok');await refreshAll();}catch(e){toast('Save error: '+e.message,'err');refreshAll();}}
 
-async function saveCell(td){
-  const amount=parseAmount(td.textContent);
-  if(amount===null){toast('Не число — правка отменена','err');return refreshAll();}
-  try{
-    await api('/assumptions',{method:'PUT',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({items:[{category_code:td.dataset.code,month:td.dataset.month,amount}]})});
-    toast('Сохранено · '+fmtMonth(td.dataset.month),'ok');
-    await refreshAll();
-  }catch(err){toast('Ошибка сохранения: '+err.message,'err');refreshAll();}
-}
-
-async function upload(files){
-  files=[...files];if(!files.length)return;
-  toast('Загрузка: '+files.map(f=>f.name).join(', '));
+async function upload(files){files=[...files];if(!files.length)return;toast('Uploading: '+files.map(f=>f.name).join(', '));
   let imp=0,dup=0,fail=0;
-  for(const f of files){
-    const fd=new FormData();fd.append('file',f);
-    try{const r=await api('/imports/upload',{method:'POST',body:fd});imp+=r.imported;dup+=r.duplicates;}
-    catch(err){fail++;toast(f.name+': '+err.message,'err');}
-  }
-  toast(`Импортировано ${imp}, дублей ${dup}`+(fail?`, ошибок ${fail}`:''),fail?'err':'ok');
-  await refreshAll();
-  if($('#content').innerHTML)$('#content').scrollIntoView({behavior:'smooth'});
-}
+  for(const f of files){const fd=new FormData();fd.append('file',f);
+    try{const r=await api('/imports/upload',{method:'POST',body:fd});imp+=r.imported;dup+=r.duplicates;}catch(e){fail++;toast(f.name+': '+e.message,'err');}}
+  toast(`Imported ${imp}, duplicates ${dup}`+(fail?`, errors ${fail}`:''),fail?'err':'ok');await refreshAll();}
 
-async function refreshAll(){
-  try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}
-  try{state.imports=await api('/imports');}catch(e){state.imports=[];}
-  render();
-}
+function send(){const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
+  if(has){state.tab='Model';renderTabs();renderView();toast('Edit assumption cells directly in the table');}
+  else{toast('Attach a bank statement to build the model');$('#fileInput').click();}}
+
+async function refreshAll(){try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}try{state.imports=await api('/imports');}catch(e){state.imports=[];}
+  renderProjects();render();}
 async function refreshGoogle(){try{state.google=await api('/google/status');}catch(e){state.google=null;}}
+function render(){renderTabs();renderView();renderGoogleChip();}
 
-function renderGoogle(){
-  const g=state.google,chip=$('#gchip'),btn=$('#gbtn');
-  if(!g||!g.configured){chip.classList.add('hidden');btn.classList.add('hidden');return;}
-  chip.classList.remove('hidden');
-  $('#gdot').className='dot'+(g.connected?' on':'');
-  $('#gtext').textContent=g.connected?'Google подключён':'Google не подключён';
-  if(!g.connected){btn.classList.remove('hidden');btn.textContent='Подключить Google';btn.onclick=()=>location.href='/api/google/auth';}
-  else btn.classList.add('hidden');
-}
-function renderSheetsButtons(){
-  const host=$('#sheetsBtns');if(!host)return;const g=state.google;
-  if(!g||!g.configured||!g.connected){host.innerHTML='';return;}
-  host.innerHTML=`<button class="chip-btn" id="pushBtn">↗ В Google Sheets</button> <button class="chip-btn ghost" id="pullBtn">Забрать правки</button>`;
-  $('#pushBtn').onclick=async()=>{try{toast('Отправляю в Google Sheets…');const t=($('#modelTitle').value||'Финмодель').trim();const r=await api('/sheets/push?title='+encodeURIComponent(t),{method:'POST'});toast('Готово — таблица открыта','ok');window.open(r.url,'_blank');}catch(e){toast('Ошибка: '+e.message,'err');}};
-  $('#pullBtn').onclick=async()=>{try{toast('Читаю правки из таблицы…');const r=await api('/sheets/pull',{method:'POST'});const n=Object.keys(r.updated||{}).length;toast(n?('Обновлено входов: '+n):'Изменений нет','ok');await refreshAll();}catch(e){toast('Ошибка: '+e.message,'err');}};
-}
-
-function renderDock(){
-  const dock=$('#dock'),list=state.imports||[];
-  if(!list.length){dock.classList.add('hidden');return;}
-  dock.classList.remove('hidden');
-  dock.innerHTML=`<span class="dlabel">Документы</span>`+list.slice(0,14).map(d=>
-    `<div class="doc"><span class="fmt">${escapeHtml(d.format)}</span><span class="fn" title="${escapeHtml(d.filename)}">${escapeHtml(d.filename)}</span><span class="meta">+${d.imported}</span></div>`
-  ).join('');
-}
+function renderGoogleChip(){const g=state.google,chip=$('#gchip'),btn=$('#gbtn');
+  if(!g||!g.configured){chip.classList.add('hidden');btn.style.display='none';return;}
+  chip.classList.remove('hidden');$('#gdot').className='dot'+(g.connected?' on':'');$('#gtext').textContent=g.connected?'Google connected':'Google not connected';
+  if(!g.connected){btn.style.display='';btn.textContent='Connect Google';btn.onclick=()=>location.href='/api/google/auth';}else btn.style.display='none';}
 
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function toggleMic(){
-  if(!SR){toast('Голосовой ввод недоступен в этом браузере','err');return;}
-  if(state.rec){state.rec.stop();return;}
-  const rec=new SR();rec.lang='ru-RU';rec.interimResults=true;rec.continuous=false;
-  state.rec=rec;$('#micBtn').classList.add('rec');
-  const ta=$('#ta'),base=ta.value;
-  rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;$('#transcript').textContent=s;ta.value=(base?base+' ':'')+s;};
-  rec.onerror=()=>{toast('Микрофон недоступен','err');stopMic();};
-  rec.onend=stopMic;rec.start();
-}
-function stopMic(){if(state.rec){try{state.rec.stop()}catch(e){}}state.rec=null;$('#micBtn').classList.remove('rec');$('#transcript').textContent='';}
+function toggleMic(){if(!SR){toast('Voice input not supported in this browser','err');return;}
+  if(state.rec){state.rec.stop();return;}const rec=new SR();rec.lang='en-US';rec.interimResults=true;rec.continuous=false;
+  state.rec=rec;const mic=$('#mic');if(mic)mic.classList.add('rec');const ta=$('#ta'),base=ta?ta.value:'';
+  rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;const tr=$('#tr');if(tr)tr.textContent=s;if(ta)ta.value=(base?base+' ':'')+s;};
+  rec.onerror=()=>{toast('Microphone unavailable','err');stopMic();};rec.onend=stopMic;rec.start();}
+function stopMic(){if(state.rec){try{state.rec.stop()}catch(e){}}state.rec=null;const mic=$('#mic');if(mic)mic.classList.remove('rec');const tr=$('#tr');if(tr)tr.textContent='';}
 
-function send(){
-  const rows=(state.dash&&state.dash.model_grid&&state.dash.model_grid.rows)||[];
-  if(rows.length){$('#content').scrollIntoView({behavior:'smooth'});toast('Модель ниже — редактируйте ячейки прямо в таблице');return;}
-  toast('Прикрепите выписку — и модель развернётся здесь');
-  $('#fileInput').click();
+function renderSettings(){const g=state.google;
+  $('#settings').innerHTML=`
+   <div class="sitem"><div class="st">Company profile</div><div class="sd">Industry: ${state.dash&&state.dash.industry?esc(state.dash.industry.name):'not set'}</div></div>
+   <div class="sitem"><div class="st">Appearance</div><div class="sd">Workspace theme</div>
+     <div class="seg"><button data-t="light">Light</button><button data-t="dark">Dark</button></div></div>
+   <div class="sitem"><div class="st">Google Sheets</div><div class="sd">Two-way model sync</div>
+     <div class="conn">${g&&g.configured?(g.connected?'<span class="st2" style="color:var(--fact)">connected</span>':'<button class="btn" id="setGoogle">Connect Google</button>'):'<span class="st2">not configured</span>'}</div></div>
+   <div class="sitem"><div class="st">Data sources</div><div class="sd">Connectors for facts and large databases</div>
+     <div class="conn"><span>📄 Files</span><span class="st2" style="color:var(--fact)">active</span></div>
+     <div class="conn"><span>🏭 ERP API</span><span class="st2">roadmap</span></div>
+     <div class="conn"><span>🗄 SQL warehouse</span><span class="st2">roadmap</span></div></div>
+   <div class="sitem"><div class="st">Export</div><div class="sd">Excel .xlsx · Google Sheets · PDF report</div></div>`;
+  const sg=$('#setGoogle');if(sg)sg.onclick=()=>location.href='/api/google/auth';
+  document.querySelectorAll('.seg button').forEach(b=>{b.classList.toggle('on',b.dataset.t===document.documentElement.dataset.theme);
+    b.onclick=()=>{document.documentElement.dataset.theme=b.dataset.t;localStorage.setItem('dfm-theme',b.dataset.t);renderSettings();};});
 }
 
-loadTheme();initUI();refreshGoogle().then(refreshAll);
+$('#theme').onclick=toggleTheme;
+$('#gear').onclick=()=>{renderSettings();$('#ov').classList.add('open');};
+$('#closeSet').onclick=()=>$('#ov').classList.remove('open');
+$('#ov').onclick=e=>{if(e.target.id==='ov')$('#ov').classList.remove('open');};
+$('#fileInput').onchange=e=>upload(e.target.files);
+$('#exportBtn').onclick=()=>{const t=($('#ptitle').value||'Financial model').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
+$('#newProject').onclick=()=>toast('Multiple projects are on the roadmap (single workspace for now)');
+$('#ptitle').addEventListener('change',renderProjects);
+
+loadTheme();renderProjects();renderTabs();renderView();refreshGoogle().then(refreshAll);
 </script>
 </body>
 </html>
