@@ -464,3 +464,70 @@ def upsert_plan(body: PlanUpsertIn, db: Session = Depends(get_db)) -> dict:
         saved += 1
     db.commit()
     return {"saved": saved}
+
+
+# --------------------------------------------------------------- Параметры ----
+# Ключевые драйверы модели, редактируемые на листе «Параметры». Пишутся в
+# BusinessProfile.answers (как ответы опросника) и пересобирают допущения тем же
+# движком, что и опросник — правки пользователя в сетке (source='user') при этом
+# сохраняются (см. save_assumptions).
+
+_PARAM_KEYS = [
+    "industry", "legal_form", "business_age", "planning_horizon",
+    "monthly_revenue", "employees", "payroll_monthly", "rent_monthly",
+    "tax_mode", "capex_total", "funding_source", "loan_amount", "loan_rate",
+    "discount_rate",
+]
+
+
+@router.get("/parameters")
+def get_parameters(db: Session = Depends(get_db)) -> dict:
+    """Текущие драйверы модели + описания полей для формы «Параметры»."""
+    profile = db.query(models.BusinessProfile).first()
+    answers = json.loads(profile.answers_json or "{}") if profile else {}
+    industry = get_industry(profile.industry_code) if profile else None
+    return {
+        "answers": {k: answers.get(k) for k in _PARAM_KEYS if answers.get(k) not in (None, "")},
+        "industry_code": profile.industry_code if profile else None,
+        "industry": industry_public(industry) if industry else None,
+        "horizon": horizon_from(answers),
+        "questions": [q for q in build_survey()["questions"] if q["id"] in _PARAM_KEYS],
+        "industries": [{"code": i["code"], "name": i["name"]} for i in INDUSTRIES],
+    }
+
+
+@router.put("/parameters")
+def put_parameters(body: SurveyAnswersIn, db: Session = Depends(get_db)) -> dict:
+    """Обновление драйверов модели и пересборка допущений (правила шаблона).
+
+    Тело: {"answers": {ключ: значение, ...}} — частичное или полное. Значения
+    сливаются с текущим профилем; отрасль обязательна.
+    """
+    profile = db.query(models.BusinessProfile).first()
+    answers = json.loads(profile.answers_json or "{}") if profile else {}
+    for key, value in (body.answers or {}).items():
+        answers[key] = value
+
+    industry_code = str(answers.get("industry") or (profile.industry_code if profile else "") or "")
+    industry = get_industry(industry_code)
+    if industry is None:
+        raise HTTPException(status_code=400, detail="Не задана отрасль (параметр «industry»).")
+    answers["industry"] = industry_code
+
+    horizon = horizon_from(answers)
+    rows = compute_rule_series(industry, answers, horizon)
+    created = save_assumptions(db, rows, horizon)
+
+    if profile is None:
+        profile = models.BusinessProfile(industry_code=industry_code)
+        db.add(profile)
+    profile.industry_code = industry_code
+    profile.answers_json = json.dumps(answers, ensure_ascii=False)
+    db.commit()
+
+    return {
+        "answers": {k: answers.get(k) for k in _PARAM_KEYS if answers.get(k) not in (None, "")},
+        "industry": industry_public(industry),
+        "horizon": horizon,
+        "assumptions_created": created,
+    }

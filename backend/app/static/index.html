@@ -137,7 +137,7 @@ function toast(m,k){const t=document.createElement('div');t.className='toast '+(
 function loadTheme(){document.documentElement.dataset.theme=localStorage.getItem('dfm-theme')||'light';}
 function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('dfm-theme',t);}
 
-const state={dash:null,imports:[],google:null,tab:'Overview',title:'Financial model',rec:null};
+const state={dash:null,imports:[],google:null,params:null,tab:'Overview',title:'Financial model',rec:null};
 const TABS=['Overview','Model','Parameters','CAPEX','Staff','Documents'];
 
 function renderProjects(){
@@ -178,35 +178,42 @@ function gridHTML(){const g=state.dash&&state.dash.model_grid;
   return `<div class="card"><div class="gridwrap"><table><thead><tr><th class="rowname">Line item</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${b}</tbody></table></div>
    <div class="legend"><span><b style="background:var(--fact)"></b>fact from statement (locked)</span><span><b style="background:var(--assume)"></b>assumption — click to edit</span><span>empty cells are editable too</span></div></div>`;}
 
-function paramsHTML(){return `<div class="card"><h3>Model parameters<span class="badge">preview</span></h3><div class="bd">
-  <div class="form">
-   <div class="fsec">Project</div>
-   <div class="fg"><label>Planning horizon</label><select><option>12 months</option><option>24 months</option><option selected>36 months</option></select></div>
-   <div class="fg"><label>Currency</label><select><option>RUB ₽</option><option>USD $</option><option>EUR €</option></select></div>
-   <div class="fsec">Rates &amp; taxes</div>
-   <div class="fg"><label>Discount rate, %/yr</label><input value="20"/></div>
-   <div class="fg"><label>Indexation, %/yr</label><input value="8"/></div>
-   <div class="fg"><label>Tax mode</label><select><option>USN 6%</option><option>USN 15%</option><option>OSNO (profit tax)</option></select></div>
-   <div class="fg"><label>Profit tax, %</label><input value="20"/></div>
-   <div class="fsec">Financing</div>
-   <div class="fg"><label>Loan amount</label><input value="0"/></div>
-   <div class="fg"><label>Loan rate, %/yr</label><input value="17"/></div>
-   <div class="fg"><label>Loan term, months</label><input value="60"/></div>
-   <div class="fg"><label>Base revenue / month</label><input value="1 000 000"/></div>
+function paramsHTML(){
+  const a=(state.params&&state.params.answers)||{};
+  const inds=(state.params&&state.params.industries)||[];
+  const sel=(id,opts,val)=>`<select id="p_${id}">`+opts.map(o=>`<option value="${o.v}" ${String(val)===String(o.v)?'selected':''}>${o.l}</option>`).join('')+`</select>`;
+  const num=(id,val,ph)=>`<input id="p_${id}" value="${val==null?'':esc(val)}" placeholder="${ph||''}"/>`;
+  return `<div class="card"><h3>Model parameters</h3><div class="bd"><div class="form">
+    <div class="fsec">Project</div>
+    <div class="fg"><label>Industry</label>${sel('industry',inds.map(i=>({v:i.code,l:i.name})),a.industry)}</div>
+    <div class="fg"><label>Business stage</label>${sel('business_age',[{v:'existing',l:'Operating'},{v:'new',l:'Launching'}],a.business_age)}</div>
+    <div class="fg"><label>Planning horizon</label>${sel('planning_horizon',[{v:'12',l:'12 months'},{v:'24',l:'24 months'},{v:'36',l:'36 months'}],a.planning_horizon||'12')}</div>
+    <div class="fg"><label>Tax mode</label>${sel('tax_mode',[{v:'usn6',l:'USN 6%'},{v:'usn15',l:'USN 15%'},{v:'osno',l:'OSNO'},{v:'npd',l:'NPD / patent'},{v:'unknown',l:'Not sure'}],a.tax_mode)}</div>
+    <div class="fsec">Revenue &amp; costs</div>
+    <div class="fg"><label>Monthly revenue</label>${num('monthly_revenue',a.monthly_revenue,'e.g. 800000')}</div>
+    <div class="fg"><label>Payroll / month</label>${num('payroll_monthly',a.payroll_monthly)}</div>
+    <div class="fg"><label>Rent &amp; utilities / month</label>${num('rent_monthly',a.rent_monthly)}</div>
+    <div class="fg"><label>Discount rate, %/yr</label>${num('discount_rate',a.discount_rate,'20')}</div>
+    <div class="fsec">Investment &amp; financing</div>
+    <div class="fg"><label>Start CAPEX</label>${num('capex_total',a.capex_total)}</div>
+    <div class="fg"><label>Funding source</label>${sel('funding_source',[{v:'own',l:'Own funds'},{v:'loan',l:'Loan'},{v:'investor',l:'Investor'},{v:'mixed',l:'Mixed'}],a.funding_source)}</div>
+    <div class="fg"><label>Loan amount</label>${num('loan_amount',a.loan_amount)}</div>
+    <div class="fg"><label>Loan rate, %/yr</label>${num('loan_rate',a.loan_rate,'17')}</div>
   </div>
-  <p class="note">Preview only for now — model inputs are currently driven by the questionnaire and edited directly in the Model grid. A dedicated parameters-save endpoint is on the roadmap.</p></div></div>`;}
+  <div style="margin-top:16px"><button class="btn acc" id="rebuild">Rebuild model</button></div>
+  <p class="note">Saving recomputes model assumptions from these drivers. Your manual edits in the Model grid are preserved.</p></div></div>`;}
 
-function capexHTML(){return `<div class="card"><h3>CAPEX &amp; estimate<span class="badge">preview</span></h3><div class="gridwrap"><table>
-  <thead><tr><th>Item</th><th>Cost</th><th>Month</th><th>Depreciation</th></tr></thead><tbody>
-  <tr><td>Equipment</td><td>${money(0)}</td><td style="text-align:right">1</td><td style="text-align:right">—</td></tr>
-  </tbody></table></div><div class="bd"><button class="btn">＋ Add item</button> <button class="srcbtn">Import estimate .xlsx</button>
-  <p class="note">CAPEX schedule &amp; depreciation are on the roadmap; the Excel export already builds a full CAPEX sheet.</p></div></div>`;}
+function capexHTML(){const a=(state.params&&state.params.answers)||{};const cx=a.capex_total?money(parseAmount(a.capex_total)):money(0);
+  return `<div class="card"><h3>CAPEX &amp; estimate</h3><div class="bd">
+   <div class="kpis"><div class="kpi"><div class="l">Total start CAPEX (from Parameters)</div><div class="v">${cx}</div></div></div>
+   <p class="note">Set the total in the Parameters tab — it feeds the model as an investment outflow, and the Excel export builds a full CAPEX sheet with depreciation. A detailed line-item estimate table is on the roadmap.</p>
+   <button class="btn">＋ Add line item <span class="badge">soon</span></button></div></div>`;}
 
-function staffHTML(){return `<div class="card"><h3>Headcount plan<span class="badge">preview</span></h3><div class="gridwrap"><table>
-  <thead><tr><th>Role</th><th>Count</th><th>Salary</th><th>Contributions,%</th><th>Total / mo</th></tr></thead><tbody>
-  <tr><td>—</td><td>0</td><td>${money(0)}</td><td>30.2</td><td>${money(0)}</td></tr>
-  </tbody></table></div><div class="bd"><button class="btn">＋ Add role</button>
-  <p class="note">Headcount planning endpoint is on the roadmap.</p></div></div>`;}
+function staffHTML(){const a=(state.params&&state.params.answers)||{};const pr=a.payroll_monthly?money(parseAmount(a.payroll_monthly)):money(0);const emp=(a.employees==null||a.employees==='')?'—':esc(a.employees);
+  return `<div class="card"><h3>Headcount &amp; payroll</h3><div class="bd">
+   <div class="kpis"><div class="kpi"><div class="l">Payroll / month (from Parameters)</div><div class="v">${pr}</div></div><div class="kpi"><div class="l">Team size</div><div class="v">${emp}</div></div></div>
+   <p class="note">Set payroll in the Parameters tab — it feeds the model as a monthly expense. A per-role headcount table is on the roadmap.</p>
+   <button class="btn">＋ Add role <span class="badge">soon</span></button></div></div>`;}
 
 function docsHTML(){const list=state.imports||[];
   return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">Documents</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">＋ Upload</button></div>
@@ -223,7 +230,16 @@ function renderView(){
   $('#view').innerHTML=(map[state.tab]||overviewHTML)();
   if(state.tab==='Overview')wireComposer();
   if(state.tab==='Model')wireGrid();
+  if(state.tab==='Parameters'){const b=$('#rebuild');if(b)b.onclick=saveParams;}
   if(state.tab==='Documents'){const u=()=>$('#fileInput').click();['#up2','#up3'].forEach(id=>{const el=$(id);if(el)el.onclick=u;});}
+}
+async function saveParams(){
+  const ids=['industry','business_age','planning_horizon','tax_mode','monthly_revenue','payroll_monthly','rent_monthly','discount_rate','capex_total','funding_source','loan_amount','loan_rate'];
+  const answers={};ids.forEach(id=>{const el=$('#p_'+id);if(el&&el.value!=='')answers[id]=el.value;});
+  if(!answers.industry){toast('Pick an industry first','err');return;}
+  try{toast('Rebuilding model…');const r=await api('/parameters',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
+    toast('Model rebuilt · '+r.assumptions_created+' assumptions','ok');await refreshAll();state.tab='Model';renderTabs();renderView();}
+  catch(e){toast('Error: '+e.message,'err');}
 }
 
 function wireComposer(){
@@ -256,6 +272,7 @@ function send(){const has=state.dash&&state.dash.model_grid&&state.dash.model_gr
   else{toast('Attach a bank statement to build the model');$('#fileInput').click();}}
 
 async function refreshAll(){try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}try{state.imports=await api('/imports');}catch(e){state.imports=[];}
+  try{state.params=await api('/parameters');}catch(e){state.params=null;}
   renderProjects();render();}
 async function refreshGoogle(){try{state.google=await api('/google/status');}catch(e){state.google=null;}}
 function render(){renderTabs();renderView();renderGoogleChip();}
