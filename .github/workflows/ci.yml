@@ -24,3 +24,11 @@ jobs:
       - name: Run tests
         working-directory: backend
         run: python -m pytest
+
+      - name: Validate migrations (upgrade + check)
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:////tmp/ci_migrations.db
+        run: |
+          alembic upgrade head
+          alembic check

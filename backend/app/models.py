@@ -1,5 +1,10 @@
 """ORM-модели данных."""
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utcnow() -> datetime:
+    """Текущее время UTC (замена устаревшего datetime.utcnow)."""
+    return datetime.now(timezone.utc)
 
 from sqlalchemy import (
     Column, Date, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint,
@@ -34,7 +39,7 @@ class ImportLog(Base):
     needs_review = Column(Integer, default=0)
     status = Column(String(16), default="done")  # done | error
     error = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
 
 class Operation(Base):
@@ -57,7 +62,7 @@ class Operation(Base):
 
     source_hash = Column(String(64), unique=True, index=True)
     import_id = Column(Integer, ForeignKey("import_logs.id"), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
 
 class Rule(Base):
@@ -71,7 +76,7 @@ class Rule(Base):
     pattern = Column(String(255), nullable=False)  # подстрока в нижнем регистре
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=False)
     category = relationship("Category", lazy="joined")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
 
 class PlanValue(Base):
@@ -95,8 +100,8 @@ class BusinessProfile(Base):
     id = Column(Integer, primary_key=True)
     industry_code = Column(String(32), nullable=False)
     answers_json = Column(Text, nullable=False, default="{}")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
 
 class Assumption(Base):
@@ -117,5 +122,5 @@ class Assumption(Base):
     amount = Column(Numeric(14, 2), nullable=False)
     source = Column(String(16), nullable=False, default="user")  # survey | user
     note = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

@@ -37,6 +37,7 @@ def init_db() -> None:
     from .finmodel.template import DEFAULT_CATEGORIES
 
     Base.metadata.create_all(engine)
+    _stamp_alembic_head()
     with SessionLocal() as db:
         existing = {code for (code,) in db.query(models.Category.code).all()}
         added = False
@@ -46,3 +47,28 @@ def init_db() -> None:
                 added = True
         if added:
             db.commit()
+
+
+def _stamp_alembic_head() -> None:
+    """Помечает базу, созданную через create_all, текущей ревизией Alembic.
+
+    Так `alembic upgrade head` на уже работающей базе не будет пытаться
+    создать существующие таблицы. Ошибки не критичны: без штампа приложение
+    работает, штамп можно поставить вручную (`alembic stamp head`).
+    """
+    from pathlib import Path
+
+    try:
+        from alembic import command
+        from alembic.config import Config
+    except ImportError:  # alembic не установлен (минимальное окружение)
+        return
+    try:
+        ini_path = Path(__file__).resolve().parents[1] / "alembic.ini"
+        if not ini_path.exists():
+            return
+        config = Config(str(ini_path))
+        config.set_main_option("script_location", str(ini_path.parent / "alembic"))
+        command.stamp(config, "head")
+    except Exception:  # noqa: BLE001 — штамп не должен ронять запуск приложения
+        pass
