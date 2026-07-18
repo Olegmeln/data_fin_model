@@ -1,0 +1,622 @@
+{
+  "$defs": {
+    "Capex": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/CapexItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "total_override": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Override"
+        },
+        "depreciation_months": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Depreciation Months"
+        }
+      },
+      "title": "Capex",
+      "type": "object"
+    },
+    "CapexItem": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "amount": {
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "vat_included": {
+          "default": false,
+          "title": "Vat Included",
+          "type": "boolean"
+        },
+        "schedule_months": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schedule Months"
+        }
+      },
+      "required": [
+        "name",
+        "amount"
+      ],
+      "title": "CapexItem",
+      "type": "object"
+    },
+    "CreditFacility": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/FacilityKind",
+          "default": "investment"
+        },
+        "amount": {
+          "minimum": 0,
+          "title": "Amount",
+          "type": "number"
+        },
+        "term_months": {
+          "minimum": 1,
+          "title": "Term Months",
+          "type": "integer"
+        },
+        "rate": {
+          "$ref": "#/$defs/RateSchedule"
+        },
+        "grace_months": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Grace Months",
+          "type": "integer"
+        },
+        "rate_formula": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rate Formula"
+        }
+      },
+      "required": [
+        "name",
+        "amount",
+        "term_months",
+        "rate"
+      ],
+      "title": "CreditFacility",
+      "type": "object"
+    },
+    "FacilityKind": {
+      "enum": [
+        "investment",
+        "working_capital"
+      ],
+      "title": "FacilityKind",
+      "type": "string"
+    },
+    "Financing": {
+      "additionalProperties": false,
+      "properties": {
+        "equity_amount": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Equity Amount",
+          "type": "number"
+        },
+        "facilities": {
+          "items": {
+            "$ref": "#/$defs/CreditFacility"
+          },
+          "title": "Facilities",
+          "type": "array"
+        }
+      },
+      "title": "Financing",
+      "type": "object"
+    },
+    "OpenQuestion": {
+      "additionalProperties": false,
+      "description": "Пункт «требует уточнения» — результат работы валидатора/аудита.",
+      "properties": {
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "field_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field Path"
+        },
+        "variants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Variants",
+          "type": "array"
+        },
+        "severity": {
+          "default": "warning",
+          "title": "Severity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "title": "OpenQuestion",
+      "type": "object"
+    },
+    "Product": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ProductKind",
+          "default": "goods"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        },
+        "start_price": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Price"
+        },
+        "price_indexation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Price Indexation"
+        },
+        "ramp_up_months": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ramp Up Months"
+        },
+        "extra": {
+          "additionalProperties": true,
+          "title": "Extra",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Product",
+      "type": "object"
+    },
+    "ProductKind": {
+      "enum": [
+        "goods",
+        "service"
+      ],
+      "title": "ProductKind",
+      "type": "string"
+    },
+    "ProjectProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "project_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Type"
+        },
+        "industry": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Industry"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "currency": {
+          "default": "RUB",
+          "title": "Currency",
+          "type": "string"
+        },
+        "horizon_years": {
+          "default": 5,
+          "maximum": 50,
+          "minimum": 1,
+          "title": "Horizon Years",
+          "type": "integer"
+        },
+        "model_start": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Start"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ProjectProfile",
+      "type": "object"
+    },
+    "RatePoint": {
+      "additionalProperties": false,
+      "description": "Точка расписания: значение действует с даты (None = с начала модели).",
+      "properties": {
+        "effective_from": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective From"
+        },
+        "value_pct": {
+          "title": "Value Pct",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value_pct"
+      ],
+      "title": "RatePoint",
+      "type": "object"
+    },
+    "RateSchedule": {
+      "additionalProperties": false,
+      "description": "Ставка как расписание во времени (НДС 20% → 22% с 2026-01-01 и т.п.).",
+      "properties": {
+        "points": {
+          "items": {
+            "$ref": "#/$defs/RatePoint"
+          },
+          "minItems": 1,
+          "title": "Points",
+          "type": "array"
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "title": "RateSchedule",
+      "type": "object"
+    },
+    "Scenario": {
+      "additionalProperties": false,
+      "description": "Сценарий = именованный набор переопределений (путь → значение).",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "overrides": {
+          "additionalProperties": true,
+          "title": "Overrides",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Scenario",
+      "type": "object"
+    },
+    "SourceMethod": {
+      "enum": [
+        "extracted",
+        "user",
+        "default",
+        "derived"
+      ],
+      "title": "SourceMethod",
+      "type": "string"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "description": "Происхождение факта: документ/страница, метод, уверенность 0..1.",
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/SourceMethod"
+        },
+        "document": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Document"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locator"
+        },
+        "confidence": {
+          "default": 1.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "Taxes": {
+      "additionalProperties": false,
+      "properties": {
+        "regime": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Regime"
+        },
+        "profit": {
+          "$ref": "#/$defs/RateSchedule"
+        },
+        "vat": {
+          "$ref": "#/$defs/RateSchedule"
+        },
+        "property_pct": {
+          "default": 2.2,
+          "minimum": 0,
+          "title": "Property Pct",
+          "type": "number"
+        },
+        "land_pct": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Land Pct",
+          "type": "number"
+        },
+        "payroll_contributions": {
+          "$ref": "#/$defs/RateSchedule"
+        }
+      },
+      "title": "Taxes",
+      "type": "object"
+    },
+    "Valuation": {
+      "additionalProperties": false,
+      "properties": {
+        "discount_rate_pct": {
+          "default": 9.0,
+          "minimum": 0,
+          "title": "Discount Rate Pct",
+          "type": "number"
+        },
+        "reinvest_roa_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reinvest Roa Pct"
+        }
+      },
+      "title": "Valuation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Корневой документ допущений проекта.",
+  "properties": {
+    "schema": {
+      "default": "finmodel.assumptions.v1",
+      "title": "Schema",
+      "type": "string"
+    },
+    "profile": {
+      "$ref": "#/$defs/ProjectProfile"
+    },
+    "products": {
+      "items": {
+        "$ref": "#/$defs/Product"
+      },
+      "title": "Products",
+      "type": "array"
+    },
+    "capex": {
+      "$ref": "#/$defs/Capex"
+    },
+    "financing": {
+      "$ref": "#/$defs/Financing"
+    },
+    "taxes": {
+      "$ref": "#/$defs/Taxes"
+    },
+    "valuation": {
+      "$ref": "#/$defs/Valuation"
+    },
+    "scenarios": {
+      "items": {
+        "$ref": "#/$defs/Scenario"
+      },
+      "title": "Scenarios",
+      "type": "array"
+    },
+    "open_questions": {
+      "items": {
+        "$ref": "#/$defs/OpenQuestion"
+      },
+      "title": "Open Questions",
+      "type": "array"
+    },
+    "sources": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SourceRef"
+      },
+      "title": "Sources",
+      "type": "object"
+    }
+  },
+  "required": [
+    "profile"
+  ],
+  "title": "AssumptionSet",
+  "type": "object"
+}

@@ -124,3 +124,19 @@ class Assumption(Base):
     note = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class AssumptionSetRecord(Base):
+    """Версионированный набор допущений проекта (документ схемы assumptions.v1)."""
+
+    __tablename__ = "assumption_sets"
+    __table_args__ = (UniqueConstraint("project_slug", "version", name="uq_assumptions_project_version"),)
+
+    id = Column(Integer, primary_key=True)
+    project_slug = Column(String(128), nullable=False, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    status = Column(String(16), nullable=False, default="draft")  # draft | confirmed | archived
+    schema_id = Column(String(64), nullable=False)
+    data = Column(Text, nullable=False)  # JSON-документ AssumptionSet
+    comment = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=_utcnow)
