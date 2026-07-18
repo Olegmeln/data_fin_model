@@ -102,8 +102,9 @@ class Product(Strict):
     kind: ProductKind = ProductKind.goods
     unit: str | None = None                       # кг, шт, час...
     start_price: float | None = Field(None, ge=0)  # цена за единицу без НДС
+    start_volume: float | None = Field(None, ge=0)  # объём продаж, ед/мес на полной мощности
     price_indexation: str | None = None            # напр. "ИПЦ Минэкономразвития"
-    ramp_up_months: int | None = Field(None, ge=0)
+    ramp_up_months: int | None = Field(None, ge=0)  # линейный разгон объёма до полного
     extra: dict[str, Any] = Field(default_factory=dict)  # отраслевые параметры (урожайность и т.п.)
 
 
@@ -124,6 +125,18 @@ class Capex(Strict):
         if self.total_override is not None:
             return self.total_override
         return sum(i.amount for i in self.items)
+
+
+class OpexItem(Strict):
+    """Статья операционных расходов: фикс в месяц и/или доля выручки."""
+
+    name: str
+    monthly_amount: float = Field(0, ge=0)
+    pct_of_revenue: float = Field(0, ge=0, le=100)
+
+
+class Opex(Strict):
+    items: list[OpexItem] = Field(default_factory=list)
 
 
 class FacilityKind(str, Enum):
@@ -192,6 +205,7 @@ class AssumptionSet(Strict):
     profile: ProjectProfile
     products: list[Product] = Field(default_factory=list)
     capex: Capex = Field(default_factory=Capex)
+    opex: Opex = Field(default_factory=Opex)
     financing: Financing = Field(default_factory=Financing)
     taxes: Taxes = Field(default_factory=Taxes)
     valuation: Valuation = Field(default_factory=Valuation)

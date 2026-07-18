@@ -206,6 +206,48 @@
       "title": "OpenQuestion",
       "type": "object"
     },
+    "Opex": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/OpexItem"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "title": "Opex",
+      "type": "object"
+    },
+    "OpexItem": {
+      "additionalProperties": false,
+      "description": "Статья операционных расходов: фикс в месяц и/или доля выручки.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "monthly_amount": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Monthly Amount",
+          "type": "number"
+        },
+        "pct_of_revenue": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pct Of Revenue",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "OpexItem",
+      "type": "object"
+    },
     "Product": {
       "additionalProperties": false,
       "properties": {
@@ -241,6 +283,19 @@
           ],
           "default": null,
           "title": "Start Price"
+        },
+        "start_volume": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Volume"
         },
         "price_indexation": {
           "anyOf": [
@@ -582,6 +637,9 @@
     },
     "capex": {
       "$ref": "#/$defs/Capex"
+    },
+    "opex": {
+      "$ref": "#/$defs/Opex"
     },
     "financing": {
       "$ref": "#/$defs/Financing"
