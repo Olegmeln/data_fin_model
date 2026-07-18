@@ -630,3 +630,51 @@ def put_assumption_set(project: str, body: dict, db: Session = Depends(get_db)) 
     if status == "confirmed":
         store_preferences(db, assumptions)
     return _record_out(record, assumptions)
+
+
+# ------------------------------------------------------- Книга модели (v1) ----
+
+from fastapi.responses import Response as RawResponse  # noqa: E402
+
+from .finmodel.book import BookError, build_book  # noqa: E402
+from .finmodel.book.excel import export_book_xlsx  # noqa: E402
+
+
+def _load_latest_or_404(db: Session, project: str):
+    loaded = load_assumption_set(db, project)
+    if loaded is None:
+        raise HTTPException(status_code=404, detail=f"Наборы допущений проекта {project!r} не найдены.")
+    return loaded
+
+
+@router.get("/book/{project}/metrics")
+def book_metrics(project: str, scenario: str | None = None,
+                 version: int | None = None, db: Session = Depends(get_db)) -> dict:
+    loaded = load_assumption_set(db, project, version)
+    if loaded is None:
+        raise HTTPException(status_code=404, detail=f"Наборы допущений проекта {project!r} не найдены.")
+    record, assumptions = loaded
+    try:
+        book = build_book(assumptions, scenario=scenario)
+    except BookError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"project": project, "version": record.version, "scenario": scenario,
+            "metrics": book.metrics}
+
+
+@router.get("/book/{project}/export")
+def book_export(project: str, scenario: str | None = None,
+                sheets: str | None = None, db: Session = Depends(get_db)):
+    record, assumptions = _load_latest_or_404(db, project)
+    try:
+        book = build_book(assumptions, scenario=scenario)
+        codes = [c.strip() for c in sheets.split(",")] if sheets else None
+        payload = export_book_xlsx(assumptions, book, codes)
+    except (BookError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    filename = f"{project}_v{record.version}" + (f"_{scenario}" if scenario else "") + ".xlsx"
+    return RawResponse(
+        content=payload,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename.encode("ascii", "ignore").decode() or "book.xlsx"}"'},
+    )
