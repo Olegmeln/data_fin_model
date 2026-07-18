@@ -140,3 +140,17 @@ class AssumptionSetRecord(Base):
     data = Column(Text, nullable=False)  # JSON-документ AssumptionSet
     comment = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=_utcnow)
+
+
+class PreferenceMemory(Base):
+    """Память предпочтений: подтверждённые пользователем значения по профилю задачи."""
+
+    __tablename__ = "preference_memory"
+    __table_args__ = (UniqueConstraint("profile_key", "field_path", name="uq_pref_profile_path"),)
+
+    id = Column(Integer, primary_key=True)
+    profile_key = Column(String(128), nullable=False, index=True)  # напр. отрасль
+    field_path = Column(String(128), nullable=False)               # напр. "taxes" | "valuation"
+    value = Column(Text, nullable=False)                           # JSON выбранного раздела
+    confirmed_count = Column(Integer, nullable=False, default=1)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

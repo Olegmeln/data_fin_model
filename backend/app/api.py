@@ -3,7 +3,7 @@ import hashlib
 import json
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from . import models
@@ -531,3 +531,102 @@ def put_parameters(body: SurveyAnswersIn, db: Session = Depends(get_db)) -> dict
         "horizon": horizon,
         "assumptions_created": created,
     }
+
+
+# ------------------------------------------------- Интейк документов (v1) ----
+
+from .finmodel.assumptions_schema import AssumptionSet  # noqa: E402
+from .finmodel.intake import IntakeError, extract_assumptions, extract_text  # noqa: E402
+from .finmodel.intake.preferences import apply_preferences, store_preferences  # noqa: E402
+from .finmodel.intake.validator import apply_validation  # noqa: E402
+from .finmodel.assumptions_store import (  # noqa: E402
+    list_versions, load_assumption_set, save_assumption_set,
+)
+
+
+def _record_out(record, assumptions: AssumptionSet) -> dict:
+    return {
+        "project": record.project_slug,
+        "version": record.version,
+        "status": record.status,
+        "schema": record.schema_id,
+        "comment": record.comment,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+        "assumptions": assumptions.model_dump(by_alias=True, exclude_none=True, mode="json"),
+        "open_questions": [q.model_dump(exclude_none=True) for q in assumptions.open_questions],
+    }
+
+
+@router.post("/intake/extract")
+async def intake_extract(
+    project: str,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Документы → извлечение → память предпочтений → валидация → черновик набора."""
+    documents = []
+    for upload in files:
+        raw = await upload.read()
+        try:
+            documents.append(extract_text(upload.filename or "документ", raw))
+        except IntakeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    try:
+        assumptions = extract_assumptions(documents)
+    except IntakeError as exc:
+        status = 503 if "ANTHROPIC_API_KEY" in str(exc) else 422
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+    assumptions = apply_preferences(db, assumptions)
+    assumptions = apply_validation(assumptions)
+    record = save_assumption_set(
+        db, project, assumptions,
+        comment=f"извлечено из: {', '.join(d.filename for d in documents)}",
+    )
+    return _record_out(record, assumptions)
+
+
+@router.get("/assumption-sets/{project}")
+def get_assumption_set(project: str, version: int | None = None, db: Session = Depends(get_db)) -> dict:
+    loaded = load_assumption_set(db, project, version)
+    if loaded is None:
+        raise HTTPException(status_code=404, detail=f"Наборы допущений проекта {project!r} не найдены.")
+    record, assumptions = loaded
+    return _record_out(record, assumptions)
+
+
+@router.get("/assumption-sets/{project}/versions")
+def get_assumption_versions(project: str, db: Session = Depends(get_db)) -> list[dict]:
+    return [
+        {
+            "version": r.version,
+            "status": r.status,
+            "comment": r.comment,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in list_versions(db, project)
+    ]
+
+
+@router.put("/assumption-sets/{project}")
+def put_assumption_set(project: str, body: dict, db: Session = Depends(get_db)) -> dict:
+    """Сохранение правок пользователя новой версией; confirmed пополняет память."""
+    status = body.get("status", "draft")
+    if status not in ("draft", "confirmed"):
+        raise HTTPException(status_code=400, detail="status должен быть draft или confirmed")
+    try:
+        assumptions = AssumptionSet.from_json(body.get("assumptions") or {})
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Набор не прошёл схему: {exc}") from exc
+    assumptions = apply_validation(assumptions)
+    blockers = [q for q in assumptions.open_questions if q.severity == "blocker"]
+    if status == "confirmed" and blockers:
+        raise HTTPException(
+            status_code=409,
+            detail={"message": "Нельзя подтвердить набор с blocker-вопросами",
+                    "open_questions": [q.model_dump(exclude_none=True) for q in blockers]},
+        )
+    record = save_assumption_set(db, project, assumptions, status=status, comment=body.get("comment"))
+    if status == "confirmed":
+        store_preferences(db, assumptions)
+    return _record_out(record, assumptions)

@@ -215,8 +215,15 @@ function staffHTML(){const a=(state.params&&state.params.answers)||{};const pr=a
    <p class="note">Set payroll in the Parameters tab — it feeds the model as a monthly expense. A per-role headcount table is on the roadmap.</p>
    <button class="btn">＋ Add role <span class="badge">soon</span></button></div></div>`;}
 
-function docsHTML(){const list=state.imports||[];
+function docsHTML(){const list=state.imports||[];const iq=state.intake;
   return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">Documents</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">＋ Upload</button></div>
+   <div class="card" style="margin-bottom:16px"><h3>Flip documents into a model</h3><div class="bd">
+     <p class="note">Upload a business plan, financial model, or estimate (PDF/DOCX/XLSX/CSV/TXT) — the Modelling agent extracts assumptions into the AFM&C schema, cross-checks them and lists open questions.</p>
+     <input type="file" id="intakeFiles" multiple accept=".pdf,.docx,.xlsx,.xlsm,.csv,.txt,.md" style="margin:8px 0">
+     <button class="btn acc" id="intakeGo">⚡ Extract assumptions</button>
+     ${iq?`<div style="margin-top:12px"><b>v${iq.version}</b> · ${esc(iq.status)} · ${esc(iq.comment||'')}
+       ${iq.open_questions&&iq.open_questions.length?`<div style="margin-top:8px"><b>Open questions (${iq.open_questions.length})</b>${iq.open_questions.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':'⚠️'} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div>`:'<div class="note" style="margin-top:8px">✅ No open questions</div>'}</div>`:''}
+   </div></div>
    <div class="docgrid">${list.length?list.map(d=>`<div class="doc"><span class="fmt">${esc(d.format)}</span><div class="n">${esc(d.filename)}</div><div class="m">+${d.imported} rows · ${d.duplicates} dup</div></div>`).join(''):'<div class="note">No documents yet — upload a bank statement.</div>'}</div>
    <div class="card" style="margin-top:16px"><h3>Connect a data source</h3><div class="bd"><div class="src">
      <button class="srcbtn" id="up3">📄 Upload files (CSV/XLSX/PDF/ZIP)</button>
@@ -231,8 +238,25 @@ function renderView(){
   if(state.tab==='Overview')wireComposer();
   if(state.tab==='Model')wireGrid();
   if(state.tab==='Parameters'){const b=$('#rebuild');if(b)b.onclick=saveParams;}
+  if(state.tab==='Documents'){const g=$('#intakeGo');if(g)g.onclick=runIntake;}
   if(state.tab==='Documents'){const u=()=>$('#fileInput').click();['#up2','#up3'].forEach(id=>{const el=$(id);if(el)el.onclick=u;});}
 }
+async function runIntake(){
+  const inp=$('#intakeFiles');
+  if(!inp||!inp.files.length){toast('Choose files first');return;}
+  const fd=new FormData();
+  for(const f of inp.files)fd.append('files',f);
+  const project=(state.project&&state.project.slug)||'default';
+  try{
+    toast('Extracting assumptions…');
+    const r=await fetch(`/api/intake/extract?project=${encodeURIComponent(project)}`,{method:'POST',body:fd});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.detail&&data.detail.message||data.detail||r.statusText);
+    state.intake=data;renderView();
+    toast(`Extracted v${data.version}: ${data.open_questions.length} open question(s)`);
+  }catch(e){toast('Intake failed: '+e.message);}
+}
+
 async function saveParams(){
   const ids=['industry','business_age','planning_horizon','tax_mode','monthly_revenue','payroll_monthly','rent_monthly','discount_rate','capex_total','funding_source','loan_amount','loan_rate'];
   const answers={};ids.forEach(id=>{const el=$('#p_'+id);if(el&&el.value!=='')answers[id]=el.value;});
