@@ -6,10 +6,13 @@
 «требует подтверждения».
 """
 import json
+import logging
 
 import httpx
 
 from ..config import settings
+
+logger = logging.getLogger("app.ai.categorize")
 
 _BATCH_SIZE = 40
 
@@ -75,7 +78,19 @@ async def ai_categorize(
                     confidence = float(row.get("confidence", 0))
                     if code in valid_codes:
                         results[op_id] = (code, max(0.0, min(confidence, 1.0)))
-            except Exception:  # noqa: BLE001 — деградация без ИИ допустима
+            except httpx.HTTPStatusError as exc:
+                # Деградация без ИИ допустима, но причина должна попасть в логи
+                # (без содержимого операций — только метаданные).
+                logger.warning(
+                    "ai_categorize: HTTP %s от API, batch_start=%s, batch_size=%s",
+                    exc.response.status_code, start, len(batch),
+                )
+                continue
+            except (httpx.HTTPError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                logger.warning(
+                    "ai_categorize: %s (%s), batch_start=%s, batch_size=%s",
+                    type(exc).__name__, exc, start, len(batch),
+                )
                 continue
 
     return results

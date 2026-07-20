@@ -6,10 +6,13 @@
 (нет ключа, таймаут, кривой ответ) сервис тихо остаётся на правилах.
 """
 import json
+import logging
 
 import httpx
 
 from ..config import settings
+
+logger = logging.getLogger("app.ai.builder")
 
 _SYSTEM = (
     "Ты — опытный финансовый директор. Тебе дают профиль бизнеса (любой бизнес "
@@ -72,7 +75,17 @@ def ai_build_assumptions(
             text = text.strip("`")
             text = text[text.find("{"):]
         data = json.loads(text[text.find("{"): text.rfind("}") + 1])
-    except Exception:
+    except httpx.HTTPStatusError as exc:
+        logger.warning(
+            "ai_build_assumptions: HTTP %s от API, industry=%s, horizon=%s",
+            exc.response.status_code, industry.get("code"), horizon,
+        )
+        return None
+    except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
+        logger.warning(
+            "ai_build_assumptions: %s (%s), industry=%s, horizon=%s",
+            type(exc).__name__, exc, industry.get("code"), horizon,
+        )
         return None
 
     rows = []
