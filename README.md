@@ -87,6 +87,16 @@ Copy `.env.example` to `.env`:
 
 Ready for Vercel: `api/index.py` is the serverless entry point, `vercel.json` routes everything to FastAPI. Connect Neon (Postgres) via the Storage tab — the integration sets `DATABASE_URL` automatically. Every `git push` to `main` deploys. Note serverless limits: without Postgres, data is ephemeral; AI processing of very large statements may exceed the free-tier function timeout.
 
+**Migrations.** On Vercel the app does not touch the schema at cold start (`DB_AUTO_INIT` defaults to off there); it only checks DB availability (see `db_ok` in `/api/health`). Apply migrations from your machine before/after deploying:
+
+```bash
+cd backend
+export DATABASE_URL="postgresql://...neon..."   # Windows: set DATABASE_URL=...
+alembic upgrade head
+```
+
+For a brand-new database run `python -m app.db` once (creates tables, stamps Alembic, seeds the category dictionary). Local development keeps auto-init for convenience.
+
 ### Roadmap
 
 Google Sheets sync → authorization and workspaces (Owner / Editor / Viewer roles) → billing → notifications → production frontend (React/Next.js) → monitoring, mobile, collaboration, funding module. Strategically: connectors to 1C and other systems, and the AFM&C agent-contract standard for models of any scale.
@@ -221,6 +231,16 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 
 - **Без Postgres данные не сохраняются.** Файловая система Vercel доступна только для чтения, поэтому без `DATABASE_URL` приложение поднимает SQLite во временном каталоге `/tmp` — база обнуляется между холодными стартами. Для демо-клика сойдёт, для работы подключите Neon из шага 3.
 - **Лимит времени функции** на бесплатном тарифе ограничен: ИИ-разбор очень больших выписок может не уложиться (категоризация правилами и ключевыми словами работает мгновенно). Для постоянной работы с ИИ подойдут Render/Railway либо тариф Vercel Pro.
+
+**Миграции.** На Vercel приложение не меняет схему при cold start (`DB_AUTO_INIT` там выключен по умолчанию) — только проверяет доступность БД (`db_ok` в `/api/health`). Миграции применяются с вашей машины:
+
+```cmd
+cd backend
+set DATABASE_URL=postgresql://...neon...
+alembic upgrade head
+```
+
+Для совершенно новой базы один раз выполните `python -m app.db` (создание таблиц, штамп Alembic, сидирование справочника статей). Локальная разработка сохраняет автоинициализацию для удобства.
 
 ### API
 
