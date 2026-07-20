@@ -64,11 +64,14 @@ def _operation_to_dict(op: models.Operation) -> dict:
 
 @router.get("/health")
 def health() -> dict:
+    from .db import check_db
+
     return {
         "status": "ok",
         "ai_enabled": settings.ai_enabled,
         "db": settings.db_kind,
         "persistent": settings.db_persistent,
+        "db_ok": check_db(),
     }
 
 

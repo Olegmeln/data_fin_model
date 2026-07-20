@@ -67,5 +67,18 @@ class Settings:
     def ai_enabled(self) -> bool:
         return bool(self.ANTHROPIC_API_KEY)
 
+    @property
+    def db_auto_init(self) -> bool:
+        """Создавать ли схему БД при старте приложения.
+
+        По умолчанию: включено локально (удобство разработки), выключено на
+        Vercel — в продакшене схема управляется миграциями (alembic upgrade head),
+        cold start не должен менять БД. Переопределяется DB_AUTO_INIT=1/0.
+        """
+        value = os.getenv("DB_AUTO_INIT")
+        if value is not None:
+            return value.strip().lower() not in ("0", "false", "no", "")
+        return not os.getenv("VERCEL")
+
 
 settings = Settings()

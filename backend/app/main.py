@@ -10,7 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .api import router
-from .db import init_db
+from .config import settings
+from .db import check_db, init_db
 
 app = FastAPI(
     title="data_fin_model API",
@@ -25,7 +26,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-init_db()
+# Локально: автосоздание схемы и сидирование для удобства разработки.
+# В продакшене (Vercel: DB_AUTO_INIT выключен по умолчанию) старт приложения
+# схему не меняет — миграции применяются отдельно: alembic upgrade head.
+if settings.db_auto_init:
+    init_db()
+else:
+    check_db()
+
 app.include_router(router, prefix="/api")
 
 _STATIC_DIR = Path(__file__).parent / "static"
