@@ -4,6 +4,7 @@ import json
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models
@@ -36,6 +37,11 @@ def _check_upload_size(raw: bytes, filename: str | None) -> None:
 def _operation_hash(op_date: date, amount, direction: str, counterparty: str, description: str) -> str:
     payload = f"{op_date.isoformat()}|{amount}|{direction}|{(counterparty or '')[:80]}|{(description or '')[:160]}"
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
+def _hash_exists(db: Session, op_hash: str) -> bool:
+    """Проверка дубликата по source_hash (вынесена для тестируемости)."""
+    return db.query(models.Operation.id).filter(models.Operation.source_hash == op_hash).first() is not None
 
 
 def _operation_to_dict(op: models.Operation) -> dict:
@@ -286,7 +292,7 @@ async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> d
             duplicates += 1
             continue
         seen_hashes.add(op_hash)
-        if db.query(models.Operation.id).filter(models.Operation.source_hash == op_hash).first():
+        if _hash_exists(db, op_hash):
             duplicates += 1
             continue
 
@@ -333,10 +339,22 @@ async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> d
             if confidence >= settings.CONFIDENCE_THRESHOLD:
                 operation.status = "auto"
 
-    db.add_all(new_operations)
-    log.imported = len(new_operations)
+    # Вставка построчно через savepoint: при гонке двух одновременных импортов
+    # дубликат по source_hash (unique) не откатывает весь импорт, а считается duplicates.
+    imported: list[models.Operation] = []
+    for operation in new_operations:
+        savepoint = db.begin_nested()
+        try:
+            db.add(operation)
+            db.flush()
+            imported.append(operation)
+        except IntegrityError:
+            savepoint.rollback()
+            duplicates += 1
+
+    log.imported = len(imported)
     log.duplicates = duplicates
-    log.needs_review = sum(1 for op in new_operations if op.status == "needs_review")
+    log.needs_review = sum(1 for op in imported if op.status == "needs_review")
     db.commit()
 
     return {
