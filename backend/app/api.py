@@ -3,7 +3,7 @@ import hashlib
 import json
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -17,7 +17,9 @@ from .finmodel.builder import build_dashboard
 from .finmodel.industries import INDUSTRIES, get_industry, industry_public
 from .finmodel.survey import build_survey, compute_rule_series, horizon_from, save_assumptions
 from .parsers import ParserError, parse_statement
-from .schemas import AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, SurveyAnswersIn
+from .schemas import (
+    AssumptionSetPutIn, AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, SurveyAnswersIn,
+)
 
 router = APIRouter()
 
@@ -392,9 +394,9 @@ def list_operations(
     status: str | None = None,
     month: str | None = None,
     category: str | None = None,
-    q: str | None = None,
-    limit: int = 200,
-    offset: int = 0,
+    q: str | None = Query(None, max_length=200),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
     query = db.query(models.Operation)
@@ -651,13 +653,11 @@ def get_assumption_versions(project: str, db: Session = Depends(get_db)) -> list
 
 
 @router.put("/assumption-sets/{project}")
-def put_assumption_set(project: str, body: dict, db: Session = Depends(get_db)) -> dict:
+def put_assumption_set(project: str, body: AssumptionSetPutIn, db: Session = Depends(get_db)) -> dict:
     """Сохранение правок пользователя новой версией; confirmed пополняет память."""
-    status = body.get("status", "draft")
-    if status not in ("draft", "confirmed"):
-        raise HTTPException(status_code=400, detail="status должен быть draft или confirmed")
+    status = body.status
     try:
-        assumptions = AssumptionSet.from_json(body.get("assumptions") or {})
+        assumptions = AssumptionSet.from_json(body.assumptions or {})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Набор не прошёл схему: {exc}") from exc
     assumptions = apply_validation(assumptions)
@@ -668,7 +668,7 @@ def put_assumption_set(project: str, body: dict, db: Session = Depends(get_db)) 
             detail={"message": "Нельзя подтвердить набор с blocker-вопросами",
                     "open_questions": [q.model_dump(exclude_none=True) for q in blockers]},
         )
-    record = save_assumption_set(db, project, assumptions, status=status, comment=body.get("comment"))
+    record = save_assumption_set(db, project, assumptions, status=status, comment=body.comment)
     if status == "confirmed":
         store_preferences(db, assumptions)
     return _record_out(record, assumptions)
