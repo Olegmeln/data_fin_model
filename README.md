@@ -1,17 +1,111 @@
-# data_fin_model — живая финансовая модель
+# data_fin_model — Live Financial Model / Живая финансовая модель
 
-Low-code платформа динамического финансового моделирования для малого и среднего бизнеса.
-Превращает банковскую выписку в обновляемую финмодель с BI-дашбордом: данные загружаются,
-ИИ раскладывает операции по статьям, показатели и графики пересчитываются автоматически.
-
-**Ключевой сценарий MVP:** `загрузил выписку → ИИ разобрал операции → дашборд обновился` — без ручного переноса цифр.
+**[English](#english) | [Русский](#русский)**
 
 ---
 
-## Что уже работает (итерации 1–2a)
+<a name="english"></a>
+## English
+
+A low-code platform for dynamic financial modelling — built for projects of **any scale**, from small businesses to large investment programs. Documents (bank statements, business plans, spreadsheets) turn into a live, continuously updated financial model with a BI dashboard: data comes in, AI maps operations to model line items, metrics and charts recalculate automatically.
+
+**Core MVP scenario:** `upload a bank statement → AI categorizes operations → dashboard updates` — no manual data entry.
+
+**Strategic vision — AFM&C (Agentic Financial Modelling & Controlling):** three agent roles working over one model standard. *Modelling* builds models from documents and dialogue; *Audit* cross-validates document packages against each other and against bank requirements; *Controlling* runs continuous plan-vs-actual and covenant monitoring. The standard is designed as an agent-to-agent contract (MCP interface) — like XBRL for reporting, but for live models. Future connectors: 1C and other accounting systems.
+
+### What already works
+
+- **Bank statement parsers** — CSV, Excel (.xlsx) and 1CClientBankExchange (.txt) with auto-detection of format, encoding (UTF-8 / Windows-1251), delimiters and column roles
+- **Deduplication** — re-uploading the same file is safe; duplicates are dropped by operation hash, robust to concurrent uploads
+- **Categorization cascade** — user rules → template keywords → AI (Claude API) → fallback; low-confidence operations are flagged for review
+- **Learning** — confirming a category creates a "counterparty → line item" rule and applies it to similar operations
+- **Financial model & dashboard** — monthly revenue/expense series, cash flow and cumulative balance, KPIs, expense structure, plan-vs-actual
+- **Assumptions engine** — every cell has a provenance ("fact / assumption"); assumptions are generated from an interactive survey, editable in the grid, and automatically displaced by facts from uploaded statements
+- **AI model builder** — with `ANTHROPIC_API_KEY`, Claude refines assumptions (seasonality, realistic cost shares, ramp-up); without a key the industry-rules engine works standalone
+- **Investment framing** — any business is treated as an investment project: CAPEX, credit facilities, NPV / IRR / payback on the dashboard
+- **Excel export — the flagship scenario** — a .xlsx with 1000+ live formulas: Cover, Assumptions with Pessimist/Base/Optimist scenarios, 36-month model with annuity loan, annual summary, dashboard with Excel charts, sensitivity matrix; named cells and ranges make the file precise for AI agents working directly in Excel
+- **Document intake (v1)** — business plans and reference models (PDF/DOCX/XLSX) → structured `assumptions.v1` sets with versioning, validation and cross-document audit
+- **Model book (v1)** — sheet-registry engine: series, metrics, scenario support, Excel export per registry
+
+### Architecture
+
+```
+data_fin_model/
+├── backend/
+│   └── app/
+│       ├── main.py              # FastAPI entry point, serves the demo UI
+│       ├── config.py            # settings from .env
+│       ├── db.py                # DB connection, init, category seeding
+│       ├── models.py            # ORM: operations, categories, rules, imports, plan
+│       ├── schemas.py           # Pydantic request schemas
+│       ├── api.py               # REST API
+│       ├── parsers/             # csv, xlsx, 1C statement parsers
+│       ├── categorization/      # rules cascade + optional AI layer
+│       └── finmodel/            # model builder, survey, intake, book, Excel export
+├── backend/tests/               # pytest suite (parsers, API, migrations, book)
+├── backend/alembic/             # migrations
+├── samples/                     # demo statements
+└── docs/                        # MVP specification
+```
+
+**Stack:** Python 3.11+, FastAPI, SQLAlchemy 2, PostgreSQL (SQLite for local start), Alembic, Chart.js in the demo UI. AI — Anthropic Claude API (optional).
+
+### Quick start
+
+```bash
+git clone https://github.com/Olegmeln/data_fin_model.git
+cd data_fin_model/backend
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Open **http://localhost:8000** for the demo UI, **http://localhost:8000/docs** for Swagger.
+
+Try the demo data:
+
+```bash
+curl -F "file=@../samples/выписка_demo.csv" localhost:8000/api/imports/upload
+curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/upload
+```
+
+### Configuration
+
+Copy `.env.example` to `.env`:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./finmodel.db` | SQLAlchemy connection string; PostgreSQL for production |
+| `ANTHROPIC_API_KEY` | _(empty)_ | Anthropic API key; without it the rules engine works standalone |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for categorization |
+| `AI_CONFIDENCE_THRESHOLD` | `0.8` | Below this, operations are flagged "needs review" |
+| `MAX_UPLOAD_MB` | `15` | Upload size limit per file, MB |
+| `MAX_STATEMENT_ROWS` | `20000` | Max operations per statement |
+| `MAX_INTAKE_FILES` | `10` | Max files per intake request |
+
+### Deployment
+
+Ready for Vercel: `api/index.py` is the serverless entry point, `vercel.json` routes everything to FastAPI. Connect Neon (Postgres) via the Storage tab — the integration sets `DATABASE_URL` automatically. Every `git push` to `main` deploys. Note serverless limits: without Postgres, data is ephemeral; AI processing of very large statements may exceed the free-tier function timeout.
+
+### Roadmap
+
+Google Sheets sync → authorization and workspaces (Owner / Editor / Viewer roles) → billing → notifications → production frontend (React/Next.js) → monitoring, mobile, collaboration, funding module. Strategically: connectors to 1C and other systems, and the AFM&C agent-contract standard for models of any scale.
+
+---
+
+<a name="русский"></a>
+## Русский
+
+Low-code платформа динамического финансового моделирования — для проектов **любого масштаба**: от малого бизнеса до крупных инвестиционных программ. Документы (банковские выписки, бизнес-планы, таблицы) превращаются в живую, постоянно обновляемую финмодель с BI-дашбордом: данные загружаются, ИИ раскладывает операции по статьям, показатели и графики пересчитываются автоматически.
+
+**Ключевой сценарий MVP:** `загрузил выписку → ИИ разобрал операции → дашборд обновился` — без ручного переноса цифр.
+
+**Стратегическое видение — AFM&C (Agentic Financial Modelling & Controlling):** три агентские роли над единым стандартом модели. *Моделирование* собирает модели из документов и диалога; *Аудит* сверяет пакеты документов между собой и с требованиями банков; *Контроллинг* ведёт непрерывный план-факт и мониторинг ковенант. Стандарт спроектирован как контракт «агент-агент» (MCP-интерфейс) — как XBRL для отчётности, но для живых моделей. Будущие коннекторы: 1С и другие учётные системы.
+
+### Что уже работает (итерации 1–2a)
 
 - [x] **Парсеры банковских выписок** — CSV, Excel (.xlsx) и текстовый формат «1С: клиент-банк» (1CClientBankExchange) с автоопределением формата, кодировки (UTF-8 / Windows-1251), разделителей и ролей колонок
-- [x] **Дедупликация** — повторная загрузка того же файла безопасна, дубликаты операций отсекаются по хэшу
+- [x] **Дедупликация** — повторная загрузка того же файла безопасна, дубликаты отсекаются по хэшу; устойчива к одновременным загрузкам
 - [x] **Категоризация операций** — четырёхуровневый каскад: правила пользователя → ключевые слова шаблона → ИИ (Claude API) → запасной вариант; операции с низкой уверенностью помечаются «требует подтверждения»
 - [x] **Дообучение** — подтверждение статьи создаёт правило «контрагент → статья» и применяет его к похожим операциям
 - [x] **Финмодель и дашборд** — помесячные ряды выручки/расходов, денежный поток и накопленный остаток, KPI (прибыль, маржинальность), структура расходов, план/факт по статьям (внутренние переводы исключаются из P&L и потока)
@@ -24,6 +118,8 @@ Low-code платформа динамического финансового м
 - [x] **ИИ-сборка модели** — при наличии `ANTHROPIC_API_KEY` допущения уточняет Claude: сезонность, реалистичные доли затрат, специфика из собственных параметров пользователя; в финале опросника — сводка логики «Модель собрал ИИ», в шапке — индикатор статуса ИИ; без ключа работает движок отраслевых правил
 - [x] **Инвестиционная рамка** — любой бизнес рассматривается как инвестпроект: стартовый CAPEX и кредит доступны всем отраслям, опросник включает юридическую структуру (ИП/ООО/АО/ГК + свой вариант), горизонт 12–36 месяцев, источник финансирования и собственные параметры; на дашборде блок NPV / IRR / срок окупаемости по проектному потоку (без финансирования) со ставкой дисконтирования из опросника
 - [x] **Экспорт модели в Excel — главный сценарий** — кнопка «Скачать модель .xlsx» создаёт файл с живыми формулами (1000+): Обложка, Допущения со сценариями Пессимист/База/Оптимист и сезонностью, помесячная Модель на 36 месяцев с кредитом-аннуитетом, Годовая сводка, Дашборд с NPV / IRR / окупаемостью и диаграммами Excel, матрица Чувствительности с цветовой подсветкой, Инструкция с мультииндустриальными пресетами; ключевые ячейки и ряды названы (BaseRevenue, CogsPct, FCF, CumFCF, RevenueRow…) — это делает работу ИИ-агента прямо в Excel точной; если пройден опросник, драйверы подставляются из профиля
+- [x] **Интейк документов (v1)** — бизнес-планы и эталонные модели (PDF/DOCX/XLSX) → структурированные наборы `assumptions.v1` с версионированием, валидацией и кросс-документным аудитом
+- [x] **Книга модели (v1)** — движок по реестру листов: ряды, метрики, сценарии, экспорт в Excel по реестру
 - [ ] ZIP-инжест и PDF-парсер банковских выписок (итерация 2b)
 - [ ] Синхронизация с Google Sheets (модель в таблице пользователя)
 - [ ] Авторизация, рабочие пространства и роли
@@ -31,7 +127,7 @@ Low-code платформа динамического финансового м
 
 Полный объём MVP и границы — в техническом задании: [`docs/ТЗ_MVP_платформа_финмоделирования.docx`](docs/ТЗ_MVP_платформа_финмоделирования.docx).
 
-## Архитектура
+### Архитектура
 
 ```
 data_fin_model/
@@ -50,19 +146,20 @@ data_fin_model/
 │       │   └── ai.py            # ИИ-категоризация через Anthropic API (опционально)
 │       ├── finmodel/
 │       │   ├── template.py      # шаблон статей с ключевыми словами
-│       │   └── builder.py       # сборка модели и данных дашборда
-│       └── static/index.html    # рабочий стол (новый UX, один файл); legacy.html — прежний интерфейс (/legacy)
+│       │   ├── builder.py       # сборка модели и данных дашборда
+│       │   ├── intake/          # интейк документов: извлечение, валидация, память
+│       │   └── book/            # книга модели: реестр листов, движок, Excel
+│       └── static/index.html    # рабочий стол (новый UX); legacy.html — прежний интерфейс (/legacy)
+├── backend/tests/               # pytest: парсеры, API, миграции, книга, интейк
+├── backend/alembic/             # миграции
 ├── samples/                     # демо-выписки для проверки
-│   ├── выписка_demo.csv
-│   ├── выписка_demo_июнь_2026.csv
-│   └── statement_1c_demo.txt
 ├── docs/                        # техническое задание на MVP
 └── .env.example
 ```
 
-**Стек:** Python 3.11+, FastAPI, SQLAlchemy 2, SQLite (для старта; продакшен — PostgreSQL), Chart.js на демо-интерфейсе. ИИ — Anthropic Claude API (опционально).
+**Стек:** Python 3.11+, FastAPI, SQLAlchemy 2, PostgreSQL (для старта — SQLite), Alembic, Chart.js на демо-интерфейсе. ИИ — Anthropic Claude API (опционально).
 
-## Быстрый старт
+### Быстрый старт
 
 ```bash
 git clone https://github.com/Olegmeln/data_fin_model.git
@@ -77,7 +174,7 @@ uvicorn app.main:app --reload --port 8000
 
 При первом запуске создаётся локальная база `finmodel.db` и справочник из 14 статей универсальной финмодели.
 
-### Проверка на демо-данных
+#### Проверка на демо-данных
 
 Загрузите через интерфейс (вкладка «Загрузка данных») или через API файлы из `samples/`:
 
@@ -95,7 +192,7 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 денежным потоком и структурой затрат. Повторная загрузка тех же файлов
 импортирует 0 операций — сработает дедупликация.
 
-## Конфигурация
+### Конфигурация
 
 Скопируйте `.env.example` в `.env` (файл ищется в рабочем каталоге и в корне репозитория):
 
@@ -105,8 +202,11 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 | `ANTHROPIC_API_KEY` | _(пусто)_ | Ключ Anthropic API. Без ключа ИИ-уровень отключён, работают правила и ключевые слова |
 | `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Модель для категоризации |
 | `AI_CONFIDENCE_THRESHOLD` | `0.8` | Порог уверенности: ниже — операция получает статус «требует подтверждения» |
+| `MAX_UPLOAD_MB` | `15` | Лимит размера загружаемого файла, МБ |
+| `MAX_STATEMENT_ROWS` | `20000` | Лимит числа операций в выписке |
+| `MAX_INTAKE_FILES` | `10` | Лимит числа файлов в одном запросе интейка |
 
-## Деплой на Vercel
+### Деплой на Vercel
 
 Репозиторий готов к развёртыванию: `api/index.py` — serverless-точка входа, `vercel.json` маршрутизирует все запросы в FastAPI, корневой `requirements.txt` содержит зависимости с драйвером Postgres.
 
@@ -122,7 +222,7 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 - **Без Postgres данные не сохраняются.** Файловая система Vercel доступна только для чтения, поэтому без `DATABASE_URL` приложение поднимает SQLite во временном каталоге `/tmp` — база обнуляется между холодными стартами. Для демо-клика сойдёт, для работы подключите Neon из шага 3.
 - **Лимит времени функции** на бесплатном тарифе ограничен: ИИ-разбор очень больших выписок может не уложиться (категоризация правилами и ключевыми словами работает мгновенно). Для постоянной работы с ИИ подойдут Render/Railway либо тариф Vercel Pro.
 
-## API
+### API
 
 | Метод | Путь | Назначение |
 |---|---|---|
@@ -142,14 +242,18 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 | `PUT` | `/api/assumptions` | Правка или создание допущений; сумма ≤ 0 удаляет допущение |
 | `DELETE` | `/api/assumptions/{id}` | Удаление допущения |
 | `GET` | `/api/model/export` | Скачивание файла финансовой модели .xlsx (параметр `title`) |
+| `POST` | `/api/intake/extract` | Документы → извлечение допущений → черновик набора `assumptions.v1` |
+| `GET/PUT` | `/api/assumption-sets/{project}` | Версии наборов допущений; confirmed пополняет память предпочтений |
+| `GET` | `/api/book/{project}/metrics` | Метрики книги модели (сценарии) |
+| `GET` | `/api/book/{project}/export` | Экспорт книги модели в .xlsx по реестру листов |
 
-## Поддерживаемые форматы выписок
+### Поддерживаемые форматы выписок
 
 1. **CSV** — разделитель `;` или `,`, кодировка UTF-8 или Windows-1251. Колонки распознаются по заголовкам: дата, сумма (или раздельные приход/расход), тип операции, контрагент, назначение платежа. Суммы вида `1 234,56` разбираются корректно.
 2. **Excel (.xlsx)** — те же правила распознавания колонок, активный лист.
 3. **1CClientBankExchange (.txt)** — стандартный формат обмена «1С: клиент-банк». Направление платежа определяется по расчётному счёту организации из заголовка файла либо по полям `ДатаСписано`/`ДатаПоступило`.
 
-## Как работает категоризация
+### Как работает категоризация
 
 Каскад из четырёх уровней, побеждает первый сработавший:
 
@@ -160,15 +264,15 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 
 Операции с уверенностью ниже порога попадают в фильтр «Требуют подтверждения». Подтверждение пользователем ставит уверенность 1.0, создаёт правило и переразмечает похожие операции.
 
-## Дорожная карта (по ТЗ)
+### Дорожная карта (по ТЗ)
 
 1. **Google Sheets** — модель живёт в таблице пользователя: создание из шаблона, чтение и запись через Sheets API.
 2. **Авторизация и рабочие пространства** — e-mail + Google OAuth, роли Владелец / Редактор / Наблюдатель.
 3. **Тарифы и оплата** — пробный период 14 дней, рекуррентная подписка.
 4. **Уведомления** — e-mail о завершении импорта и ошибках синхронизации.
 5. **Продакшен-фронтенд** — React/Next.js вместо демо-интерфейса.
-6. Далее по этапам продукта: мониторинг и алерты, мобильное приложение, совместная работа, модуль привлечения финансирования.
+6. Далее по этапам продукта: мониторинг и алерты, мобильное приложение, совместная работа, модуль привлечения финансирования. Стратегически — коннекторы к 1С и другим системам и стандарт AFM&C как агентский контракт для моделей любого масштаба.
 
-## Документация
+### Документация
 
 - Техническое задание на MVP: [`docs/ТЗ_MVP_платформа_финмоделирования.docx`](docs/ТЗ_MVP_платформа_финмоделирования.docx) — функциональные и нефункциональные требования, 13 экранов, интеграции, тарифы.
