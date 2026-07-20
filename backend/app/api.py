@@ -21,6 +21,18 @@ from .schemas import AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, Survey
 router = APIRouter()
 
 
+def _check_upload_size(raw: bytes, filename: str | None) -> None:
+    """Единая проверка размера загружаемого файла."""
+    if not raw:
+        raise HTTPException(status_code=400, detail=f"Файл {filename or ''} пуст.".replace("  ", " "))
+    if len(raw) > settings.MAX_UPLOAD_BYTES:
+        limit_mb = settings.MAX_UPLOAD_BYTES // (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"Файл {filename or ''} слишком большой: лимит {limit_mb} МБ.".replace("  ", " "),
+        )
+
+
 def _operation_hash(op_date: date, amount, direction: str, counterparty: str, description: str) -> str:
     payload = f"{op_date.isoformat()}|{amount}|{direction}|{(counterparty or '')[:80]}|{(description or '')[:160]}"
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
@@ -242,13 +254,19 @@ def delete_assumption(assumption_id: int, db: Session = Depends(get_db)) -> dict
 async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> dict:
     """Загрузка выписки: парсинг → дедупликация → категоризация (правила + ИИ)."""
     raw = await file.read()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Файл пуст.")
+    _check_upload_size(raw, file.filename)
 
     try:
         fmt, parsed = parse_statement(file.filename, raw)
     except ParserError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if len(parsed) > settings.MAX_STATEMENT_ROWS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"В выписке {len(parsed)} операций — лимит {settings.MAX_STATEMENT_ROWS}. "
+                   "Разбейте файл на части.",
+        )
 
     log = models.ImportLog(filename=file.filename or "statement", fmt=fmt, total_rows=len(parsed))
     db.add(log)
@@ -564,9 +582,15 @@ async def intake_extract(
     db: Session = Depends(get_db),
 ) -> dict:
     """Документы → извлечение → память предпочтений → валидация → черновик набора."""
+    if len(files) > settings.MAX_INTAKE_FILES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Слишком много файлов: {len(files)} — лимит {settings.MAX_INTAKE_FILES}.",
+        )
     documents = []
     for upload in files:
         raw = await upload.read()
+        _check_upload_size(raw, upload.filename)
         try:
             documents.append(extract_text(upload.filename or "документ", raw))
         except IntakeError as exc:

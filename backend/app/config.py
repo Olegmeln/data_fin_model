@@ -58,6 +58,11 @@ class Settings:
     # Порог уверенности: ниже него операция получает статус «требует подтверждения».
     CONFIDENCE_THRESHOLD: float = float(os.getenv("AI_CONFIDENCE_THRESHOLD", "0.8"))
 
+    # Лимиты загрузки файлов (защита памяти и времени ответа, особенно на Vercel).
+    MAX_UPLOAD_BYTES: int = int(os.getenv("MAX_UPLOAD_MB", "15")) * 1024 * 1024
+    MAX_STATEMENT_ROWS: int = int(os.getenv("MAX_STATEMENT_ROWS", "20000"))
+    MAX_INTAKE_FILES: int = int(os.getenv("MAX_INTAKE_FILES", "10"))
+
     @property
     def ai_enabled(self) -> bool:
         return bool(self.ANTHROPIC_API_KEY)
