@@ -68,6 +68,14 @@ class Settings:
         return bool(self.ANTHROPIC_API_KEY)
 
     @property
+    def cors_origins(self) -> list[str]:
+        """Разрешённые CORS-origin (CORS_ORIGINS, через запятую). По умолчанию `*` — MVP/демо;
+        перед выходом в продакшен задайте домен фронтенда."""
+        raw = os.getenv("CORS_ORIGINS", "*")
+        origins = [item.strip() for item in raw.split(",") if item.strip()]
+        return origins or ["*"]
+
+    @property
     def db_auto_init(self) -> bool:
         """Создавать ли схему БД при старте приложения.
 

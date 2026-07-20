@@ -21,7 +21,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # MVP: при выходе в продакшен ограничить доменом фронтенда
+    allow_origins=settings.cors_origins,  # CORS_ORIGINS в env; по умолчанию * (MVP)
     allow_methods=["*"],
     allow_headers=["*"],
 )

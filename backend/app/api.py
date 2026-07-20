@@ -251,7 +251,7 @@ def upsert_assumptions(body: AssumptionUpsertIn, db: Session = Depends(get_db)) 
 
 @router.delete("/assumptions/{assumption_id}")
 def delete_assumption(assumption_id: int, db: Session = Depends(get_db)) -> dict:
-    assumption = db.query(models.Assumption).get(assumption_id)
+    assumption = db.get(models.Assumption, assumption_id)
     if assumption is None:
         raise HTTPException(status_code=404, detail="Допущение не найдено.")
     db.delete(assumption)
@@ -437,7 +437,7 @@ def confirm_category(
     db: Session = Depends(get_db),
 ) -> dict:
     """Подтверждение/смена статьи. Создаёт правило и применяет его к похожим операциям."""
-    operation = db.query(models.Operation).get(operation_id)
+    operation = db.get(models.Operation, operation_id)
     if operation is None:
         raise HTTPException(status_code=404, detail="Операция не найдена.")
     category = db.query(models.Category).filter(models.Category.code == body.category_code).first()

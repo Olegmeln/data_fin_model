@@ -32,3 +32,13 @@ def test_check_db_ok(client):
 def test_health_reports_db_ok(client):
     data = client.get("/api/health").json()
     assert data["db_ok"] is True
+
+
+class TestCorsOrigins:
+    def test_default_wildcard(self, monkeypatch):
+        monkeypatch.delenv("CORS_ORIGINS", raising=False)
+        assert settings.cors_origins == ["*"]
+
+    def test_parsing_list(self, monkeypatch):
+        monkeypatch.setenv("CORS_ORIGINS", "https://a.example, https://b.example ,")
+        assert settings.cors_origins == ["https://a.example", "https://b.example"]
