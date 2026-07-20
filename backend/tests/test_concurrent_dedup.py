@@ -7,33 +7,46 @@ IntegrityError по savepoint, без 500 и без отката всего им
 from app import api
 
 
-def test_race_duplicates_counted_not_crashed(client, sample_csv, monkeypatch):
+def _csv(rows: list[str]) -> bytes:
+    header = "Дата;Сумма;Тип;Контрагент;Назначение платежа"
+    return "\n".join([header, *rows]).encode("utf-8")
+
+
+def test_race_duplicates_counted_not_crashed(client, monkeypatch):
+    payload_bytes = _csv([
+        "05.03.2031;150000;Поступление;ООО Гонка;Оплата по договору Р-1",
+        "06.03.2031;-42000;Списание;ООО Аренда-Гонка;Аренда офиса март",
+    ])
     first = client.post(
         "/api/imports/upload",
-        files={"file": ("выписка.csv", sample_csv, "text/csv")},
+        files={"file": ("race.csv", payload_bytes, "text/csv")},
     ).json()
-    assert first["imported"] > 0
+    assert first["imported"] == 2
 
     monkeypatch.setattr(api, "_hash_exists", lambda db, op_hash: False)
 
     second = client.post(
         "/api/imports/upload",
-        files={"file": ("выписка.csv", sample_csv, "text/csv")},
+        files={"file": ("race.csv", payload_bytes, "text/csv")},
     )
     assert second.status_code == 200, second.text
     payload = second.json()
     assert payload["imported"] == 0
-    assert payload["duplicates"] >= first["imported"]
+    assert payload["duplicates"] == 2
 
 
-def test_normal_idempotency_still_works(client, sample_csv):
+def test_normal_idempotency_still_works(client):
+    payload_bytes = _csv([
+        "10.04.2031;99000;Поступление;ООО Идемпотент;Оплата счёта 7",
+    ])
     first = client.post(
         "/api/imports/upload",
-        files={"file": ("выписка2.csv", sample_csv, "text/csv")},
+        files={"file": ("idem.csv", payload_bytes, "text/csv")},
     ).json()
+    assert first["imported"] == 1
     second = client.post(
         "/api/imports/upload",
-        files={"file": ("выписка2.csv", sample_csv, "text/csv")},
+        files={"file": ("idem.csv", payload_bytes, "text/csv")},
     ).json()
     assert second["imported"] == 0
-    assert second["duplicates"] == first["imported"] + first["duplicates"]
+    assert second["duplicates"] == 1

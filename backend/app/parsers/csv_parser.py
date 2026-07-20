@@ -8,7 +8,10 @@ from .base import ParsedOperation, ParserError, build_operation, decode_bytes, m
 def parse_csv(raw: bytes) -> list[ParsedOperation]:
     text = decode_bytes(raw)
     delimiter = ";" if text.count(";") >= text.count(",") else ","
-    rows = [row for row in csv.reader(io.StringIO(text), delimiter=delimiter) if any(c.strip() for c in row)]
+    try:
+        rows = [row for row in csv.reader(io.StringIO(text), delimiter=delimiter) if any(c.strip() for c in row)]
+    except csv.Error as exc:
+        raise ParserError(f"Файл не распознан как CSV: {exc}") from exc
     if not rows:
         raise ParserError("Файл пуст или не распознан как CSV.")
 
