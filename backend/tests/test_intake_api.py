@@ -105,6 +105,41 @@ class TestIntakeApi:
         assert response.status_code == 422
 
 
+class TestAutoAssumptionSet:
+    """Auto-режим формы допущений: стартовый профиль + память предпочтений."""
+
+    def test_auto_creates_default_profile(self, client):
+        response = client.post("/api/assumption-sets/autoproj/auto")
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["version"] == 1 and payload["status"] == "draft"
+        a = payload["assumptions"]
+        # дефолты Архитектуры_финмодели_v1: 5 лет, 9%, 2 товара + 2 услуги, 3 сценария
+        assert a["profile"]["horizon_years"] == 5
+        assert a["valuation"]["discount_rate_pct"] == 9.0
+        kinds = sorted(p["kind"] for p in a["products"])
+        assert kinds == ["goods", "goods", "service", "service"]
+        assert [s["name"] for s in a["scenarios"]] == ["Пессимистичный", "Базовый", "Оптимистичный"]
+        assert a["sources"]["profile"]["method"] == "default"
+
+    def test_auto_applies_preference_memory(self, client, db_session):
+        # подтверждённый набор «универсального» профиля пополняет память
+        confirmed = _extracted_set(industry=None).model_copy(update={"taxes": Taxes(
+            regime="УСН 15%", vat=RateSchedule.flat(0), profit=RateSchedule.flat(15))})
+        store_preferences(db_session, confirmed)
+        # auto-набор без отрасли = тот же «универсальный» профиль → налоги из памяти
+        response = client.post("/api/assumption-sets/autoprefs/auto")
+        assert response.status_code == 200, response.text
+        a = response.json()["assumptions"]
+        assert a["taxes"]["regime"] == "УСН 15%"
+        assert "память предпочтений" in a["sources"]["taxes"]["note"]
+
+    def test_auto_versions_stack(self, client):
+        client.post("/api/assumption-sets/autostack/auto")
+        response = client.post("/api/assumption-sets/autostack/auto")
+        assert response.json()["version"] == 2
+
+
 class TestPreferenceMemory:
     def test_store_and_apply_for_same_profile(self, db_session):
         confirmed = _extracted_set()

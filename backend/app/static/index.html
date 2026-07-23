@@ -92,6 +92,9 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
 #toasts{position:fixed;top:16px;right:16px;z-index:60;display:flex;flex-direction:column;gap:8px}
 .toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:11px 14px;box-shadow:var(--shadow);max-width:340px;font-size:13.5px}
 .toast.ok{border-left-color:var(--fact)}.toast.err{border-left-color:#c0392b}
+.aset td,.aset th{text-align:left}
+.aset td input,.aset td select{width:100%;min-width:64px;border:1px solid var(--border);background:var(--surface-2);border-radius:6px;padding:4px 7px;color:var(--text);font:inherit;font-size:12.5px}
+.aset .icon{width:28px;height:28px;font-size:13px}
 </style></head>
 <body>
 <div class="app">
@@ -132,13 +135,13 @@ const KIND={income:'Income',expense:'Expenses',investing:'Investments',financing
 const fmtMonth=m=>{const[y,mo]=m.split('-');return MON[+mo]+' '+y.slice(2);};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function parseAmount(s){if(s==null)return null;s=String(s).replace(/[₽\s ]/g,'').replace(',','.');if(s===''||s==='—')return 0;const v=parseFloat(s);return isNaN(v)?null:v;}
-async function api(path,opts){const r=await fetch('/api'+path,opts);if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch(e){}throw new Error(d||('HTTP '+r.status));}const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text();}
+async function api(path,opts){const r=await fetch('/api'+path,opts);if(!r.ok){let d='';try{d=(await r.json()).detail||'';if(typeof d==='object')d=d.message||JSON.stringify(d);}catch(e){}throw new Error(d||('HTTP '+r.status));}const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text();}
 function toast(m,k){const t=document.createElement('div');t.className='toast '+(k||'');t.textContent=m;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),4200);}
 function loadTheme(){document.documentElement.dataset.theme=localStorage.getItem('dfm-theme')||'light';}
 function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('dfm-theme',t);}
 
 const state={dash:null,imports:[],google:null,params:null,tab:'Overview',title:'Financial model',rec:null};
-const TABS=['Overview','Model','Parameters','CAPEX','Staff','Documents'];
+const TABS=['Overview','Model','Assumptions','Parameters','CAPEX','Staff','Documents'];
 
 function renderProjects(){
   const ind=state.dash&&state.dash.industry?state.dash.industry.name:'Not set';
@@ -232,11 +235,157 @@ function docsHTML(){const list=state.imports||[];const iq=state.intake;
      <button class="srcbtn">🗄 SQL warehouse <span class="badge">soon</span></button>
    </div><p class="note">Any source normalizes into a single operations schema; the model updates automatically.</p></div></div>`;}
 
+// ---- Книга допущений (assumptions.v1) — форма workspace v2, критический путь п.4 ----
+const PROJECT=()=>(state.project&&state.project.slug)||'default';
+const MB={extracted:['AI','assume'],user:['manual','fact'],default:['auto',''],derived:['calc','']};
+function srcOf(path){const s=state.doc&&state.doc.sources;if(!s)return null;if(s[path])return s[path];
+  let best=null;for(const k in s){if(path===k||path.startsWith(k+'.')||path.startsWith(k+'['))if(!best||k.length>best.length)best=k;}
+  return best?s[best]:null;}
+function srcBadge(path){const s=srcOf(path);if(!s)return '<span class="badge" style="opacity:.5">manual</span>';
+  const m=MB[s.method]||[s.method,''];const tip=[s.document,s.locator,s.note,(s.confidence!=null&&s.confidence<1)?('confidence '+s.confidence):''].filter(Boolean).join(' · ');
+  return `<span class="badge" title="${esc(tip)}"${m[1]?` style="color:var(--${m[1]});background:var(--${m[1]}-bg)"`:''}>${m[0]}</span>`;}
+function setPath(obj,path,value){const parts=path.replace(/\[(\d+)\]/g,'.$1').split('.');let o=obj;
+  for(let i=0;i<parts.length-1;i++){const k=isNaN(+parts[i])?parts[i]:+parts[i];
+    if(o[k]==null)o[k]=isNaN(+parts[i+1])?{}:[];o=o[k];}
+  const last=parts[parts.length-1],k=isNaN(+last)?last:+last;
+  if(value===null)delete o[k];else o[k]=value;}
+function markManual(path){if(!state.doc.sources)state.doc.sources={};state.doc.sources[path]={method:'user'};}
+const rateVal=r=>(r&&r.points&&r.points.length)?r.points[0].value_pct:null;
+const rateMulti=r=>r&&r.points&&r.points.length>1;
+function inp(label,path,val,ph,str){return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input data-path="${path}"${str?' data-str="1"':''} value="${val==null?'':esc(val)}" placeholder="${ph||''}"/></div>`;}
+function rateInp(label,path,r){if(rateMulti(r))return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input value="${esc(r.points.map(pt=>(pt.effective_from?pt.effective_from+': ':'')+pt.value_pct+'%').join(' → '))}" disabled title="расписание во времени — несколько точек"/></div>`;
+  return inp(label,path+'.points[0].value_pct',rateVal(r));}
+function tcell(path,val,str){return `<td><input data-path="${path}"${str?' data-str="1"':''} value="${val==null?'':esc(val)}"/></td>`;}
+function productsTable(){const list=state.doc.products||[];
+ return `<table><thead><tr><th>Продукт ${srcBadge('products')}</th><th>Тип</th><th>Ед.</th><th>Цена/ед</th><th>Объём/мес</th><th>Разгон, мес</th><th></th></tr></thead><tbody>`+
+ list.map((p,i)=>`<tr>${tcell(`products[${i}].name`,p.name,1)}
+  <td><select data-path="products[${i}].kind" data-str="1"><option value="goods"${p.kind!=='service'?' selected':''}>товар</option><option value="service"${p.kind==='service'?' selected':''}>услуга</option></select></td>
+  ${tcell(`products[${i}].unit`,p.unit,1)}${tcell(`products[${i}].start_price`,p.start_price)}${tcell(`products[${i}].start_volume`,p.start_volume)}${tcell(`products[${i}].ramp_up_months`,p.ramp_up_months)}
+  <td><button class="icon" data-del="products:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="products" style="margin-top:8px">＋ Продукт</button>`;}
+function capexTable(){const list=(state.doc.capex&&state.doc.capex.items)||[];
+ return `<table><thead><tr><th>Позиция ${srcBadge('capex')}</th><th>Сумма</th><th>НДС внутри</th><th>Мес. с</th><th>по</th><th></th></tr></thead><tbody>`+
+ list.map((c,i)=>`<tr>${tcell(`capex.items[${i}].name`,c.name,1)}${tcell(`capex.items[${i}].amount`,c.amount)}
+  <td style="text-align:center"><input type="checkbox" data-path="capex.items[${i}].vat_included" data-bool="1"${c.vat_included?' checked':''}/></td>
+  ${tcell(`capex.items[${i}].schedule_months[0]`,c.schedule_months?c.schedule_months[0]:null)}${tcell(`capex.items[${i}].schedule_months[1]`,c.schedule_months?c.schedule_months[1]:null)}
+  <td><button class="icon" data-del="capex.items:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="capex.items" style="margin-top:8px">＋ Позиция CAPEX</button>`;}
+function opexTable(){const list=(state.doc.opex&&state.doc.opex.items)||[];
+ return `<table><thead><tr><th>Статья ${srcBadge('opex')}</th><th>Фикс/мес</th><th>% выручки</th><th></th></tr></thead><tbody>`+
+ list.map((o,i)=>`<tr>${tcell(`opex.items[${i}].name`,o.name,1)}${tcell(`opex.items[${i}].monthly_amount`,o.monthly_amount)}${tcell(`opex.items[${i}].pct_of_revenue`,o.pct_of_revenue)}
+  <td><button class="icon" data-del="opex.items:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="opex.items" style="margin-top:8px">＋ Статья расходов</button>`;}
+function facilitiesTable(){const list=(state.doc.financing&&state.doc.financing.facilities)||[];
+ return `<table><thead><tr><th>Кредит ${srcBadge('financing')}</th><th>Тип</th><th>Сумма</th><th>Срок, мес</th><th>Ставка, %</th><th>Льгота, мес</th><th></th></tr></thead><tbody>`+
+ list.map((c,i)=>`<tr>${tcell(`financing.facilities[${i}].name`,c.name,1)}
+  <td><select data-path="financing.facilities[${i}].kind" data-str="1"><option value="investment"${c.kind!=='working_capital'?' selected':''}>инвестиционный</option><option value="working_capital"${c.kind==='working_capital'?' selected':''}>оборотный</option></select></td>
+  ${tcell(`financing.facilities[${i}].amount`,c.amount)}${tcell(`financing.facilities[${i}].term_months`,c.term_months)}
+  ${rateMulti(c.rate)?`<td><input value="${esc(c.rate.points.map(pt=>pt.value_pct+'%').join(' → '))}" disabled/></td>`:tcell(`financing.facilities[${i}].rate.points[0].value_pct`,rateVal(c.rate))}
+  ${tcell(`financing.facilities[${i}].grace_months`,c.grace_months)}
+  <td><button class="icon" data-del="financing.facilities:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="financing.facilities" style="margin-top:8px">＋ Кредит</button>`;}
+function asetHTML(){
+ if(!state.aset||!state.doc)return `<div class="card"><h3>Книга допущений <span class="badge">assumptions.v1</span></h3><div class="bd">
+   <p class="note">Единый слой допущений — источник истины книги модели. Режимы заполнения: <b>auto</b> — стартовый профиль (5 лет · 9% дисконт · 2 товара + 2 услуги) с памятью предпочтений; <b>AI</b> — агент извлекает из документов; <b>manual</b> — правка полей формы. Confirmed-версия пополняет память предпочтений.</p>
+   <div class="src"><button class="btn acc" id="asAuto">⚙ Auto — стартовый профиль</button>
+   <button class="btn" id="asAI">⚡ AI — из документов</button></div></div></div>`;
+ const d=state.doc,rec=state.aset,p=d.profile||{},t=d.taxes||{},v=d.valuation||{},f=d.financing||{},cx=d.capex||{};
+ const vers=(state.asetVersions||[]).map(x=>`<option value="${x.version}"${x.version===rec.version?' selected':''}>v${x.version} · ${x.status}</option>`).join('');
+ const scen=(d.scenarios||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+ const oq=d.open_questions||[];const met=state.bookMetrics;
+ const debt=(f.facilities||[]).reduce((s,x)=>s+(+x.amount||0),0);const eq=+f.equity_amount||0;
+ const share=(eq+debt)>0?`${Math.round(eq/(eq+debt)*100)}/${Math.round(debt/(eq+debt)*100)}`:'—';
+ const metHTML=met?`<div class="kpis" style="margin-top:12px">${[['NPV',money(met.npv)],['IRR',met.irr_pct!=null?met.irr_pct+'%':'—'],['MIRR',met.mirr_pct!=null?met.mirr_pct+'%':'—'],['Окупаемость',met.payback_months!=null?met.payback_months+' мес':'—'],['DSCR min',met.dscr_min!=null?met.dscr_min:'—']].map(([l,x])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${x}</div></div>`).join('')}</div>`:'';
+ return `<div class="aset">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <h3 style="margin:0;font-size:16px">Книга допущений <span class="badge">assumptions.v1</span></h3>
+    <div class="sp" style="flex:1"></div>
+    <select id="asVer" class="search" style="margin:0;height:34px">${vers}</select>
+    <button class="btn" id="asAuto" title="Новая версия из стартового профиля">⚙ Auto</button>
+    <button class="btn" id="asAI" title="Извлечь из документов">⚡ AI</button>
+    <button class="btn" id="asSaveDraft">💾 Черновик</button>
+    <button class="btn acc" id="asConfirm">✓ Подтвердить</button>
+  </div>
+  ${oq.length?`<div class="card" style="margin-bottom:14px"><h3>Требуют уточнения (${oq.length})</h3><div class="bd">${oq.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':(q.severity==='info'?'ℹ️':'⚠️')} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div></div>`:''}
+  <div class="card" style="margin-bottom:14px"><h3>Профиль проекта и оценка</h3><div class="bd"><div class="form">
+    ${inp('Название','profile.name',p.name,'',1)}${inp('Отрасль','profile.industry',p.industry,'напр. производство',1)}
+    ${inp('Тип проекта','profile.project_type',p.project_type,'',1)}${inp('Локация','profile.location',p.location,'',1)}
+    ${inp('Валюта','profile.currency',p.currency||'RUB','',1)}${inp('Горизонт, лет','profile.horizon_years',p.horizon_years)}
+    ${inp('Старт модели (ГГГГ-ММ-ДД)','profile.model_start',p.model_start,'2026-09-01',1)}
+    ${inp('Ставка дисконтирования, %','valuation.discount_rate_pct',v.discount_rate_pct)}
+    ${inp('ROA реинвестирования (MIRR), %','valuation.reinvest_roa_pct',v.reinvest_roa_pct)}
+  </div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>Продуктовая линейка</h3><div class="bd">${productsTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>CAPEX</h3><div class="bd">${capexTable()}
+    <div class="form" style="margin-top:12px">${inp('Итог (если без разбивки)','capex.total_override',cx.total_override)}${inp('Амортизация, мес','capex.depreciation_months',cx.depreciation_months)}</div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>Операционные расходы</h3><div class="bd">${opexTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>Финансирование <span class="badge" title="доля собственных/заёмных">${share}</span></h3><div class="bd">
+    <div class="form">${inp('Собственные средства','financing.equity_amount',f.equity_amount)}</div>
+    <div style="margin-top:10px">${facilitiesTable()}</div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>Налоги</h3><div class="bd"><div class="form">
+    ${inp('Режим','taxes.regime',t.regime,'ОСНО / УСН…',1)}${rateInp('Налог на прибыль, %','taxes.profit',t.profit)}
+    ${rateInp('НДС, %','taxes.vat',t.vat)}${rateInp('Страховые взносы, %','taxes.payroll_contributions',t.payroll_contributions)}
+    ${inp('Налог на имущество, %','taxes.property_pct',t.property_pct)}${inp('Земельный налог, %','taxes.land_pct',t.land_pct)}
+  </div></div></div>
+  <div class="card"><h3>Сценарии и книга</h3><div class="bd">
+    <div class="crow" style="flex-wrap:wrap"><select id="asScen" class="search" style="margin:0;height:34px"><option value="">База (без сценария)</option>${scen}</select>
+    <button class="btn" id="asMetrics">Σ Метрики</button><button class="btn acc" id="asBook">⬇ Книга .xlsx</button></div>
+    ${metHTML}
+    <p class="note">Книга собирается по sheet registry из этого набора. v${rec.version} · ${esc(rec.status)}${rec.comment?' · '+esc(rec.comment):''}</p>
+  </div></div></div>`;}
+function sanitizeDoc(){const d=state.doc;if(!d)return;
+ ((d.capex&&d.capex.items)||[]).forEach(it=>{const sm=it.schedule_months;
+   if(Array.isArray(sm)&&(sm.length<2||sm[0]==null||sm[1]==null))delete it.schedule_months;});
+ if(d.products)d.products=d.products.filter(x=>x&&x.name);
+ if(d.capex&&d.capex.items)d.capex.items=d.capex.items.filter(x=>x&&x.name);
+ if(d.opex&&d.opex.items)d.opex.items=d.opex.items.filter(x=>x&&x.name);
+ if(d.financing&&d.financing.facilities)d.financing.facilities=d.financing.facilities.filter(x=>x&&x.name);}
+async function loadAset(version){try{state.aset=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+(version?('?version='+version):''));
+  state.doc=JSON.parse(JSON.stringify(state.aset.assumptions));state.bookMetrics=null;}catch(e){state.aset=null;state.doc=null;}}
+async function loadVersions(){try{state.asetVersions=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/versions');}catch(e){state.asetVersions=[];}}
+async function autoSet(){try{toast('Auto: собираю стартовый профиль…');
+  const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/auto',{method:'POST'});
+  state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
+  toast('Создана v'+r.version+' из стартового профиля','ok');}catch(e){toast('Ошибка: '+e.message,'err');}}
+async function saveAset(status){try{sanitizeDoc();
+  const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT()),{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status,assumptions:state.doc,comment:null})});
+  state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
+  toast(status==='confirmed'?('Подтверждено v'+r.version+' — память предпочтений обновлена'):('Сохранён черновик v'+r.version),'ok');
+ }catch(e){toast('Ошибка: '+e.message,'err');}}
+async function loadMetrics(){try{const sc=$('#asScen')?$('#asScen').value:'';
+  const m=await api('/book/'+encodeURIComponent(PROJECT())+'/metrics'+(sc?('?scenario='+encodeURIComponent(sc)):''));
+  state.bookMetrics=m.metrics;renderView();}catch(e){toast('Метрики: '+e.message,'err');}}
+const ROW_DEFAULTS={'products':{name:'Новый продукт',kind:'goods'},'capex.items':{name:'Позиция',amount:0},
+ 'opex.items':{name:'Статья',monthly_amount:0},'financing.facilities':{name:'Кредит',kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0}};
+function arrAt(sec){const parts=sec.split('.');let o=state.doc;for(const k of parts.slice(0,-1)){o[k]=o[k]||{};o=o[k];}
+ const last=parts[parts.length-1];o[last]=o[last]||[];return o[last];}
+function wireAset(){
+ document.querySelectorAll('#view [data-path]').forEach(el=>{el.onchange=()=>{let v;
+   if(el.dataset.bool)v=el.checked;
+   else{const s=el.value.trim();if(s==='')v=null;else if(el.dataset.str)v=s;
+     else{const n=Number(s.replace(/[\s ]/g,'').replace(',','.'));v=isNaN(n)?s:n;}}
+   setPath(state.doc,el.dataset.path,v);markManual(el.dataset.path);};});
+ document.querySelectorAll('#view [data-add]').forEach(b=>b.onclick=()=>{
+   arrAt(b.dataset.add).push(JSON.parse(JSON.stringify(ROW_DEFAULTS[b.dataset.add])));markManual(b.dataset.add);renderView();});
+ document.querySelectorAll('#view [data-del]').forEach(b=>b.onclick=()=>{
+   const[sec,i]=b.dataset.del.split(':');arrAt(sec).splice(+i,1);markManual(sec);renderView();});
+ const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
+ on('#asAuto',autoSet);
+ on('#asAI',()=>{state.tab='Documents';renderTabs();renderView();toast('Загрузите документы и нажмите «Extract assumptions»');});
+ on('#asSaveDraft',()=>saveAset('draft'));on('#asConfirm',()=>saveAset('confirmed'));
+ on('#asMetrics',loadMetrics);
+ on('#asBook',()=>{const sc=$('#asScen')?$('#asScen').value:'';
+   window.location.href='/api/book/'+encodeURIComponent(PROJECT())+'/export'+(sc?('?scenario='+encodeURIComponent(sc)):'');});
+ const ver=$('#asVer');if(ver)ver.onchange=async e=>{await loadAset(+e.target.value);renderView();};
+}
+
 function renderView(){
-  const map={Overview:overviewHTML,Model:gridHTML,Parameters:paramsHTML,CAPEX:capexHTML,Staff:staffHTML,Documents:docsHTML};
+  const map={Overview:overviewHTML,Model:gridHTML,Assumptions:asetHTML,Parameters:paramsHTML,CAPEX:capexHTML,Staff:staffHTML,Documents:docsHTML};
   $('#view').innerHTML=(map[state.tab]||overviewHTML)();
   if(state.tab==='Overview')wireComposer();
   if(state.tab==='Model')wireGrid();
+  if(state.tab==='Assumptions')wireAset();
   if(state.tab==='Parameters'){const b=$('#rebuild');if(b)b.onclick=saveParams;}
   if(state.tab==='Documents'){const g=$('#intakeGo');if(g)g.onclick=runIntake;}
   if(state.tab==='Documents'){const u=()=>$('#fileInput').click();['#up2','#up3'].forEach(id=>{const el=$(id);if(el)el.onclick=u;});}
@@ -252,8 +401,8 @@ async function runIntake(){
     const r=await fetch(`/api/intake/extract?project=${encodeURIComponent(project)}`,{method:'POST',body:fd});
     const data=await r.json();
     if(!r.ok)throw new Error(data.detail&&data.detail.message||data.detail||r.statusText);
-    state.intake=data;renderView();
-    toast(`Extracted v${data.version}: ${data.open_questions.length} open question(s)`);
+    state.intake=data;state.aset=data;state.doc=JSON.parse(JSON.stringify(data.assumptions));state.bookMetrics=null;loadVersions();renderView();
+    toast(`Extracted v${data.version}: ${data.open_questions.length} open question(s) — см. вкладку Assumptions`);
   }catch(e){toast('Intake failed: '+e.message);}
 }
 
@@ -297,6 +446,7 @@ function send(){const has=state.dash&&state.dash.model_grid&&state.dash.model_gr
 
 async function refreshAll(){try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}try{state.imports=await api('/imports');}catch(e){state.imports=[];}
   try{state.params=await api('/parameters');}catch(e){state.params=null;}
+  await loadAset();await loadVersions();
   renderProjects();render();}
 async function refreshGoogle(){try{state.google=await api('/google/status');}catch(e){state.google=null;}}
 function render(){renderTabs();renderView();renderGoogleChip();}

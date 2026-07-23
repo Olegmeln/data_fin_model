@@ -633,6 +633,19 @@ async def intake_extract(
     return _record_out(record, assumptions)
 
 
+@router.post("/assumption-sets/{project}/auto")
+def auto_assumption_set(project: str, name: str | None = None, db: Session = Depends(get_db)) -> dict:
+    """Auto-режим формы допущений: стартовый профиль по умолчанию
+    (Архитектура_финмодели_v1) + память предпочтений + валидация → новая версия."""
+    from .finmodel.assumptions_schema import default_assumption_set
+
+    assumptions = default_assumption_set(name or project)
+    assumptions = apply_preferences(db, assumptions)
+    assumptions = apply_validation(assumptions)
+    record = save_assumption_set(db, project, assumptions, comment="auto: стартовый профиль")
+    return _record_out(record, assumptions)
+
+
 @router.get("/assumption-sets/{project}")
 def get_assumption_set(project: str, version: int | None = None, db: Session = Depends(get_db)) -> dict:
     loaded = load_assumption_set(db, project, version)

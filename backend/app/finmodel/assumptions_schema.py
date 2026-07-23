@@ -237,6 +237,31 @@ class AssumptionSet(Strict):
         return cls.model_validate_json(raw)
 
 
+def default_assumption_set(name: str = "Новый проект") -> AssumptionSet:
+    """Стартовый профиль auto-режима (Архитектура_финмодели_v1, «Допущения по умолчанию»):
+    5 лет, 9% дисконтирования, 4 продукта = 2 товара + 2 услуги, три сценария."""
+    return AssumptionSet(
+        profile=ProjectProfile(
+            name=name,
+            project_type="строительство → производство → реализация",
+            horizon_years=5,
+        ),
+        products=[
+            Product(name="Товар 1"),
+            Product(name="Товар 2"),
+            Product(name="Услуга 1", kind=ProductKind.service),
+            Product(name="Услуга 2", kind=ProductKind.service),
+        ],
+        valuation=Valuation(discount_rate_pct=9.0),
+        scenarios=[
+            Scenario(name="Пессимистичный"),
+            Scenario(name="Базовый"),
+            Scenario(name="Оптимистичный"),
+        ],
+        sources={"profile": SourceRef(method=SourceMethod.default, note="стартовый профиль (auto)")},
+    )
+
+
 def export_json_schema() -> dict:
     """JSON Schema контракта — публикуемая часть стандарта AFM&C."""
     return AssumptionSet.model_json_schema(by_alias=True)
