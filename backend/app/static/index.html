@@ -288,7 +288,8 @@ function asetHTML(){
  if(!state.aset||!state.doc)return `<div class="card"><h3>Книга допущений <span class="badge">assumptions.v1</span></h3><div class="bd">
    <p class="note">Единый слой допущений — источник истины книги модели. Режимы заполнения: <b>auto</b> — стартовый профиль (5 лет · 9% дисконт · 2 товара + 2 услуги) с памятью предпочтений; <b>AI</b> — агент извлекает из документов; <b>manual</b> — правка полей формы. Confirmed-версия пополняет память предпочтений.</p>
    <div class="src"><button class="btn acc" id="asAuto">⚙ Auto — стартовый профиль</button>
-   <button class="btn" id="asAI">⚡ AI — из документов</button></div></div></div>`;
+   <button class="btn" id="asAI">⚡ AI — из документов</button>
+   <button class="btn" id="asSurvey">⧉ Из опросника</button></div></div></div>`;
  const d=state.doc,rec=state.aset,p=d.profile||{},t=d.taxes||{},v=d.valuation||{},f=d.financing||{},cx=d.capex||{};
  const vers=(state.asetVersions||[]).map(x=>`<option value="${x.version}"${x.version===rec.version?' selected':''}>v${x.version} · ${x.status}</option>`).join('');
  const scen=(d.scenarios||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
@@ -303,6 +304,7 @@ function asetHTML(){
     <select id="asVer" class="search" style="margin:0;height:34px">${vers}</select>
     <button class="btn" id="asAuto" title="Новая версия из стартового профиля">⚙ Auto</button>
     <button class="btn" id="asAI" title="Извлечь из документов">⚡ AI</button>
+    <button class="btn" id="asSurvey" title="Новая версия из ответов опросника">⧉ Опросник</button>
     <button class="btn" id="asSaveDraft">💾 Черновик</button>
     <button class="btn acc" id="asConfirm">✓ Подтвердить</button>
   </div>
@@ -372,6 +374,10 @@ function wireAset(){
    const[sec,i]=b.dataset.del.split(':');arrAt(sec).splice(+i,1);markManual(sec);renderView();});
  const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
  on('#asAuto',autoSet);
+ on('#asSurvey',async()=>{try{toast('Конвертирую ответы опросника…');
+   const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/from-survey',{method:'POST'});
+   state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
+   toast('Создана v'+r.version+' из опросника','ok');}catch(e){toast('Ошибка: '+e.message,'err');}});
  on('#asAI',()=>{state.tab='Documents';renderTabs();renderView();toast('Загрузите документы и нажмите «Extract assumptions»');});
  on('#asSaveDraft',()=>saveAset('draft'));on('#asConfirm',()=>saveAset('confirmed'));
  on('#asMetrics',loadMetrics);

@@ -646,6 +646,23 @@ def auto_assumption_set(project: str, name: str | None = None, db: Session = Dep
     return _record_out(record, assumptions)
 
 
+@router.post("/assumption-sets/{project}/from-survey")
+def assumption_set_from_survey_endpoint(project: str, db: Session = Depends(get_db)) -> dict:
+    """Мост «опросник → assumptions.v1»: профиль бизнеса конвертируется
+    в набор допущений публичной схемы (источники method=derived)."""
+    from .finmodel.from_survey import assumption_set_from_survey
+
+    profile = db.query(models.BusinessProfile).first()
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Опросник ещё не пройден.")
+    answers = json.loads(profile.answers_json or "{}")
+    assumptions = assumption_set_from_survey(answers, name=project)
+    assumptions = apply_preferences(db, assumptions)
+    assumptions = apply_validation(assumptions)
+    record = save_assumption_set(db, project, assumptions, comment="из опросника")
+    return _record_out(record, assumptions)
+
+
 @router.get("/assumption-sets/{project}")
 def get_assumption_set(project: str, version: int | None = None, db: Session = Depends(get_db)) -> dict:
     loaded = load_assumption_set(db, project, version)

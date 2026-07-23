@@ -26,7 +26,7 @@ A low-code platform for dynamic financial modelling — built for projects of **
 - **Excel export — the flagship scenario** — a .xlsx with 1000+ live formulas: Cover, Assumptions with Pessimist/Base/Optimist scenarios, 36-month model with annuity loan, annual summary, dashboard with Excel charts, sensitivity matrix; named cells and ranges make the file precise for AI agents working directly in Excel
 - **Document intake (v1)** — business plans and reference models (PDF/DOCX/XLSX) → structured `assumptions.v1` sets with versioning, validation and cross-document audit
 - **Model book (v1)** — sheet-registry engine: series, metrics, scenario support, Excel export per registry; 9 sheets including Sales plan, CAPEX & depreciation, Opex breakdown and monthly P&L with profit-tax schedules
-- **Assumptions workspace** — the Assumptions tab edits `assumptions.v1` sets with three fill modes (auto default profile / AI extraction / manual) and per-field provenance; confirming a version feeds the preference memory
+- **Assumptions workspace** — the Assumptions tab edits `assumptions.v1` sets with three fill modes (auto default profile / AI extraction / manual) and per-field provenance; confirming a version feeds the preference memory; the survey profile converts into an `assumptions.v1` set in one click
 
 ### Architecture
 
@@ -131,7 +131,7 @@ Low-code платформа динамического финансового м
 - [x] **Экспорт модели в Excel — главный сценарий** — кнопка «Скачать модель .xlsx» создаёт файл с живыми формулами (1000+): Обложка, Допущения со сценариями Пессимист/База/Оптимист и сезонностью, помесячная Модель на 36 месяцев с кредитом-аннуитетом, Годовая сводка, Дашборд с NPV / IRR / окупаемостью и диаграммами Excel, матрица Чувствительности с цветовой подсветкой, Инструкция с мультииндустриальными пресетами; ключевые ячейки и ряды названы (BaseRevenue, CogsPct, FCF, CumFCF, RevenueRow…) — это делает работу ИИ-агента прямо в Excel точной; если пройден опросник, драйверы подставляются из профиля
 - [x] **Интейк документов (v1)** — бизнес-планы и эталонные модели (PDF/DOCX/XLSX) → структурированные наборы `assumptions.v1` с версионированием, валидацией и кросс-документным аудитом
 - [x] **Книга модели (v1)** — движок по реестру листов: ряды, метрики, сценарии, экспорт в Excel по реестру; 9 листов: Обложка, Допущения, CF, Дашборд, План продаж, CAPEX и амортизация, Опер. расходы, ПиУ (с налогом на прибыль по расписанию ставок), Кредит
-- [x] **Форма допущений (workspace v2)** — вкладка Assumptions: редактирование наборов `assumptions.v1` в трёх режимах (auto — стартовый профиль с памятью предпочтений / AI — извлечение из документов / manual — правка полей), происхождение каждого поля, версии, подтверждение с пополнением памяти предпочтений
+- [x] **Форма допущений (workspace v2)** — вкладка Assumptions: редактирование наборов `assumptions.v1` в трёх режимах (auto — стартовый профиль с памятью предпочтений / AI — извлечение из документов / manual — правка полей), происхождение каждого поля, версии, подтверждение с пополнением памяти предпочтений; профиль опросника конвертируется в набор `assumptions.v1` одной кнопкой (мост к единому слою допущений)
 - [ ] ZIP-инжест и PDF-парсер банковских выписок (итерация 2b)
 - [ ] Синхронизация с Google Sheets (модель в таблице пользователя)
 - [ ] Авторизация, рабочие пространства и роли
