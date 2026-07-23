@@ -29,9 +29,14 @@ REGISTRY: tuple[SheetSpec, ...] = (
     SheetSpec("assumptions", "Допущения", "build_assumptions"),
     SheetSpec("cf", "CF", "build_cf"),
     SheetSpec("dashboard", "Дашборд", "build_dashboard"),
+    SheetSpec("sales", "План продаж", "build_sales"),
+    SheetSpec("capex", "CAPEX и амортизация", "build_capex_sheet"),
+    SheetSpec("opex", "Опер. расходы", "build_opex_sheet"),
+    SheetSpec("pl", "ПиУ", "build_pl"),
     SheetSpec("credit", "Кредит", "build_credit"),
     # будущие листы целевой архитектуры регистрируются здесь:
-    # sales, production, admin, capex, staff, statements, covenants ...
+    # roadmap (дорожная карта), production (производство/закупки),
+    # staff (ФОТ — требует раздела схемы), statements (балансы), covenants ...
 )
 
 

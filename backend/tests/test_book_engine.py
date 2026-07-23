@@ -56,6 +56,54 @@ class TestSeries:
         assert book.months[-1] == date(2028, 12, 1)
 
 
+class TestDepreciationAndPL:
+    def test_no_depreciation_without_term(self):
+        book = build_book(demo_set())
+        assert all(v == 0 for v in book.depreciation)
+
+    def test_linear_depreciation_starts_after_schedule(self):
+        aset = demo_set(capex=Capex(
+            items=[CapexItem(name="Оборудование", amount=1200, schedule_months=(0, 3))],
+            depreciation_months=12))
+        book = build_book(aset)
+        assert book.depreciation[3] == 0.0            # ещё строим
+        assert book.depreciation[4] == pytest.approx(100.0)   # 1200/12 со следующего месяца
+        assert book.depreciation[15] == pytest.approx(100.0)
+        assert book.depreciation[16] == 0.0
+        assert sum(book.depreciation) == pytest.approx(1200.0)
+
+    def test_total_override_depreciates_from_month_one(self):
+        aset = demo_set(capex=Capex(total_override=600, depreciation_months=6))
+        book = build_book(aset)
+        assert book.depreciation[0] == 0.0
+        assert book.depreciation[1] == pytest.approx(100.0)
+        assert sum(book.depreciation) == pytest.approx(600.0)
+
+    def test_opex_by_item_sums_to_opex(self):
+        book = build_book(demo_set())
+        assert set(book.opex_by_item) == {"Аренда", "Логистика"}
+        for i in (0, 4, 20):
+            assert sum(s[i] for s in book.opex_by_item.values()) == pytest.approx(book.opex[i])
+
+    def test_profit_tax_and_net_income(self):
+        aset = demo_set(capex=Capex(
+            items=[CapexItem(name="О", amount=1200, schedule_months=(0, 3))],
+            depreciation_months=12))
+        book = build_book(aset)
+        i = 10  # рабочий месяц: выручка 1000, opex 300, амортизация 100
+        ebit = book.ebitda[i] - book.depreciation[i]
+        assert book.ebit[i] == pytest.approx(ebit)
+        taxable = ebit - book.interest[i]
+        assert book.tax[i] == pytest.approx(max(0, taxable * 0.25))  # ставка по умолчанию 25%
+        assert book.net_income[i] == pytest.approx(taxable - book.tax[i])
+
+    def test_no_tax_on_losses(self):
+        aset = demo_set(products=[Product(name="Товар", start_price=1, start_volume=10)])
+        book = build_book(aset)
+        assert all(t == 0 for t in book.tax)
+        assert book.net_income[0] < 0
+
+
 class TestCredit:
     def test_draw_interest_and_grace(self):
         book = build_book(demo_set())

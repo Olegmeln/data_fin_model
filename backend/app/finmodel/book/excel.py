@@ -218,11 +218,112 @@ def build_credit(ws, aset: AssumptionSet, book: BookData) -> None:
     ws.freeze_panes = "B3"
 
 
+def _series_header(ws, book: BookData, title: str) -> None:
+    ws.cell(row=1, column=1, value=title).font = HEADER
+    _row(ws, 2, "Месяц", [m.strftime("%Y-%m") for m in book.months], font=HEADER, fmt="@")
+    ws.column_dimensions["A"].width = 28
+    ws.freeze_panes = "B3"
+
+
+def _formula_total(ws, r: int, n: int, label: str, first_row: int = 3) -> None:
+    """Итоговая строка живой формулой SUM по колонке (не значением)."""
+    for i in range(n):
+        col = get_column_letter(2 + i)
+        cell = ws.cell(row=r, column=2 + i,
+                       value=f"=SUM({col}{first_row}:{col}{r - 1})" if r > first_row else 0)
+        cell.font = FORMULA
+        cell.number_format = MONEY
+    ws.cell(row=r, column=1, value=label).font = HEADER
+
+
+def build_sales(ws, aset: AssumptionSet, book: BookData) -> None:
+    n = len(book.months)
+    _series_header(ws, book, "План продаж — по продуктам (движок AFM&C)")
+    r = 3
+    for name, series in book.revenue_by_product.items():
+        _row(ws, r, name, series)
+        r += 1
+    _formula_total(ws, max(r, 4), n, "Выручка итого (формула)")
+
+
+def build_capex_sheet(ws, aset: AssumptionSet, book: BookData) -> None:
+    _series_header(ws, book, "CAPEX и амортизация")
+    _row(ws, 3, "CAPEX (график)", book.capex)
+    _row(ws, 4, "Амортизация", book.depreciation)
+    r = 6
+    ws.cell(row=r, column=1, value="Позиции (вводы)").font = HEADER
+    r += 1
+    for item in aset.capex.items:
+        ws.cell(row=r, column=1, value=item.name).font = HEADER
+        cell = ws.cell(row=r, column=2, value=item.amount)
+        cell.font = INPUT
+        cell.fill = KEY_FILL
+        cell.number_format = MONEY
+        sm = item.schedule_months
+        ws.cell(row=r, column=3, value=f"мес {sm[0]}–{sm[1]}" if sm else "мес 0").font = NOTE
+        if item.vat_included:
+            ws.cell(row=r, column=4, value="НДС внутри").font = NOTE
+        r += 1
+    if aset.capex.total_override is not None:
+        ws.cell(row=r, column=1, value="Итог (без разбивки)").font = HEADER
+        cell = ws.cell(row=r, column=2, value=aset.capex.total_override)
+        cell.font = INPUT
+        cell.number_format = MONEY
+        r += 1
+    if aset.capex.depreciation_months:
+        ws.cell(row=r, column=1, value="Срок амортизации, мес")
+        cell = ws.cell(row=r, column=2, value=aset.capex.depreciation_months)
+        cell.font = INPUT
+        cell.number_format = "#,##0"
+
+
+def build_opex_sheet(ws, aset: AssumptionSet, book: BookData) -> None:
+    n = len(book.months)
+    _series_header(ws, book, "Операционные расходы — по статьям (фикс + % выручки)")
+    r = 3
+    for name, series in book.opex_by_item.items():
+        _row(ws, r, name, series)
+        r += 1
+    _formula_total(ws, max(r, 4), n, "OPEX итого (формула)")
+
+
+def build_pl(ws, aset: AssumptionSet, book: BookData) -> None:
+    n = len(book.months)
+    _series_header(ws, book, "Прибыли и убытки, помесячно")
+    _row(ws, 3, "Выручка", book.revenue)
+    _row(ws, 4, "OPEX", book.opex)
+    for i in range(n):
+        col = get_column_letter(2 + i)
+        cell = ws.cell(row=5, column=2 + i, value=f"={col}3-{col}4")
+        cell.font = FORMULA
+        cell.number_format = MONEY
+    ws.cell(row=5, column=1, value="EBITDA (формула)").font = HEADER
+    _row(ws, 6, "Амортизация", book.depreciation)
+    for i in range(n):
+        col = get_column_letter(2 + i)
+        cell = ws.cell(row=7, column=2 + i, value=f"={col}5-{col}6")
+        cell.font = FORMULA
+        cell.number_format = MONEY
+    ws.cell(row=7, column=1, value="EBIT (формула)").font = HEADER
+    _row(ws, 8, "Проценты по кредитам", book.interest)
+    _row(ws, 9, "Налог на прибыль", book.tax)
+    for i in range(n):
+        col = get_column_letter(2 + i)
+        cell = ws.cell(row=10, column=2 + i, value=f"={col}7-{col}8-{col}9")
+        cell.font = FORMULA
+        cell.number_format = MONEY
+    ws.cell(row=10, column=1, value="Чистая прибыль (формула)").font = HEADER
+
+
 _BUILDERS = {
     "build_cover": build_cover,
     "build_assumptions": build_assumptions,
     "build_cf": build_cf,
     "build_dashboard": build_dashboard,
+    "build_sales": build_sales,
+    "build_capex_sheet": build_capex_sheet,
+    "build_opex_sheet": build_opex_sheet,
+    "build_pl": build_pl,
     "build_credit": build_credit,
 }
 

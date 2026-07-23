@@ -75,6 +75,11 @@ class BookData:
     debt_outstanding: list[float]
     net_cf: list[float]
     cumulative_cf: list[float]
+    opex_by_item: dict[str, list[float]] = field(default_factory=dict)
+    depreciation: list[float] = field(default_factory=list)
+    ebit: list[float] = field(default_factory=list)
+    tax: list[float] = field(default_factory=list)
+    net_income: list[float] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
 
 
@@ -96,11 +101,16 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         revenue_by_product[product.name] = series
     revenue = [sum(values) for values in zip(*revenue_by_product.values())] if revenue_by_product else [0.0] * horizon
 
-    opex = []
-    for i in range(horizon):
-        fixed = sum(item.monthly_amount for item in aset.opex.items)
-        variable = sum(revenue[i] * item.pct_of_revenue / 100 for item in aset.opex.items)
-        opex.append(fixed + variable)
+    opex_by_item: dict[str, list[float]] = {}
+    for item in aset.opex.items:
+        name = item.name
+        while name in opex_by_item:  # дубликаты имён не теряем
+            name += " ·"
+        opex_by_item[name] = [
+            item.monthly_amount + revenue[i] * item.pct_of_revenue / 100 for i in range(horizon)
+        ]
+    opex = ([sum(values) for values in zip(*opex_by_item.values())]
+            if opex_by_item else [0.0] * horizon)
 
     ebitda = [revenue[i] - opex[i] for i in range(horizon)]
 
@@ -113,6 +123,22 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
             capex[i] += item.amount / span
     if not aset.capex.items and aset.capex.total_override:
         capex[0] = aset.capex.total_override
+
+    # амортизация: линейная, позиция начинает амортизироваться со следующего
+    # месяца после завершения графика ввода (или с месяца 1 для итога без разбивки)
+    depreciation = [0.0] * horizon
+    dep_months = aset.capex.depreciation_months
+    if dep_months:
+        starts: list[tuple[int, float]] = []
+        for item in aset.capex.items:
+            first, last = item.schedule_months or (0, 0)
+            starts.append((min(horizon - 1, max(first, last)) + 1, item.amount))
+        if not aset.capex.items and aset.capex.total_override:
+            starts.append((1, aset.capex.total_override))
+        for start_month, amount in starts:
+            monthly = amount / dep_months
+            for i in range(start_month, min(horizon, start_month + dep_months)):
+                depreciation[i] += monthly
 
     debt_draw = [0.0] * horizon
     interest = [0.0] * horizon
@@ -144,11 +170,23 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         running += value
         cumulative.append(running)
 
+    # P&L: EBIT, налог на прибыль (ставка — расписание во времени), чистая прибыль
+    ebit = [ebitda[i] - depreciation[i] for i in range(horizon)]
+    tax = [0.0] * horizon
+    net_income = [0.0] * horizon
+    for i in range(horizon):
+        taxable = ebit[i] - interest[i]
+        rate_pct = aset.taxes.profit.value_at(months[i])
+        tax[i] = max(0.0, taxable * rate_pct / 100)
+        net_income[i] = taxable - tax[i]
+
     book = BookData(
         months=months, revenue=revenue, revenue_by_product=revenue_by_product,
         opex=opex, ebitda=ebitda, capex=capex, debt_draw=debt_draw,
         interest=interest, principal=principal, debt_outstanding=debt_outstanding,
         net_cf=net_cf, cumulative_cf=cumulative,
+        opex_by_item=opex_by_item, depreciation=depreciation,
+        ebit=ebit, tax=tax, net_income=net_income,
     )
     book.metrics = _metrics(aset, book)
     return book

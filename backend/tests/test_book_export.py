@@ -32,7 +32,14 @@ def book_set() -> AssumptionSet:
 class TestRegistry:
     def test_default_composition_and_order(self):
         codes = [s.code for s in resolve_sheets()]
-        assert codes == ["cover", "assumptions", "cf", "dashboard", "credit"]
+        assert codes == ["cover", "assumptions", "cf", "dashboard",
+                         "sales", "capex", "opex", "pl", "credit"]
+
+    def test_registry_builders_exist(self):
+        """Структурный контракт: каждый лист реестра имеет строителя в excel.py."""
+        from app.finmodel.book.excel import _BUILDERS
+        for spec in REGISTRY:
+            assert spec.builder_name in _BUILDERS, spec.code
 
     def test_subset_keeps_requested_order(self):
         codes = [s.code for s in resolve_sheets(["dashboard", "cf"])]
@@ -54,7 +61,18 @@ class TestExcelBook:
         return load_workbook(io.BytesIO(payload))
 
     def test_all_sheets_present(self):
-        assert self._workbook().sheetnames == ["Обложка", "Допущения", "CF", "Дашборд", "Кредит"]
+        assert self._workbook().sheetnames == [
+            "Обложка", "Допущения", "CF", "Дашборд",
+            "План продаж", "CAPEX и амортизация", "Опер. расходы", "ПиУ", "Кредит"]
+
+    def test_sales_total_is_formula(self):
+        sales = self._workbook()["План продаж"]
+        assert str(sales.cell(row=4, column=2).value).startswith("=SUM(")
+
+    def test_pl_net_income_is_formula(self):
+        pl = self._workbook()["ПиУ"]
+        assert str(pl.cell(row=5, column=2).value).startswith("=")   # EBITDA
+        assert str(pl.cell(row=10, column=2).value).startswith("=")  # чистая прибыль
 
     def test_subset_export(self):
         assert self._workbook(["cf", "dashboard"]).sheetnames == ["CF", "Дашборд"]
