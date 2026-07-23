@@ -139,23 +139,24 @@ def build_cf(ws, aset: AssumptionSet, book: BookData) -> None:
     _row(ws, 6, "Транш кредита", book.debt_draw)
     _row(ws, 7, "Проценты", book.interest)
     _row(ws, 8, "Погашение тела", book.principal)
+    _row(ws, 9, "Налог на прибыль", book.tax)
     for i in range(n):
         col = get_column_letter(2 + i)
-        ebitda = ws.cell(row=9, column=2 + i, value=f"={col}3-{col}4")
+        ebitda = ws.cell(row=10, column=2 + i, value=f"={col}3-{col}4")
         ebitda.font = FORMULA
         ebitda.number_format = MONEY
-        net = ws.cell(row=10, column=2 + i, value=f"={col}9-{col}5+{col}6-{col}7-{col}8")
+        net = ws.cell(row=11, column=2 + i, value=f"={col}10-{col}9-{col}5+{col}6-{col}7-{col}8")
         net.font = FORMULA
         net.number_format = MONEY
         prev = get_column_letter(1 + i)
         cumulative = ws.cell(
-            row=11, column=2 + i,
-            value=f"={col}10" if i == 0 else f"={prev}11+{col}10")
+            row=12, column=2 + i,
+            value=f"={col}11" if i == 0 else f"={prev}12+{col}11")
         cumulative.font = FORMULA
         cumulative.number_format = MONEY
-    ws.cell(row=9, column=1, value="EBITDA (формула)").font = HEADER
-    ws.cell(row=10, column=1, value="Чистый поток (формула)").font = HEADER
-    ws.cell(row=11, column=1, value="Кумулятив (формула)").font = HEADER
+    ws.cell(row=10, column=1, value="EBITDA (формула)").font = HEADER
+    ws.cell(row=11, column=1, value="Чистый поток после налога (формула)").font = HEADER
+    ws.cell(row=12, column=1, value="Кумулятив (формула)").font = HEADER
     ws.column_dimensions["A"].width = 24
     ws.freeze_panes = "B3"
 
@@ -169,8 +170,9 @@ def build_dashboard(ws, aset: AssumptionSet, book: BookData) -> None:
         ("Выручка, итого", f"=SUM(CF!B3:{last}3)"),
         ("OPEX, итого", f"=SUM(CF!B4:{last}4)"),
         ("CAPEX, итого", f"=SUM(CF!B5:{last}5)"),
-        ("EBITDA, итого", f"=SUM(CF!B9:{last}9)"),
-        ("Чистый поток, итого", f"=SUM(CF!B10:{last}10)"),
+        ("Налог на прибыль, итого", f"=SUM(CF!B9:{last}9)"),
+        ("EBITDA, итого", f"=SUM(CF!B10:{last}10)"),
+        ("Чистый поток, итого", f"=SUM(CF!B11:{last}11)"),
     ]
     for label, formula in agg:
         ws.cell(row=r, column=1, value=label).font = HEADER

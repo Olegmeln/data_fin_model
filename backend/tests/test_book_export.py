@@ -79,9 +79,10 @@ class TestExcelBook:
 
     def test_cf_totals_are_formulas_not_values(self):
         cf = self._workbook()["CF"]
-        assert str(cf.cell(row=9, column=2).value).startswith("=")   # EBITDA
-        assert str(cf.cell(row=10, column=2).value).startswith("=")  # чистый поток
-        assert str(cf.cell(row=11, column=3).value).startswith("=B11")  # кумулятив тянет предыдущий
+        assert cf.cell(row=9, column=1).value == "Налог на прибыль"
+        assert str(cf.cell(row=10, column=2).value).startswith("=")  # EBITDA
+        assert str(cf.cell(row=11, column=2).value).startswith("=")  # чистый поток после налога
+        assert str(cf.cell(row=12, column=3).value).startswith("=B12")  # кумулятив тянет предыдущий
 
     def test_dashboard_links_cf_by_formula(self):
         dash = self._workbook()["Дашборд"]

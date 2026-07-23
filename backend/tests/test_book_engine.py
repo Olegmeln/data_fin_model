@@ -97,6 +97,14 @@ class TestDepreciationAndPL:
         assert book.tax[i] == pytest.approx(max(0, taxable * 0.25))  # ставка по умолчанию 25%
         assert book.net_income[i] == pytest.approx(taxable - book.tax[i])
 
+    def test_net_cf_is_after_tax(self):
+        book = build_book(demo_set())
+        i = 10  # прибыльный месяц
+        expected = (book.ebitda[i] - book.tax[i] - book.capex[i]
+                    + book.debt_draw[i] - book.interest[i] - book.principal[i])
+        assert book.tax[i] > 0
+        assert book.net_cf[i] == pytest.approx(expected)
+
     def test_no_tax_on_losses(self):
         aset = demo_set(products=[Product(name="Товар", start_price=1, start_volume=10)])
         book = build_book(aset)

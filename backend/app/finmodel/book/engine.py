@@ -160,16 +160,6 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
                 outstanding -= payment
             debt_outstanding[i] += outstanding
 
-    net_cf = [
-        ebitda[i] - capex[i] + debt_draw[i] - interest[i] - principal[i]
-        for i in range(horizon)
-    ]
-    cumulative = []
-    running = 0.0
-    for value in net_cf:
-        running += value
-        cumulative.append(running)
-
     # P&L: EBIT, налог на прибыль (ставка — расписание во времени), чистая прибыль
     ebit = [ebitda[i] - depreciation[i] for i in range(horizon)]
     tax = [0.0] * horizon
@@ -179,6 +169,17 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         rate_pct = aset.taxes.profit.value_at(months[i])
         tax[i] = max(0.0, taxable * rate_pct / 100)
         net_income[i] = taxable - tax[i]
+
+    # чистый поток — после налога на прибыль
+    net_cf = [
+        ebitda[i] - tax[i] - capex[i] + debt_draw[i] - interest[i] - principal[i]
+        for i in range(horizon)
+    ]
+    cumulative = []
+    running = 0.0
+    for value in net_cf:
+        running += value
+        cumulative.append(running)
 
     book = BookData(
         months=months, revenue=revenue, revenue_by_product=revenue_by_product,
@@ -226,9 +227,9 @@ def _mirr_yearly(flows: list[float], finance_rate_pct: float, reinvest_rate_pct:
 
 
 def _metrics(aset: AssumptionSet, book: BookData) -> dict:
-    # проектные потоки: без кредитных движений (FCFF-подход)
+    # проектные потоки: без кредитных движений, после налога (FCFF-подход)
     project_flows = [
-        book.ebitda[i] - book.capex[i] for i in range(len(book.months))
+        book.ebitda[i] - book.tax[i] - book.capex[i] for i in range(len(book.months))
     ]
     monthly_discount = (1 + aset.valuation.discount_rate_pct / 100) ** (1 / 12) - 1
     npv = _npv(monthly_discount, project_flows)
