@@ -112,6 +112,56 @@ class TestDepreciationAndPL:
         assert book.net_income[0] < 0
 
 
+class TestStaffAndCovenants:
+    def _staffed(self, **kw):
+        from app.finmodel.assumptions_schema import Covenants, Milestone, Staff, StaffRole
+        return demo_set(
+            staff=Staff(roles=[
+                StaffRole(name="Директор", monthly_salary=100),
+                StaffRole(name="Рабочие", count=3, monthly_salary=50, start_month=2),
+            ]),
+            milestones=[Milestone(name="Старт стройки", month=0, kind="capex"),
+                        Milestone(name="Запуск", month=4, kind="launch")],
+            **kw,
+        )
+
+    def test_payroll_series_respects_start_month(self):
+        book = build_book(self._staffed())
+        assert book.payroll_by_role["Директор"][0] == 100
+        assert book.payroll_by_role["Рабочие"][1] == 0
+        assert book.payroll_by_role["Рабочие"][2] == 150
+
+    def test_payroll_and_contributions_flow_into_opex(self):
+        book = build_book(self._staffed())
+        # месяц 4: аренда 200 + логистика 100 + ФОТ 250 + взносы 250*30.4%
+        assert "ФОТ (штат)" in book.opex_by_item
+        assert book.opex_by_item["Страховые взносы"][4] == pytest.approx(250 * 0.304)
+        assert book.opex[4] == pytest.approx(200 + 100 + 250 + 76)
+
+    def test_contributions_included_skips_extra(self):
+        from app.finmodel.assumptions_schema import Staff, StaffRole
+        aset = demo_set(staff=Staff(contributions_included=True,
+                                    roles=[StaffRole(name="Все", monthly_salary=100)]))
+        book = build_book(aset)
+        assert "Страховые взносы" not in book.opex_by_item
+
+    def test_covenant_metrics_reported(self):
+        metrics = build_book(demo_set()).metrics
+        assert metrics["icr_by_year"], "ICR должен считаться при наличии процентов"
+        assert metrics["net_debt_to_ebitda_by_year"]
+        assert metrics["covenant_breaches"] == []  # пороги не заданы
+
+    def test_covenant_breach_detected(self):
+        from app.finmodel.assumptions_schema import Covenants, CreditFacility, RateSchedule
+        aset = demo_set(financing={
+            "equity_amount": 300,
+            "facilities": [CreditFacility(name="Кредит", amount=900, term_months=24,
+                                          grace_months=6, rate=RateSchedule.flat(12))],
+            "covenants": Covenants(dscr_min=99.0)})
+        metrics = build_book(aset).metrics
+        assert any("DSCR" in b for b in metrics["covenant_breaches"])
+
+
 class TestCredit:
     def test_draw_interest_and_grace(self):
         book = build_book(demo_set())

@@ -317,8 +317,130 @@ def build_pl(ws, aset: AssumptionSet, book: BookData) -> None:
     ws.cell(row=10, column=1, value="Чистая прибыль (формула)").font = HEADER
 
 
+def build_roadmap(ws, aset: AssumptionSet, book: BookData) -> None:
+    ws.cell(row=1, column=1, value="Дорожная карта проекта").font = TITLE
+    kind_labels = {"stage": "Этап", "capex": "CAPEX", "launch": "Запуск", "finance": "Финансирование"}
+    r = 3
+    ws.cell(row=r, column=1, value="Месяц").font = HEADER
+    ws.cell(row=r, column=2, value="Дата").font = HEADER
+    ws.cell(row=r, column=3, value="Тип").font = HEADER
+    ws.cell(row=r, column=4, value="Веха").font = HEADER
+    r += 1
+    for m in sorted(aset.milestones, key=lambda x: x.month):
+        ws.cell(row=r, column=1, value=m.month).font = INPUT
+        if m.month < len(book.months):
+            ws.cell(row=r, column=2, value=book.months[m.month].strftime("%Y-%m")).font = FORMULA
+        ws.cell(row=r, column=3, value=kind_labels.get(m.kind, m.kind)).font = FORMULA
+        ws.cell(row=r, column=4, value=m.name + (f" — {m.note}" if m.note else "")).font = INPUT
+        r += 1
+    # производные вехи из расчёта — связь карты с CAPEX и запуском продаж
+    r += 1
+    ws.cell(row=r, column=1, value="Расчётные вехи (движок)").font = HEADER
+    r += 1
+    derived = []
+    capex_months = [i for i, v in enumerate(book.capex) if v > 0]
+    if capex_months:
+        derived.append((capex_months[0], "Начало инвестиционной фазы (CAPEX)"))
+        derived.append((capex_months[-1], "Завершение CAPEX"))
+    revenue_months = [i for i, v in enumerate(book.revenue) if v > 0]
+    if revenue_months:
+        derived.append((revenue_months[0], "Старт продаж"))
+    positive = [i for i, v in enumerate(book.cumulative_cf) if v >= 0]
+    if positive and any(v < 0 for v in book.cumulative_cf[:positive[-1] + 1]):
+        derived.append((positive[0], "Выход накопленного потока в плюс"))
+    for month, label in sorted(derived):
+        ws.cell(row=r, column=1, value=month).font = FORMULA
+        ws.cell(row=r, column=2, value=book.months[month].strftime("%Y-%m")).font = FORMULA
+        ws.cell(row=r, column=4, value=label).font = NOTE
+        r += 1
+    ws.column_dimensions["A"].width = 10
+    ws.column_dimensions["B"].width = 12
+    ws.column_dimensions["C"].width = 16
+    ws.column_dimensions["D"].width = 52
+
+
+def build_staff(ws, aset: AssumptionSet, book: BookData) -> None:
+    n = len(book.months)
+    _series_header(ws, book, "ФОТ: план набора и расходы на персонал")
+    r = 3
+    for name, series in book.payroll_by_role.items():
+        _row(ws, r, name, series)
+        r += 1
+    _formula_total(ws, max(r, 4), n, "ФОТ итого (формула)")
+    r = max(r, 4) + 1
+    contributions = book.opex_by_item.get("Страховые взносы")
+    if contributions:
+        _row(ws, r, "Страховые взносы", contributions)
+        r += 1
+    r += 1
+    ws.cell(row=r, column=1, value="Штатное расписание (вводы)").font = HEADER
+    r += 1
+    for role in aset.staff.roles:
+        ws.cell(row=r, column=1, value=role.name).font = HEADER
+        count = ws.cell(row=r, column=2, value=role.count)
+        count.font = INPUT
+        count.number_format = "#,##0.#"
+        salary = ws.cell(row=r, column=3, value=role.monthly_salary)
+        salary.font = INPUT
+        salary.number_format = MONEY
+        span = f"с мес {role.start_month}" + (f" по {role.end_month}" if role.end_month is not None else "")
+        ws.cell(row=r, column=4, value=span).font = NOTE
+        r += 1
+
+
+def build_covenants(ws, aset: AssumptionSet, book: BookData) -> None:
+    ws.cell(row=1, column=1, value="Ковенанты и долговые метрики").font = TITLE
+    cov = aset.financing.covenants
+    metrics = book.metrics
+    years = len(book.months) // 12
+    r = 3
+    ws.cell(row=r, column=1, value="Метрика").font = HEADER
+    for y in range(years):
+        ws.cell(row=r, column=2 + y, value=f"Год {y + 1}").font = HEADER
+    ws.cell(row=r, column=2 + years, value="Порог").font = HEADER
+    ws.cell(row=r, column=3 + years, value="Статус").font = HEADER
+    rows = [
+        ("DSCR", metrics.get("dscr_by_year", []), cov.dscr_min, "≥"),
+        ("ICR (EBITDA/проценты)", metrics.get("icr_by_year", []), cov.icr_min, "≥"),
+        ("Долг/EBITDA", metrics.get("net_debt_to_ebitda_by_year", []), cov.net_debt_to_ebitda_max, "≤"),
+    ]
+    r += 1
+    for label, values, threshold, op in rows:
+        ws.cell(row=r, column=1, value=label).font = HEADER
+        for y, value in enumerate(values):
+            cell = ws.cell(row=r, column=2 + y, value=value)
+            cell.font = FORMULA
+            cell.number_format = "0.00"
+        if threshold is not None:
+            th = ws.cell(row=r, column=2 + years, value=f"{op} {threshold}")
+            th.font = INPUT
+            th.fill = KEY_FILL
+            if values:
+                worst = min(values) if op == "≥" else max(values)
+                ok = worst >= threshold if op == "≥" else worst <= threshold
+                ws.cell(row=r, column=3 + years, value="OK" if ok else "НАРУШЕНИЕ").font = (
+                    FORMULA if ok else Font(name=FONT, bold=True, color="CC0000"))
+        r += 1
+    r += 1
+    breaches = metrics.get("covenant_breaches", [])
+    if breaches:
+        ws.cell(row=r, column=1, value="Нарушения:").font = HEADER
+        r += 1
+        for b in breaches:
+            ws.cell(row=r, column=1, value="⛔ " + b).font = NOTE
+            r += 1
+    elif any(t is not None for _, _, t, _ in rows):
+        ws.cell(row=r, column=1, value="Все заданные ковенанты выполняются").font = NOTE
+    else:
+        ws.cell(row=r, column=1, value="Пороги ковенант не заданы (financing.covenants)").font = NOTE
+    ws.column_dimensions["A"].width = 26
+
+
 _BUILDERS = {
     "build_cover": build_cover,
+    "build_roadmap": build_roadmap,
+    "build_staff": build_staff,
+    "build_covenants": build_covenants,
     "build_assumptions": build_assumptions,
     "build_cf": build_cf,
     "build_dashboard": build_dashboard,

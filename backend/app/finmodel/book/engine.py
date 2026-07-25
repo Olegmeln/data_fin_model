@@ -76,6 +76,7 @@ class BookData:
     net_cf: list[float]
     cumulative_cf: list[float]
     opex_by_item: dict[str, list[float]] = field(default_factory=dict)
+    payroll_by_role: dict[str, list[float]] = field(default_factory=dict)
     depreciation: list[float] = field(default_factory=list)
     ebit: list[float] = field(default_factory=list)
     tax: list[float] = field(default_factory=list)
@@ -109,6 +110,31 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         opex_by_item[name] = [
             item.monthly_amount + revenue[i] * item.pct_of_revenue / 100 for i in range(horizon)
         ]
+    # ФОТ из штатного расписания: попадает в OPEX как две статьи, поэтому
+    # EBITDA/налоги/CF учитывают персонал автоматически; детализация — на листе ФОТ
+    payroll_by_role: dict[str, list[float]] = {}
+    for role in aset.staff.roles:
+        series = []
+        for i in range(horizon):
+            active = role.start_month <= i and (role.end_month is None or i <= role.end_month)
+            series.append(role.count * role.monthly_salary if active else 0.0)
+        name = role.name
+        while name in payroll_by_role:
+            name += " ·"
+        payroll_by_role[name] = series
+    payroll_total = ([sum(v) for v in zip(*payroll_by_role.values())]
+                     if payroll_by_role else [0.0] * horizon)
+    contributions = [0.0] * horizon
+    if any(payroll_total) and not aset.staff.contributions_included:
+        contributions = [
+            payroll_total[i] * aset.taxes.payroll_contributions.value_at(months[i]) / 100
+            for i in range(horizon)
+        ]
+    if any(payroll_total):
+        opex_by_item["ФОТ (штат)"] = payroll_total
+        if any(contributions):
+            opex_by_item["Страховые взносы"] = contributions
+
     opex = ([sum(values) for values in zip(*opex_by_item.values())]
             if opex_by_item else [0.0] * horizon)
 
@@ -186,7 +212,8 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         opex=opex, ebitda=ebitda, capex=capex, debt_draw=debt_draw,
         interest=interest, principal=principal, debt_outstanding=debt_outstanding,
         net_cf=net_cf, cumulative_cf=cumulative,
-        opex_by_item=opex_by_item, depreciation=depreciation,
+        opex_by_item=opex_by_item, payroll_by_role=payroll_by_role,
+        depreciation=depreciation,
         ebit=ebit, tax=tax, net_income=net_income,
     )
     book.metrics = _metrics(aset, book)
@@ -251,13 +278,35 @@ def _metrics(aset: AssumptionSet, book: BookData) -> dict:
     debt_service = [book.interest[i] + book.principal[i] for i in range(len(book.months))]
     years = len(book.months) // 12
     dscr_by_year = []
+    icr_by_year = []
+    net_debt_to_ebitda_by_year = []
     for y in range(years):
         service = sum(debt_service[y * 12:(y + 1) * 12])
+        interest_y = sum(book.interest[y * 12:(y + 1) * 12])
         cash = sum(book.ebitda[y * 12:(y + 1) * 12])
         if service > 0:
             dscr_by_year.append(round(cash / service, 2))
+        if interest_y > 0:
+            icr_by_year.append(round(cash / interest_y, 2))
+        debt_eoy = book.debt_outstanding[y * 12 + 11]
+        if debt_eoy > 0 and cash > 0:
+            net_debt_to_ebitda_by_year.append(round(debt_eoy / cash, 2))
     if dscr_by_year:
         dscr_min = min(dscr_by_year)
+
+    # проверка ковенант (заданных в financing.covenants)
+    cov = aset.financing.covenants
+    covenant_breaches: list[str] = []
+    if cov.dscr_min is not None and dscr_by_year and min(dscr_by_year) < cov.dscr_min:
+        covenant_breaches.append(
+            f"DSCR {min(dscr_by_year)} < {cov.dscr_min} (порог)")
+    if cov.icr_min is not None and icr_by_year and min(icr_by_year) < cov.icr_min:
+        covenant_breaches.append(
+            f"ICR {min(icr_by_year)} < {cov.icr_min} (порог)")
+    if (cov.net_debt_to_ebitda_max is not None and net_debt_to_ebitda_by_year
+            and max(net_debt_to_ebitda_by_year) > cov.net_debt_to_ebitda_max):
+        covenant_breaches.append(
+            f"Долг/EBITDA {max(net_debt_to_ebitda_by_year)} > {cov.net_debt_to_ebitda_max} (порог)")
 
     return {
         "npv": round(npv, 2),
@@ -267,6 +316,9 @@ def _metrics(aset: AssumptionSet, book: BookData) -> dict:
         "discount_rate_pct": aset.valuation.discount_rate_pct,
         "dscr_by_year": dscr_by_year,
         "dscr_min": dscr_min,
+        "icr_by_year": icr_by_year,
+        "net_debt_to_ebitda_by_year": net_debt_to_ebitda_by_year,
+        "covenant_breaches": covenant_breaches,
         "revenue_total": round(sum(book.revenue), 2),
         "capex_total": round(sum(book.capex), 2),
     }

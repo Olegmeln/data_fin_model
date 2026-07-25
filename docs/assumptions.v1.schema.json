@@ -87,6 +87,53 @@
       "title": "CapexItem",
       "type": "object"
     },
+    "Covenants": {
+      "additionalProperties": false,
+      "description": "Ковенанты кредитного пакета: None = не задан.",
+      "properties": {
+        "dscr_min": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dscr Min"
+        },
+        "icr_min": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Icr Min"
+        },
+        "net_debt_to_ebitda_max": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Net Debt To Ebitda Max"
+        }
+      },
+      "title": "Covenants",
+      "type": "object"
+    },
     "CreditFacility": {
       "additionalProperties": false,
       "properties": {
@@ -162,9 +209,50 @@
           },
           "title": "Facilities",
           "type": "array"
+        },
+        "covenants": {
+          "$ref": "#/$defs/Covenants"
         }
       },
       "title": "Financing",
+      "type": "object"
+    },
+    "Milestone": {
+      "additionalProperties": false,
+      "description": "Веха дорожной карты проекта.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "month": {
+          "minimum": 0,
+          "title": "Month",
+          "type": "integer"
+        },
+        "kind": {
+          "default": "stage",
+          "title": "Kind",
+          "type": "string"
+        },
+        "note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Note"
+        }
+      },
+      "required": [
+        "name",
+        "month"
+      ],
+      "title": "Milestone",
       "type": "object"
     },
     "OpenQuestion": {
@@ -551,6 +639,71 @@
       "title": "SourceRef",
       "type": "object"
     },
+    "Staff": {
+      "additionalProperties": false,
+      "properties": {
+        "roles": {
+          "items": {
+            "$ref": "#/$defs/StaffRole"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "contributions_included": {
+          "default": false,
+          "title": "Contributions Included",
+          "type": "boolean"
+        }
+      },
+      "title": "Staff",
+      "type": "object"
+    },
+    "StaffRole": {
+      "additionalProperties": false,
+      "description": "Роль в штатном расписании: оклад gross на человека.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "count": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Count",
+          "type": "number"
+        },
+        "monthly_salary": {
+          "minimum": 0,
+          "title": "Monthly Salary",
+          "type": "number"
+        },
+        "start_month": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Start Month",
+          "type": "integer"
+        },
+        "end_month": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Month"
+        }
+      },
+      "required": [
+        "name",
+        "monthly_salary"
+      ],
+      "title": "StaffRole",
+      "type": "object"
+    },
     "Taxes": {
       "additionalProperties": false,
       "properties": {
@@ -640,6 +793,16 @@
     },
     "opex": {
       "$ref": "#/$defs/Opex"
+    },
+    "staff": {
+      "$ref": "#/$defs/Staff"
+    },
+    "milestones": {
+      "items": {
+        "$ref": "#/$defs/Milestone"
+      },
+      "title": "Milestones",
+      "type": "array"
     },
     "financing": {
       "$ref": "#/$defs/Financing"

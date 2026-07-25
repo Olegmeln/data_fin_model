@@ -32,8 +32,8 @@ def book_set() -> AssumptionSet:
 class TestRegistry:
     def test_default_composition_and_order(self):
         codes = [s.code for s in resolve_sheets()]
-        assert codes == ["cover", "assumptions", "cf", "dashboard",
-                         "sales", "capex", "opex", "pl", "credit"]
+        assert codes == ["cover", "roadmap", "assumptions", "cf", "dashboard",
+                         "sales", "capex", "opex", "staff", "pl", "credit", "covenants"]
 
     def test_registry_builders_exist(self):
         """Структурный контракт: каждый лист реестра имеет строителя в excel.py."""
@@ -62,8 +62,8 @@ class TestExcelBook:
 
     def test_all_sheets_present(self):
         assert self._workbook().sheetnames == [
-            "Обложка", "Допущения", "CF", "Дашборд",
-            "План продаж", "CAPEX и амортизация", "Опер. расходы", "ПиУ", "Кредит"]
+            "Обложка", "Дорожная карта", "Допущения", "CF", "Дашборд", "План продаж",
+            "CAPEX и амортизация", "Опер. расходы", "ФОТ", "ПиУ", "Кредит", "Ковенанты"]
 
     def test_sales_total_is_formula(self):
         sales = self._workbook()["План продаж"]

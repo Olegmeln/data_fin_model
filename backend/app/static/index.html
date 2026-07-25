@@ -284,6 +284,20 @@ function facilitiesTable(){const list=(state.doc.financing&&state.doc.financing.
   ${tcell(`financing.facilities[${i}].grace_months`,c.grace_months)}
   <td><button class="icon" data-del="financing.facilities:${i}">✕</button></td></tr>`).join('')+
  `</tbody></table><button class="btn" data-add="financing.facilities" style="margin-top:8px">＋ Кредит</button>`;}
+function staffTable(){const list=(state.doc.staff&&state.doc.staff.roles)||[];
+ return `<table><thead><tr><th>Роль ${srcBadge('staff')}</th><th>Чел.</th><th>Оклад/мес</th><th>С мес</th><th>По мес</th><th></th></tr></thead><tbody>`+
+ list.map((s,i)=>`<tr>${tcell(`staff.roles[${i}].name`,s.name,1)}${tcell(`staff.roles[${i}].count`,s.count)}${tcell(`staff.roles[${i}].monthly_salary`,s.monthly_salary)}${tcell(`staff.roles[${i}].start_month`,s.start_month)}${tcell(`staff.roles[${i}].end_month`,s.end_month)}
+  <td><button class="icon" data-del="staff.roles:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><label class="note" style="display:inline-flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" data-path="staff.contributions_included" data-bool="1"${state.doc.staff&&state.doc.staff.contributions_included?' checked':''}/> взносы уже в окладах</label>
+ <div><button class="btn" data-add="staff.roles" style="margin-top:8px">＋ Роль</button></div>`;}
+function milestonesTable(){const list=state.doc.milestones||[];
+ const kinds=[['stage','этап'],['capex','CAPEX'],['launch','запуск'],['finance','финансы']];
+ return `<table><thead><tr><th>Веха ${srcBadge('milestones')}</th><th>Мес</th><th>Тип</th><th>Заметка</th><th></th></tr></thead><tbody>`+
+ list.map((m,i)=>`<tr>${tcell(`milestones[${i}].name`,m.name,1)}${tcell(`milestones[${i}].month`,m.month)}
+  <td><select data-path="milestones[${i}].kind" data-str="1">${kinds.map(([v,l])=>`<option value="${v}"${m.kind===v?' selected':''}>${l}</option>`).join('')}</select></td>
+  ${tcell(`milestones[${i}].note`,m.note,1)}
+  <td><button class="icon" data-del="milestones:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="milestones" style="margin-top:8px">＋ Веха</button>`;}
 function asetHTML(){
  if(!state.aset||!state.doc)return `<div class="card"><h3>Книга допущений <span class="badge">assumptions.v1</span></h3><div class="bd">
    <p class="note">Единый слой допущений — источник истины книги модели. Режимы заполнения: <b>auto</b> — стартовый профиль (5 лет · 9% дисконт · 2 товара + 2 услуги) с памятью предпочтений; <b>AI</b> — агент извлекает из документов; <b>manual</b> — правка полей формы. Confirmed-версия пополняет память предпочтений.</p>
@@ -296,7 +310,7 @@ function asetHTML(){
  const oq=d.open_questions||[];const met=state.bookMetrics;
  const debt=(f.facilities||[]).reduce((s,x)=>s+(+x.amount||0),0);const eq=+f.equity_amount||0;
  const share=(eq+debt)>0?`${Math.round(eq/(eq+debt)*100)}/${Math.round(debt/(eq+debt)*100)}`:'—';
- const metHTML=met?`<div class="kpis" style="margin-top:12px">${[['NPV',money(met.npv)],['IRR',met.irr_pct!=null?met.irr_pct+'%':'—'],['MIRR',met.mirr_pct!=null?met.mirr_pct+'%':'—'],['Окупаемость',met.payback_months!=null?met.payback_months+' мес':'—'],['DSCR min',met.dscr_min!=null?met.dscr_min:'—']].map(([l,x])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${x}</div></div>`).join('')}</div>`:'';
+ const metHTML=met?`<div class="kpis" style="margin-top:12px">${[['NPV',money(met.npv)],['IRR',met.irr_pct!=null?met.irr_pct+'%':'—'],['MIRR',met.mirr_pct!=null?met.mirr_pct+'%':'—'],['Окупаемость',met.payback_months!=null?met.payback_months+' мес':'—'],['DSCR min',met.dscr_min!=null?met.dscr_min:'—']].map(([l,x])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${x}</div></div>`).join('')}</div>${(met.covenant_breaches&&met.covenant_breaches.length)?met.covenant_breaches.map(b=>`<div class="note" style="color:#c0392b;margin-top:6px">⛔ ${esc(b)}</div>`).join(''):''}`:'';
  return `<div class="aset">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
     <h3 style="margin:0;font-size:16px">Книга допущений <span class="badge">assumptions.v1</span></h3>
@@ -321,9 +335,16 @@ function asetHTML(){
   <div class="card" style="margin-bottom:14px"><h3>CAPEX</h3><div class="bd">${capexTable()}
     <div class="form" style="margin-top:12px">${inp('Итог (если без разбивки)','capex.total_override',cx.total_override)}${inp('Амортизация, мес','capex.depreciation_months',cx.depreciation_months)}</div></div></div>
   <div class="card" style="margin-bottom:14px"><h3>Операционные расходы</h3><div class="bd">${opexTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>ФОТ: штатное расписание</h3><div class="bd">${staffTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>Дорожная карта проекта</h3><div class="bd">${milestonesTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>Финансирование <span class="badge" title="доля собственных/заёмных">${share}</span></h3><div class="bd">
     <div class="form">${inp('Собственные средства','financing.equity_amount',f.equity_amount)}</div>
-    <div style="margin-top:10px">${facilitiesTable()}</div></div></div>
+    <div style="margin-top:10px">${facilitiesTable()}</div>
+    <div class="form" style="margin-top:12px">
+      ${inp('Ковенант DSCR ≥','financing.covenants.dscr_min',(f.covenants||{}).dscr_min,'напр. 1.2')}
+      ${inp('Ковенант ICR ≥','financing.covenants.icr_min',(f.covenants||{}).icr_min)}
+      ${inp('Долг/EBITDA ≤','financing.covenants.net_debt_to_ebitda_max',(f.covenants||{}).net_debt_to_ebitda_max,'напр. 3.5')}
+    </div></div></div>
   <div class="card" style="margin-bottom:14px"><h3>Налоги</h3><div class="bd"><div class="form">
     ${inp('Режим','taxes.regime',t.regime,'ОСНО / УСН…',1)}${rateInp('Налог на прибыль, %','taxes.profit',t.profit)}
     ${rateInp('НДС, %','taxes.vat',t.vat)}${rateInp('Страховые взносы, %','taxes.payroll_contributions',t.payroll_contributions)}
@@ -341,7 +362,9 @@ function sanitizeDoc(){const d=state.doc;if(!d)return;
  if(d.products)d.products=d.products.filter(x=>x&&x.name);
  if(d.capex&&d.capex.items)d.capex.items=d.capex.items.filter(x=>x&&x.name);
  if(d.opex&&d.opex.items)d.opex.items=d.opex.items.filter(x=>x&&x.name);
- if(d.financing&&d.financing.facilities)d.financing.facilities=d.financing.facilities.filter(x=>x&&x.name);}
+ if(d.financing&&d.financing.facilities)d.financing.facilities=d.financing.facilities.filter(x=>x&&x.name);
+ if(d.staff&&d.staff.roles)d.staff.roles=d.staff.roles.filter(x=>x&&x.name);
+ if(d.milestones)d.milestones=d.milestones.filter(x=>x&&x.name);}
 async function loadAset(version){try{state.aset=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+(version?('?version='+version):''));
   state.doc=JSON.parse(JSON.stringify(state.aset.assumptions));state.bookMetrics=null;}catch(e){state.aset=null;state.doc=null;}}
 async function loadVersions(){try{state.asetVersions=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/versions');}catch(e){state.asetVersions=[];}}
@@ -359,7 +382,8 @@ async function loadMetrics(){try{const sc=$('#asScen')?$('#asScen').value:'';
   const m=await api('/book/'+encodeURIComponent(PROJECT())+'/metrics'+(sc?('?scenario='+encodeURIComponent(sc)):''));
   state.bookMetrics=m.metrics;renderView();}catch(e){toast('Метрики: '+e.message,'err');}}
 const ROW_DEFAULTS={'products':{name:'Новый продукт',kind:'goods'},'capex.items':{name:'Позиция',amount:0},
- 'opex.items':{name:'Статья',monthly_amount:0},'financing.facilities':{name:'Кредит',kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0}};
+ 'opex.items':{name:'Статья',monthly_amount:0},'financing.facilities':{name:'Кредит',kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0},
+ 'staff.roles':{name:'Роль',count:1,monthly_salary:0,start_month:0},'milestones':{name:'Веха',month:0,kind:'stage'}};
 function arrAt(sec){const parts=sec.split('.');let o=state.doc;for(const k of parts.slice(0,-1)){o[k]=o[k]||{};o=o[k];}
  const last=parts[parts.length-1];o[last]=o[last]||[];return o[last];}
 function wireAset(){
