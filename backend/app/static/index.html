@@ -5,21 +5,34 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>data_fin_model — financial workspace</title>
 <style>
-:root{--bg:#f7f6f3;--surface:#fff;--surface-2:#f2f0ec;--text:#201e1b;--muted:#6d675f;--border:#e7e2da;
- --accent:#c96442;--accent-ink:#fff;--accent-soft:#f4e7e0;--fact:#2f855a;--fact-bg:#eaf5ee;--assume:#2b6cb0;--assume-bg:#e9f0fb;
- --shadow:0 1px 2px rgba(30,25,20,.06),0 10px 30px rgba(30,25,20,.06);--r:14px;--r2:9px}
-html[data-theme="dark"]{--bg:#171614;--surface:#211f1d;--surface-2:#2a2825;--text:#eceae7;--muted:#a29c94;--border:#332f2a;
- --accent:#e08a68;--accent-ink:#171614;--accent-soft:#3a2b23;--fact:#68d391;--fact-bg:#22332a;--assume:#7cb0f0;--assume-bg:#232f40;
- --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4)}
+/* Design tokens — дизайн-спека v1 (Data Fin Model, Clean Financial Workspace).
+   Синий = действие, бирюзовый = AI/инсайты, тёмно-синий = доверие,
+   оранжевый = внимание/черновик (никогда не primary CTA). */
+:root{--navy:#0F172A;--action:#2563EB;--ai:#14B8A6;--canvas:#F6F8FC;--surface-w:#FFFFFF;
+ --border-t:#E2E8F0;--muted-t:#64748B;--success:#16A34A;--warning:#F59E0B;--danger:#DC2626;
+ --radius-control:10px;--radius-card:16px;--radius-hero:24px;
+ --shadow-float:0 12px 32px rgba(15,23,42,.08);--focus-ring:0 0 0 3px rgba(37,99,235,.22);
+ /* семантические алиасы приложения */
+ --bg:var(--canvas);--surface:var(--surface-w);--surface-2:#EEF2F8;--text:var(--navy);--muted:var(--muted-t);--border:var(--border-t);
+ --accent:var(--action);--accent-ink:#fff;--accent-soft:#E7EEFE;
+ --fact:var(--success);--fact-bg:#E8F6EC;--assume:var(--action);--assume-bg:#E7EEFE;
+ --ai-bg:#E0F5F2;--warn-bg:#FEF3E2;
+ --shadow:0 1px 2px rgba(15,23,42,.04),var(--shadow-float);--r:var(--radius-card);--r2:var(--radius-control)}
+html[data-theme="dark"]{--bg:#0B1220;--surface:#121A2B;--surface-2:#1B2536;--text:#E8EDF6;--muted:#94A3B8;--border:#243044;
+ --accent:#5B8DEF;--accent-ink:#0B1220;--accent-soft:#1C2A45;
+ --fact:#4ADE80;--fact-bg:#15291F;--assume:#7CB0F0;--assume-bg:#1C2A45;--ai:#2DD4BF;--ai-bg:#12302D;--warn-bg:#332616;
+ --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.45)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
 button{font:inherit;cursor:pointer}.hidden{display:none!important}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:6px}
 .app{display:grid;grid-template-columns:250px 1fr;height:100vh}
 .side{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
 .side-top{display:flex;align-items:center;gap:10px;padding:14px 16px}
-.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#e8a37f);display:grid;place-items:center;color:#fff;font-weight:800}
-.brand b{font-weight:650}.brand small{display:block;color:var(--muted);font-size:11px}
-.newbtn{margin:4px 12px 8px;height:38px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.logo{width:30px;height:30px;display:grid;place-items:center}
+.brand b{font-weight:650;letter-spacing:-.01em}.brand small{display:block;color:var(--muted);font-size:11px}
+.newbtn{margin:4px 12px 8px;height:38px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface);color:var(--text);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.newbtn:hover{border-color:var(--accent);color:var(--accent)}
 .search{margin:0 12px 8px;height:34px;border:1px solid var(--border);background:var(--surface-2);border-radius:9px;color:var(--text);padding:0 11px;font:inherit}
 .plabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 18px 4px}
 .projects{flex:1;overflow:auto;padding:0 8px}
@@ -38,16 +51,17 @@ button{font:inherit;cursor:pointer}.hidden{display:none!important}
 .btn:hover{border-color:var(--accent);color:var(--accent)}.btn.acc{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .chip{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}.dot.on{background:var(--fact)}
-.tabs{display:flex;gap:4px;padding:8px 16px 0;border-bottom:1px solid var(--border);overflow-x:auto}
-.tab{padding:8px 14px;border-radius:9px 9px 0 0;color:var(--muted);border:1px solid transparent;border-bottom:0;white-space:nowrap;background:transparent}
-.tab:hover{color:var(--text)}.tab.active{color:var(--accent);background:var(--surface);border-color:var(--border)}
+.tabs{display:flex;gap:6px;padding:9px 16px;border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:5}
+.tab{padding:7px 14px;border-radius:8px;color:var(--muted);border:1px solid transparent;white-space:nowrap;background:transparent;font-weight:500}
+.tab:hover{color:var(--text);background:var(--surface-2)}
+.tab.active{color:var(--accent);background:var(--accent-soft);font-weight:600}
 .content{flex:1;overflow:auto;padding:20px}.wrap{max-width:1060px;margin:0 auto}
 .composer{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;max-width:720px;margin:0 auto}
 .composer.drag{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .composer textarea{width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);font:inherit;font-size:16px;min-height:44px}
 .crow{display:flex;gap:8px;align-items:center}.icon{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
 .icon.rec{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.send{width:40px;height:40px;border-radius:11px;border:0;background:var(--accent);color:var(--accent-ink);font-size:17px}
+#send{height:40px;padding:0 18px;border-radius:var(--r2);font-weight:600}
 .hero h1{font-size:26px;text-align:center;margin:6px 0 20px;letter-spacing:-.02em}
 .transcript{min-height:16px;color:var(--accent);font-size:13px;padding:0 6px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
@@ -79,7 +93,7 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
 .src{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .srcbtn{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:9px;padding:9px 13px}.srcbtn:hover{border-color:var(--accent);color:var(--accent)}
 .note{font-size:12.5px;color:var(--muted);margin-top:10px}
-.badge{font-size:10.5px;background:var(--accent-soft);color:var(--accent);border-radius:5px;padding:2px 7px;margin-left:8px}
+.badge{font-size:10.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:3px 8px;margin-left:8px;display:inline-block}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:40}.ov.open{display:block}
 .panel{position:fixed;top:0;right:0;height:100%;width:400px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);transform:translateX(100%);transition:.22s;display:flex;flex-direction:column}
 .ov.open .panel{transform:none}
@@ -97,23 +111,37 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
 .aset .icon{width:28px;height:28px;font-size:13px}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:760px){.steps{grid-template-columns:1fr}}
-.stepc{border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+.stepc{border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;flex-direction:column;gap:7px;align-items:flex-start;background:var(--surface)}
+.stepc.on{border-color:var(--accent);background:var(--accent-soft)}
 .stepc b{font-size:13.5px}.stepc .note{margin:0}.stepc .btn{margin-top:auto}
+.stepc .btn[disabled]{cursor:not-allowed}
 </style></head>
 <body>
 <div class="app">
   <aside class="side">
-    <div class="side-top"><div class="logo">₽</div><div class="brand"><b>data_fin_model</b><small>financial workspace</small></div></div>
-    <button class="newbtn" id="newProject">＋ New project</button>
-    <input class="search" placeholder="Search projects…"/>
-    <div class="plabel">Projects</div>
+    <div class="side-top"><div class="logo">
+      <!-- DFM Grid Arrow: сетка данных (Navy/Action Blue) + линия роста (AI Teal) -->
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-label="Data Fin Model">
+        <rect x="2" y="2" width="12" height="12" rx="3" fill="var(--navy)"/>
+        <rect x="18" y="2" width="12" height="12" rx="3" fill="var(--action)" opacity=".28"/>
+        <rect x="2" y="18" width="12" height="12" rx="3" fill="var(--action)" opacity=".55"/>
+        <rect x="18" y="18" width="12" height="12" rx="3" fill="var(--action)"/>
+        <path d="M6 25 L14 17 L20 21 L27 11" stroke="var(--ai)" stroke-width="2.6"
+              stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M22 10.4 L27.4 10.2 L27.2 15.6" stroke="var(--ai)" stroke-width="2.6"
+              stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg></div><div class="brand"><b>Data Fin Model</b><small id="brandSub">AI financial workspace</small></div></div>
+    <button class="newbtn" id="newProject"></button>
+    <input class="search" id="projSearch"/>
+    <div class="plabel" id="plabel"></div>
     <div class="projects" id="projects"></div>
     <div class="side-foot"><div class="ava">ME</div><div style="font-size:13px">You<div class="note" style="margin:0">Workspace</div></div>
       <button class="gear" id="gear" title="Settings">⚙</button></div>
   </aside>
   <main class="main">
     <div class="topbar">
-      <input class="ptitle" id="ptitle" value="Financial model"/>
+      <input class="ptitle" id="ptitle" value=""/>
+      <span id="pstatus" class="badge"></span>
       <span id="gchip" class="chip hidden"><span class="dot" id="gdot"></span><span id="gtext"></span></span>
       <div class="sp"></div>
       <button class="btn" id="lang" title="Язык / Language">RU ⇄ EN</button>
@@ -149,9 +177,17 @@ function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'
 let LANG=localStorage.getItem('dfm-lang')||'ru';
 const I18N={
  ru:{tab_Overview:'Обзор',tab_Model:'Модель',tab_Assumptions:'Допущения',tab_Parameters:'Параметры',tab_Documents:'Документы',
-  export:'⬇ Экспорт .xlsx',theme:'◐ Тема',hero:'Что будем моделировать?',composer_ph:'Опишите бизнес или перетащите сюда банковскую выписку…',
-  step_title:'Путь к модели',step1:'1 · Профиль',step1d:'Опросник, документы или auto-профиль',step2:'2 · Допущения',step2d:'Проверьте и подтвердите книгу допущений',step3:'3 · Книга',step3d:'Скачайте Excel на 15 листов',
-  st_done:'готово',st_next:'следующий шаг',st_wait:'позже',go_survey:'Пройти опросник',go_aset:'К допущениям',go_book:'Скачать книгу',
+  export:'Экспортировать XLSX',theme:'Тема',hero:'Создайте финансовую модель',
+  composer_ph:'Опишите бизнес, загрузите файл или выберите пример.',
+  run:'Сформировать модель',brand_sub:'AI-конструктор финансовых моделей',new_project:'＋ Новый проект',
+  search_ph:'Поиск проектов…',projects:'Проекты',project_title:'Финансовая модель',
+  step_title:'Путь к готовой модели',step1:'Профиль бизнеса',step1d:'Опросник, документы или профиль по умолчанию',
+  step2:'Допущения',step2d:'Проверьте и подтвердите книгу допущений',step3:'Книга модели',step3d:'15 листов Excel с живыми формулами',
+  st_done:'Готово',st_active:'Активный шаг',st_draft:'Черновик',st_check:'Нужно проверить',
+  st_lock1:'Заблокировано до заполнения профиля',st_lock2:'Заблокировано до подтверждения допущений',
+  go_survey:'Заполнить профиль',go_aset:'Проверить допущения',go_book:'Экспортировать XLSX',
+  ex_title:'Примеры для быстрого старта',ex_hint:'Нажмите пример — подставим описание в поле',
+  ex1:'Кофейня, 2 точки, аренда и фудкост',ex2:'IT-агентство на 8 человек, проектная выручка',ex3:'Производство: линия за 5 млн, кредит 17%',
   summary:'Сводка проекта',ops:'операций разобрано',docs_loaded:'документ(ов) загружено',industry:'отрасль',edit_hint:'Допущения правятся во вкладке «Модель» и «Допущения».',
   no_model:'Модели пока нет — загрузите выписку во вкладке «Обзор» или пройдите путь из трёх шагов.',
   legend_fact:'факт из выписки (заблокирован)',legend_assume:'допущение — правится кликом',legend_empty:'пустые ячейки тоже редактируются',
@@ -169,9 +205,17 @@ const I18N={
   saved_v:'Сохранён черновик v',confirmed_v:'Подтверждено v',memory_upd:' — память предпочтений обновлена',
   settings:'Настройки',appearance:'Оформление',lang:'Язык / Language'},
  en:{tab_Overview:'Overview',tab_Model:'Model',tab_Assumptions:'Assumptions',tab_Parameters:'Parameters',tab_Documents:'Documents',
-  export:'⬇ Export .xlsx',theme:'◐ Theme',hero:'What shall we model?',composer_ph:'Describe the business or drop a bank statement here…',
-  step_title:'Path to the model',step1:'1 · Profile',step1d:'Survey, documents or auto profile',step2:'2 · Assumptions',step2d:'Review and confirm the assumptions book',step3:'3 · Workbook',step3d:'Download the 15-sheet Excel',
-  st_done:'done',st_next:'next step',st_wait:'later',go_survey:'Take the survey',go_aset:'Open assumptions',go_book:'Download workbook',
+  export:'Export XLSX',theme:'Theme',hero:'Build your financial model',
+  composer_ph:'Describe the business, upload a file or pick an example.',
+  run:'Build the model',brand_sub:'AI financial workspace',new_project:'＋ New project',
+  search_ph:'Search projects…',projects:'Projects',project_title:'Financial model',
+  step_title:'Path to a finished model',step1:'Business profile',step1d:'Survey, documents or the default profile',
+  step2:'Assumptions',step2d:'Review and confirm the assumptions book',step3:'Model workbook',step3d:'15 Excel sheets with live formulas',
+  st_done:'Done',st_active:'Active step',st_draft:'Draft',st_check:'Needs review',
+  st_lock1:'Locked until the profile is filled',st_lock2:'Locked until assumptions are confirmed',
+  go_survey:'Fill the profile',go_aset:'Review assumptions',go_book:'Export XLSX',
+  ex_title:'Quick-start examples',ex_hint:'Click an example — we will prefill the prompt',
+  ex1:'Coffee shop, 2 locations, rent and food cost',ex2:'IT agency of 8 people, project revenue',ex3:'Manufacturing: 5M line, 17% loan',
   summary:'Project summary',ops:'operations processed',docs_loaded:'document(s) loaded',industry:'industry',edit_hint:'Edit assumptions in the Model and Assumptions tabs.',
   no_model:'No model yet — upload a bank statement in Overview or follow the three steps.',
   legend_fact:'fact from statement (locked)',legend_assume:'assumption — click to edit',legend_empty:'empty cells are editable too',
@@ -191,21 +235,26 @@ const I18N={
 const t=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ru[k]||k;
 function setLang(l){LANG=l;localStorage.setItem('dfm-lang',l);render();applyChrome();}
 
-const state={dash:null,imports:[],google:null,params:null,tab:'Overview',title:'Financial model',rec:null};
+const state={dash:null,imports:[],google:null,params:null,tab:'Overview',rec:null};
 const TABS=['Overview','Model','Assumptions','Parameters','Documents'];
 
 function renderProjects(){
-  const ind=state.dash&&state.dash.industry?state.dash.industry.name:'Not set';
+  const ind=state.dash&&state.dash.industry?state.dash.industry.name:'—';
   const ops=state.dash?state.dash.kpi.operations_count:0;
-  const status=ops>0?'facts loaded':'draft';
-  $('#projects').innerHTML=`<div class="proj active"><div class="pn">${esc($('#ptitle').value)}</div>
-    <div class="pm"><span class="tag">${esc(ind)}</span><span>${status}</span></div></div>
-    <div class="note" style="padding:8px 11px">Multiple projects are on the roadmap (backend is single-workspace for now).</div>`;
+  const status=state.aset&&state.aset.status==='confirmed'?t('st_done'):(ops>0?t('st_draft'):t('st_active'));
+  $('#projects').innerHTML=`<div class="proj active"><div class="pn">${esc($('#ptitle').value||t('project_title'))}</div>
+    <div class="pm"><span class="tag">${esc(ind)}</span><span>${status}</span></div></div>`;
 }
 function renderTabs(){$('#tabs').innerHTML=TABS.map(tb=>`<button class="tab ${tb===state.tab?'active':''}" data-t="${tb}">${t('tab_'+tb)}</button>`).join('');
   document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{state.tab=el.dataset.t;renderTabs();renderView();});}
-function applyChrome(){$('#theme').textContent=t('theme');$('#exportBtn').textContent=t('export');
-  $('#lang').textContent=LANG==='ru'?'RU ⇄ EN':'EN ⇄ RU';}
+function applyChrome(){$('#theme').textContent='◐ '+t('theme');$('#exportBtn').textContent='⬇ '+t('export');
+  $('#lang').textContent=LANG==='ru'?'RU ⇄ EN':'EN ⇄ RU';
+  $('#brandSub').textContent=t('brand_sub');$('#newProject').textContent=t('new_project');
+  $('#projSearch').placeholder=t('search_ph');$('#plabel').textContent=t('projects');
+  const pt=$('#ptitle');if(pt&&(!pt.value||pt.value===I18N.ru.project_title||pt.value===I18N.en.project_title))pt.value=t('project_title');
+  const ps=$('#pstatus');if(ps){const confirmed=state.aset&&state.aset.status==='confirmed';
+    ps.textContent=confirmed?t('st_done'):t('st_draft');
+    ps.style.cssText=confirmed?'color:var(--success);background:var(--fact-bg)':'color:#B45309;background:var(--warn-bg)';}}
 
 function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
   const cards=[['Revenue (model)',money(k.revenue_total),''],['Expenses',money(k.expenses_total),''],
@@ -213,22 +262,46 @@ function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
     ['Cash balance',money(k.cash_balance),''],['NPV',inv.npv!=null?money(inv.npv):'—',inv.npv==null?'':(inv.npv>=0?'pos':'neg')]];
   return `<div class="kpis">${cards.map(([l,v,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div></div>`).join('')}</div>`;}
 
+// Статус-бейджи фиксированного набора (дизайн-спека, раздел 6)
+function badge(kind,label){const map={done:['var(--success)','var(--fact-bg)'],active:['var(--action)','var(--accent-soft)'],
+  draft:['#B45309','var(--warn-bg)'],check:['#B45309','var(--warn-bg)'],lock:['var(--muted)','var(--surface-2)']};
+  const[c,b]=map[kind]||map.lock;
+  return `<span class="badge" style="color:${c};background:${b};margin:0">${kind==='done'?'✓ ':''}${label}</span>`;}
 function stepsHTML(){
   const hasProfile=!!(state.params&&state.params.industry_code)||!!(state.dash&&state.dash.industry)||!!state.aset;
   const hasAset=!!state.aset;const confirmed=hasAset&&state.aset.status==='confirmed';
-  const st=(done,next)=>done?`<span class="badge" style="color:var(--fact);background:var(--fact-bg)">${t('st_done')}</span>`
-    :(next?`<span class="badge">${t('st_next')}</span>`:`<span class="badge" style="opacity:.6">${t('st_wait')}</span>`);
+  const oq=(state.aset&&state.aset.open_questions)?state.aset.open_questions.length:0;
+  // прогресс-счётчики вместо абстрактных этапов
+  const nParams=state.params?Object.keys(state.params.answers||{}).length:0;
+  const d=state.doc||{};
+  const nAset=(d.products||[]).length+((d.opex&&d.opex.items)||[]).length+((d.capex&&d.capex.items)||[]).length
+    +((d.staff&&d.staff.roles)||[]).length+((d.financing&&d.financing.facilities)||[]).length;
+  const s1=hasProfile?badge('done',t('st_done')):badge('active',t('st_active'));
+  const s2=confirmed?badge('done',t('st_done')):(!hasProfile?badge('lock',t('st_lock1'))
+    :(oq?badge('check',t('st_check')):(hasAset?badge('draft',t('st_draft')):badge('active',t('st_active')))));
+  const s3=confirmed?badge('active',t('st_active')):(hasAset?badge('draft',t('st_draft')):badge('lock',t('st_lock2')));
+  const cnt=(n,total)=>`<span class="note" style="margin:0">${n}${total?'/'+total:''}</span>`;
   return `<div class="card" style="margin-top:18px"><h3>${t('step_title')}</h3><div class="bd"><div class="steps">
-   <div class="stepc"><b>${t('step1')}</b>${st(hasProfile,!hasProfile)}<div class="note">${t('step1d')}</div><button class="btn" data-go="survey">${t('go_survey')}</button></div>
-   <div class="stepc"><b>${t('step2')}</b>${st(confirmed,hasProfile&&!confirmed)}<div class="note">${t('step2d')}</div><button class="btn" data-go="aset">${t('go_aset')}</button></div>
-   <div class="stepc"><b>${t('step3')}</b>${st(false,confirmed||hasAset)}<div class="note">${t('step3d')}</div><button class="btn acc" data-go="book">${t('go_book')}</button></div>
+   <div class="stepc${hasProfile?'':' on'}"><b>${t('step1')}</b>${s1}<div class="note">${t('step1d')}</div>
+     ${cnt(nParams,12)} <button class="btn${hasProfile?'':' acc'}" data-go="survey">${t('go_survey')}</button></div>
+   <div class="stepc${hasProfile&&!confirmed?' on':''}"><b>${t('step2')}</b>${s2}<div class="note">${t('step2d')}</div>
+     ${cnt(nAset,0)} <button class="btn${hasProfile&&!confirmed?' acc':''}" data-go="aset" ${hasProfile?'':'disabled style="opacity:.5"'}>${t('go_aset')}</button></div>
+   <div class="stepc${confirmed?' on':''}"><b>${t('step3')}</b>${s3}<div class="note">${t('step3d')}</div>
+     ${cnt(15,0)} <button class="btn${confirmed?' acc':''}" data-go="book" ${hasAset?'':'disabled style="opacity:.5"'}>${t('go_book')}</button></div>
   </div></div></div>`;}
+function examplesHTML(){
+  return `<div class="src" style="justify-content:center;margin-top:12px">
+    ${[1,2,3].map(i=>`<button class="srcbtn" data-ex="${t('ex'+i)}">${t('ex'+i)}</button>`).join('')}</div>
+    <div class="note" style="text-align:center">${t('ex_hint')}</div>`;}
 function overviewHTML(){
   const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
   return `${has?'':'<div class="hero"><h1>'+t('hero')+'</h1></div>'}
    <div class="composer" id="composer"><textarea id="ta" placeholder="${t('composer_ph')}"></textarea>
-     <div class="crow"><button class="icon" id="attach" title="Attach">📎</button><button class="icon" id="mic" title="Voice">🎙</button>
-       <div class="transcript" id="tr"></div><div class="sp" style="flex:1"></div><button class="send" id="send">→</button></div></div>
+     <div class="crow"><button class="icon" id="attach" title="${t('upload')}" aria-label="${t('upload')}">📎</button>
+       <button class="icon" id="mic" title="🎙" aria-label="voice">🎙</button>
+       <div class="transcript" id="tr"></div><div class="sp" style="flex:1"></div>
+       <button class="btn acc" id="send">${t('run')}</button></div></div>
+   ${has?'':examplesHTML()}
    ${stepsHTML()}
    ${has?('<div style="height:18px"></div>'+kpisHTML()+summaryCard()):''}`;
 }
@@ -289,7 +362,8 @@ function docsHTML(){const list=state.imports||[];const iq=state.intake;
 
 // ---- Книга допущений (assumptions.v1) — форма workspace v2, критический путь п.4 ----
 const PROJECT=()=>(state.project&&state.project.slug)||'default';
-const MB={extracted:['AI','assume'],user:['manual','fact'],default:['auto',''],derived:['calc','']};
+// бирюзовый = AI, синий = ручной ввод, серый = профиль/вычислено (дизайн-спека)
+const MB={extracted:['AI','ai'],user:['manual','assume'],default:['auto',''],derived:['опросник','']};
 function srcOf(path){const s=state.doc&&state.doc.sources;if(!s)return null;if(s[path])return s[path];
   let best=null;for(const k in s){if(path===k||path.startsWith(k+'.')||path.startsWith(k+'['))if(!best||k.length>best.length)best=k;}
   return best?s[best]:null;}
@@ -509,7 +583,10 @@ async function saveParams(){
 }
 
 function wireComposer(){
+  document.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{
+    const ta=$('#ta');if(ta){ta.value=b.dataset.ex;ta.focus();}});
   document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
+    if(b.hasAttribute('disabled'))return;
     const go=b.dataset.go;
     if(go==='survey'){state.tab='Parameters';renderTabs();renderView();}
     else if(go==='aset'){state.tab='Assumptions';renderTabs();renderView();}
@@ -538,16 +615,19 @@ async function upload(files){files=[...files];if(!files.length)return;toast('Upl
     try{const r=await api('/imports/upload',{method:'POST',body:fd});imp+=r.imported;dup+=r.duplicates;}catch(e){fail++;toast(f.name+': '+e.message,'err');}}
   toast(`Imported ${imp}, duplicates ${dup}`+(fail?`, errors ${fail}`:''),fail?'err':'ok');await refreshAll();}
 
-function send(){const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
-  if(has){state.tab='Model';renderTabs();renderView();toast('Edit assumption cells directly in the table');}
-  else{toast('Attach a bank statement to build the model');$('#fileInput').click();}}
+function send(){
+  // «Сформировать модель»: ведём по пути — профиль → допущения → книга
+  const hasProfile=!!(state.params&&state.params.industry_code)||!!state.aset;
+  if(!hasProfile){state.tab='Parameters';renderTabs();renderView();toast(t('go_survey'));return;}
+  if(!state.aset){state.tab='Assumptions';renderTabs();renderView();toast(t('go_aset'));return;}
+  state.tab='Model';renderTabs();renderView();}
 
 async function refreshAll(){try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}try{state.imports=await api('/imports');}catch(e){state.imports=[];}
   try{state.params=await api('/parameters');}catch(e){state.params=null;}
   await loadAset();await loadVersions();
   renderProjects();render();}
 async function refreshGoogle(){try{state.google=await api('/google/status');}catch(e){state.google=null;}}
-function render(){renderTabs();renderView();renderGoogleChip();}
+function render(){applyChrome();renderTabs();renderView();renderGoogleChip();}
 
 function renderGoogleChip(){const g=state.google,chip=$('#gchip'),btn=$('#gbtn');
   if(!g||!g.configured){chip.classList.add('hidden');btn.style.display='none';return;}
@@ -587,7 +667,7 @@ $('#ov').onclick=e=>{if(e.target.id==='ov')$('#ov').classList.remove('open');};
 $('#fileInput').onchange=e=>upload(e.target.files);
 $('#exportBtn').onclick=()=>{
   if(state.aset){window.location.href='/api/book/'+encodeURIComponent(PROJECT())+'/export';return;}
-  const t=($('#ptitle').value||'Financial model').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
+  const name=($('#ptitle').value||t('project_title')).trim();window.location.href='/api/model/export?title='+encodeURIComponent(name);};
 $('#newProject').onclick=()=>toast('Multiple projects are on the roadmap (single workspace for now)');
 $('#ptitle').addEventListener('change',renderProjects);
 
