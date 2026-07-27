@@ -35,10 +35,11 @@ REGISTRY: tuple[SheetSpec, ...] = (
     SheetSpec("opex", "Опер. расходы", "build_opex_sheet"),
     SheetSpec("staff", "ФОТ", "build_staff"),
     SheetSpec("pl", "ПиУ", "build_pl"),
+    SheetSpec("balance", "Балансы", "build_balance"),
     SheetSpec("credit", "Кредит", "build_credit"),
     SheetSpec("covenants", "Ковенанты", "build_covenants"),
     # будущие листы целевой архитектуры регистрируются здесь:
-    # production (производство/закупки), statements (балансы) ...
+    # production (производство/закупки — потребует раздела схемы) ...
 )
 
 

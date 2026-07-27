@@ -77,6 +77,9 @@ class BookData:
     cumulative_cf: list[float]
     opex_by_item: dict[str, list[float]] = field(default_factory=dict)
     payroll_by_role: dict[str, list[float]] = field(default_factory=dict)
+    fixed_assets: list[float] = field(default_factory=list)   # ОС по остаточной стоимости
+    cash: list[float] = field(default_factory=list)           # деньги (вкл. equity на старте)
+    equity_book: list[float] = field(default_factory=list)    # капитал: взнос + накопл. прибыль
     depreciation: list[float] = field(default_factory=list)
     ebit: list[float] = field(default_factory=list)
     tax: list[float] = field(default_factory=list)
@@ -207,6 +210,22 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         running += value
         cumulative.append(running)
 
+    # прогнозный баланс (упрощённый): Активы (ОС + деньги) = Капитал + Долг.
+    # Тождество выполняется алгебраически: деньги включают взнос собственного
+    # капитала на старте, капитал прирастает чистой прибылью.
+    fixed_assets = []
+    cash = []
+    equity_book = []
+    capex_cum = dep_cum = ni_cum = 0.0
+    equity0 = aset.financing.equity_amount
+    for i in range(horizon):
+        capex_cum += capex[i]
+        dep_cum += depreciation[i]
+        ni_cum += net_income[i]
+        fixed_assets.append(capex_cum - dep_cum)
+        cash.append(equity0 + cumulative[i])
+        equity_book.append(equity0 + ni_cum)
+
     book = BookData(
         months=months, revenue=revenue, revenue_by_product=revenue_by_product,
         opex=opex, ebitda=ebitda, capex=capex, debt_draw=debt_draw,
@@ -215,6 +234,7 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         opex_by_item=opex_by_item, payroll_by_role=payroll_by_role,
         depreciation=depreciation,
         ebit=ebit, tax=tax, net_income=net_income,
+        fixed_assets=fixed_assets, cash=cash, equity_book=equity_book,
     )
     book.metrics = _metrics(aset, book)
     return book

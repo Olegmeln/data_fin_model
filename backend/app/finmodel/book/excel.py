@@ -388,6 +388,34 @@ def build_staff(ws, aset: AssumptionSet, book: BookData) -> None:
         r += 1
 
 
+def build_balance(ws, aset: AssumptionSet, book: BookData) -> None:
+    n = len(book.months)
+    _series_header(ws, book, "Прогнозный баланс (упрощённый), на конец месяца")
+    _row(ws, 3, "Внеоборотные активы (ОС)", book.fixed_assets)
+    _row(ws, 4, "Денежные средства", book.cash)
+    for i in range(n):
+        col = get_column_letter(2 + i)
+        cell = ws.cell(row=5, column=2 + i, value=f"={col}3+{col}4")
+        cell.font = FORMULA
+        cell.number_format = MONEY
+    ws.cell(row=5, column=1, value="АКТИВЫ (формула)").font = HEADER
+    _row(ws, 6, "Собственный капитал", book.equity_book)
+    _row(ws, 7, "Долг", book.debt_outstanding)
+    for i in range(n):
+        col = get_column_letter(2 + i)
+        cell = ws.cell(row=8, column=2 + i, value=f"={col}6+{col}7")
+        cell.font = FORMULA
+        cell.number_format = MONEY
+        check = ws.cell(row=9, column=2 + i, value=f"={col}5-{col}8")
+        check.font = FORMULA
+        check.number_format = MONEY
+    ws.cell(row=8, column=1, value="ПАССИВЫ (формула)").font = HEADER
+    ws.cell(row=9, column=1, value="Проверка: Активы − Пассивы = 0").font = NOTE
+    ws.cell(row=11, column=1,
+            value="Деньги включают взнос собственного капитала на старте; "
+                  "капитал прирастает чистой прибылью. Оборотный капитал — в развитии.").font = NOTE
+
+
 def build_covenants(ws, aset: AssumptionSet, book: BookData) -> None:
     ws.cell(row=1, column=1, value="Ковенанты и долговые метрики").font = TITLE
     cov = aset.financing.covenants
@@ -440,6 +468,7 @@ _BUILDERS = {
     "build_cover": build_cover,
     "build_roadmap": build_roadmap,
     "build_staff": build_staff,
+    "build_balance": build_balance,
     "build_covenants": build_covenants,
     "build_assumptions": build_assumptions,
     "build_cf": build_cf,

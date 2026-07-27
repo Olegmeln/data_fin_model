@@ -40,8 +40,25 @@ def validate(aset: AssumptionSet) -> list[OpenQuestion]:
     issues += _check_financing(aset)
     issues += _check_taxes(aset)
     issues += _check_valuation(aset)
+    issues += _check_covenants(aset)
     issues += _check_confidence(aset)
     return issues
+
+
+def _check_covenants(aset: AssumptionSet) -> list[OpenQuestion]:
+    """Если пороги ковенант заданы — прогоняем движок и превращаем
+    нарушения в открытые вопросы (ядро проверки «под банк»)."""
+    cov = aset.financing.covenants
+    if all(v is None for v in (cov.dscr_min, cov.icr_min, cov.net_debt_to_ebitda_max)):
+        return []
+    try:
+        from ..book import build_book
+        breaches = build_book(aset).metrics.get("covenant_breaches", [])
+    except Exception:
+        return []  # набор ещё не считаем (нет продуктов и т.п.) — свои вопросы уже есть
+    return [_q(f"Ковенант не выполняется: {breach}", "financing.covenants",
+               variants=["пересмотреть допущения", "согласовать порог с банком"])
+            for breach in breaches]
 
 
 def _check_products(aset: AssumptionSet) -> list[OpenQuestion]:

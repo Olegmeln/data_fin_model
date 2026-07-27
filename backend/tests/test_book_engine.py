@@ -151,6 +151,37 @@ class TestStaffAndCovenants:
         assert metrics["net_debt_to_ebitda_by_year"]
         assert metrics["covenant_breaches"] == []  # пороги не заданы
 
+    def test_balance_identity_holds_monthly(self):
+        aset = demo_set(capex=Capex(
+            items=[CapexItem(name="О", amount=1200, schedule_months=(0, 3))],
+            depreciation_months=12))
+        book = build_book(aset)
+        for i in range(len(book.months)):
+            assets = book.fixed_assets[i] + book.cash[i]
+            liabilities = book.equity_book[i] + book.debt_outstanding[i]
+            assert assets == pytest.approx(liabilities), f"месяц {i}"
+
+    def test_cash_starts_with_equity(self):
+        book = build_book(demo_set())
+        # месяц 0: equity 300 + чистый поток месяца
+        assert book.cash[0] == pytest.approx(300 + book.net_cf[0])
+
+    def test_covenant_breach_becomes_open_question(self):
+        from app.finmodel.assumptions_schema import Covenants, CreditFacility, RateSchedule
+        from app.finmodel.intake.validator import validate
+        aset = demo_set(financing={
+            "equity_amount": 300,
+            "facilities": [CreditFacility(name="Кредит", amount=900, term_months=24,
+                                          grace_months=6, rate=RateSchedule.flat(12))],
+            "covenants": Covenants(dscr_min=99.0)})
+        questions = validate(aset)
+        assert any("Ковенант не выполняется" in q.question for q in questions)
+
+    def test_no_covenant_questions_without_thresholds(self):
+        from app.finmodel.intake.validator import validate
+        questions = validate(demo_set())
+        assert not any("Ковенант" in q.question for q in questions)
+
     def test_covenant_breach_detected(self):
         from app.finmodel.assumptions_schema import Covenants, CreditFacility, RateSchedule
         aset = demo_set(financing={
