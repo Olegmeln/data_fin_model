@@ -31,6 +31,7 @@ REGISTRY: tuple[SheetSpec, ...] = (
     SheetSpec("cf", "CF", "build_cf"),
     SheetSpec("dashboard", "Дашборд", "build_dashboard"),
     SheetSpec("sales", "План продаж", "build_sales"),
+    SheetSpec("production", "Производство", "build_production"),
     SheetSpec("capex", "CAPEX и амортизация", "build_capex_sheet"),
     SheetSpec("opex", "Опер. расходы", "build_opex_sheet"),
     SheetSpec("staff", "ФОТ", "build_staff"),
@@ -39,8 +40,7 @@ REGISTRY: tuple[SheetSpec, ...] = (
     SheetSpec("credit", "Кредит", "build_credit"),
     SheetSpec("covenants", "Ковенанты", "build_covenants"),
     SheetSpec("sensitivity", "Чувствительность", "build_sensitivity"),
-    # будущие листы целевой архитектуры регистрируются здесь:
-    # production (производство/закупки — потребует раздела схемы) ...
+    # целевая архитектура v1 покрыта полностью; новые листы — через реестр
 )
 
 

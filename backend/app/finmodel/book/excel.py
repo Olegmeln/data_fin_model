@@ -390,32 +390,66 @@ def build_staff(ws, aset: AssumptionSet, book: BookData) -> None:
         r += 1
 
 
+def build_production(ws, aset: AssumptionSet, book: BookData) -> None:
+    n = len(book.months)
+    _series_header(ws, book, "Производство / закупки: объёмы, себестоимость, запасы")
+    r = 3
+    for name, series in book.volumes_by_product.items():
+        _row(ws, r, f"Объём: {name}, ед.", series, fmt="#,##0.#")
+        r += 1
+    for name, series in book.cogs_by_product.items():
+        _row(ws, r, f"Себестоимость: {name}", series)
+        r += 1
+    _row(ws, r, "Закупки (кассово)", book.purchases)
+    r += 1
+    _row(ws, r, "Запасы на конец месяца", book.inventory)
+    r += 1
+    for extra in ("Логистика", "Хранение"):
+        if extra in book.opex_by_item:
+            _row(ws, r, extra, book.opex_by_item[extra])
+            r += 1
+    r += 1
+    ws.cell(row=r, column=1, value="Параметры (вводы)").font = HEADER
+    r += 1
+    for item in aset.production.items:
+        ws.cell(row=r, column=1, value=item.product).font = HEADER
+        cost = ws.cell(row=r, column=2, value=item.unit_cost)
+        cost.font = INPUT
+        cost.fill = KEY_FILL
+        cost.number_format = MONEY
+        ws.cell(row=r, column=3,
+                value=f"логистика {item.logistics_pct:g}% · хранение {item.storage_monthly:g}/мес"
+                      f" · закупка за {item.lead_months} мес").font = NOTE
+        r += 1
+
+
 def build_balance(ws, aset: AssumptionSet, book: BookData) -> None:
     n = len(book.months)
     _series_header(ws, book, "Прогнозный баланс (упрощённый), на конец месяца")
     _row(ws, 3, "Внеоборотные активы (ОС)", book.fixed_assets)
-    _row(ws, 4, "Денежные средства", book.cash)
+    _row(ws, 4, "Запасы", book.inventory)
+    _row(ws, 5, "Денежные средства", book.cash)
     for i in range(n):
         col = get_column_letter(2 + i)
-        cell = ws.cell(row=5, column=2 + i, value=f"={col}3+{col}4")
+        cell = ws.cell(row=6, column=2 + i, value=f"={col}3+{col}4+{col}5")
         cell.font = FORMULA
         cell.number_format = MONEY
-    ws.cell(row=5, column=1, value="АКТИВЫ (формула)").font = HEADER
-    _row(ws, 6, "Собственный капитал", book.equity_book)
-    _row(ws, 7, "Долг", book.debt_outstanding)
+    ws.cell(row=6, column=1, value="АКТИВЫ (формула)").font = HEADER
+    _row(ws, 7, "Собственный капитал", book.equity_book)
+    _row(ws, 8, "Долг", book.debt_outstanding)
     for i in range(n):
         col = get_column_letter(2 + i)
-        cell = ws.cell(row=8, column=2 + i, value=f"={col}6+{col}7")
+        cell = ws.cell(row=9, column=2 + i, value=f"={col}7+{col}8")
         cell.font = FORMULA
         cell.number_format = MONEY
-        check = ws.cell(row=9, column=2 + i, value=f"={col}5-{col}8")
+        check = ws.cell(row=10, column=2 + i, value=f"={col}6-{col}9")
         check.font = FORMULA
         check.number_format = MONEY
-    ws.cell(row=8, column=1, value="ПАССИВЫ (формула)").font = HEADER
-    ws.cell(row=9, column=1, value="Проверка: Активы − Пассивы = 0").font = NOTE
-    ws.cell(row=11, column=1,
-            value="Деньги включают взнос собственного капитала на старте; "
-                  "капитал прирастает чистой прибылью. Оборотный капитал — в развитии.").font = NOTE
+    ws.cell(row=9, column=1, value="ПАССИВЫ (формула)").font = HEADER
+    ws.cell(row=10, column=1, value="Проверка: Активы − Пассивы = 0").font = NOTE
+    ws.cell(row=12, column=1,
+            value="Деньги включают взнос собственного капитала на старте; капитал прирастает "
+                  "чистой прибылью; запасы = опережающие закупки минус себестоимость.").font = NOTE
 
 
 def build_covenants(ws, aset: AssumptionSet, book: BookData) -> None:
@@ -527,6 +561,7 @@ _BUILDERS = {
     "build_roadmap": build_roadmap,
     "build_staff": build_staff,
     "build_balance": build_balance,
+    "build_production": build_production,
     "build_covenants": build_covenants,
     "build_assumptions": build_assumptions,
     "build_cf": build_cf,

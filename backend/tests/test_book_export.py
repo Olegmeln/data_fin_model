@@ -33,8 +33,8 @@ class TestRegistry:
     def test_default_composition_and_order(self):
         codes = [s.code for s in resolve_sheets()]
         assert codes == ["cover", "roadmap", "assumptions", "cf", "dashboard", "sales",
-                         "capex", "opex", "staff", "pl", "balance", "credit", "covenants",
-                         "sensitivity"]
+                         "production", "capex", "opex", "staff", "pl", "balance",
+                         "credit", "covenants", "sensitivity"]
 
     def test_registry_builders_exist(self):
         """Структурный контракт: каждый лист реестра имеет строителя в excel.py."""
@@ -64,8 +64,8 @@ class TestExcelBook:
     def test_all_sheets_present(self):
         assert self._workbook().sheetnames == [
             "Обложка", "Дорожная карта", "Допущения", "CF", "Дашборд", "План продаж",
-            "CAPEX и амортизация", "Опер. расходы", "ФОТ", "ПиУ", "Балансы",
-            "Кредит", "Ковенанты", "Чувствительность"]
+            "Производство", "CAPEX и амортизация", "Опер. расходы", "ФОТ", "ПиУ",
+            "Балансы", "Кредит", "Ковенанты", "Чувствительность"]
 
     def test_defined_names_contract(self):
         """Именованные ячейки — контракт AFM&C для внешних агентов в Excel."""
@@ -92,8 +92,8 @@ class TestExcelBook:
 
     def test_balance_check_is_formula(self):
         balance = self._workbook()["Балансы"]
-        assert str(balance.cell(row=5, column=2).value).startswith("=")  # активы
-        assert str(balance.cell(row=9, column=2).value).startswith("=")  # проверка А−П
+        assert str(balance.cell(row=6, column=2).value).startswith("=")   # активы
+        assert str(balance.cell(row=10, column=2).value).startswith("=")  # проверка А−П
 
     def test_sales_total_is_formula(self):
         sales = self._workbook()["План продаж"]

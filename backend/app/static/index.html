@@ -284,6 +284,14 @@ function facilitiesTable(){const list=(state.doc.financing&&state.doc.financing.
   ${tcell(`financing.facilities[${i}].grace_months`,c.grace_months)}
   <td><button class="icon" data-del="financing.facilities:${i}">✕</button></td></tr>`).join('')+
  `</tbody></table><button class="btn" data-add="financing.facilities" style="margin-top:8px">＋ Кредит</button>`;}
+function productionTable(){const list=(state.doc.production&&state.doc.production.items)||[];
+ const prods=(state.doc.products||[]).map(p=>p.name);
+ return `<table><thead><tr><th>Продукт ${srcBadge('production')}</th><th>Себест./ед</th><th>Логистика, %</th><th>Хранение/мес</th><th>Закупка за, мес</th><th></th></tr></thead><tbody>`+
+ list.map((p,i)=>`<tr>
+  <td><select data-path="production.items[${i}].product" data-str="1">${prods.map(n=>`<option value="${esc(n)}"${p.product===n?' selected':''}>${esc(n)}</option>`).join('')}</select></td>
+  ${tcell(`production.items[${i}].unit_cost`,p.unit_cost)}${tcell(`production.items[${i}].logistics_pct`,p.logistics_pct)}${tcell(`production.items[${i}].storage_monthly`,p.storage_monthly)}${tcell(`production.items[${i}].lead_months`,p.lead_months)}
+  <td><button class="icon" data-del="production.items:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="production.items" style="margin-top:8px">＋ Позиция производства</button>`;}
 function staffTable(){const list=(state.doc.staff&&state.doc.staff.roles)||[];
  return `<table><thead><tr><th>Роль ${srcBadge('staff')}</th><th>Чел.</th><th>Оклад/мес</th><th>С мес</th><th>По мес</th><th></th></tr></thead><tbody>`+
  list.map((s,i)=>`<tr>${tcell(`staff.roles[${i}].name`,s.name,1)}${tcell(`staff.roles[${i}].count`,s.count)}${tcell(`staff.roles[${i}].monthly_salary`,s.monthly_salary)}${tcell(`staff.roles[${i}].start_month`,s.start_month)}${tcell(`staff.roles[${i}].end_month`,s.end_month)}
@@ -334,6 +342,7 @@ function asetHTML(){
   <div class="card" style="margin-bottom:14px"><h3>Продуктовая линейка</h3><div class="bd">${productsTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>CAPEX</h3><div class="bd">${capexTable()}
     <div class="form" style="margin-top:12px">${inp('Итог (если без разбивки)','capex.total_override',cx.total_override)}${inp('Амортизация, мес','capex.depreciation_months',cx.depreciation_months)}</div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>Производство / закупки</h3><div class="bd">${productionTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>Операционные расходы</h3><div class="bd">${opexTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>ФОТ: штатное расписание</h3><div class="bd">${staffTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>Дорожная карта проекта</h3><div class="bd">${milestonesTable()}</div></div>
@@ -364,6 +373,7 @@ function sanitizeDoc(){const d=state.doc;if(!d)return;
  if(d.opex&&d.opex.items)d.opex.items=d.opex.items.filter(x=>x&&x.name);
  if(d.financing&&d.financing.facilities)d.financing.facilities=d.financing.facilities.filter(x=>x&&x.name);
  if(d.staff&&d.staff.roles)d.staff.roles=d.staff.roles.filter(x=>x&&x.name);
+ if(d.production&&d.production.items)d.production.items=d.production.items.filter(x=>x&&x.product);
  if(d.milestones)d.milestones=d.milestones.filter(x=>x&&x.name);}
 async function loadAset(version){try{state.aset=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+(version?('?version='+version):''));
   state.doc=JSON.parse(JSON.stringify(state.aset.assumptions));state.bookMetrics=null;}catch(e){state.aset=null;state.doc=null;}}
@@ -383,7 +393,8 @@ async function loadMetrics(){try{const sc=$('#asScen')?$('#asScen').value:'';
   state.bookMetrics=m.metrics;renderView();}catch(e){toast('Метрики: '+e.message,'err');}}
 const ROW_DEFAULTS={'products':{name:'Новый продукт',kind:'goods'},'capex.items':{name:'Позиция',amount:0},
  'opex.items':{name:'Статья',monthly_amount:0},'financing.facilities':{name:'Кредит',kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0},
- 'staff.roles':{name:'Роль',count:1,monthly_salary:0,start_month:0},'milestones':{name:'Веха',month:0,kind:'stage'}};
+ 'staff.roles':{name:'Роль',count:1,monthly_salary:0,start_month:0},'milestones':{name:'Веха',month:0,kind:'stage'},
+ 'production.items':{product:'',unit_cost:0,lead_months:0}};
 function arrAt(sec){const parts=sec.split('.');let o=state.doc;for(const k of parts.slice(0,-1)){o[k]=o[k]||{};o=o[k];}
  const last=parts[parts.length-1];o[last]=o[last]||[];return o[last];}
 function wireAset(){

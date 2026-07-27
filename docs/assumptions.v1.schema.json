@@ -430,6 +430,60 @@
       "title": "ProductKind",
       "type": "string"
     },
+    "Production": {
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ProductionItem"
+          },
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "title": "Production",
+      "type": "object"
+    },
+    "ProductionItem": {
+      "additionalProperties": false,
+      "description": "Себестоимость и закупки по продукту: производство/закупка, логистика, хранение.",
+      "properties": {
+        "product": {
+          "title": "Product",
+          "type": "string"
+        },
+        "unit_cost": {
+          "minimum": 0,
+          "title": "Unit Cost",
+          "type": "number"
+        },
+        "logistics_pct": {
+          "default": 0,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Logistics Pct",
+          "type": "number"
+        },
+        "storage_monthly": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Storage Monthly",
+          "type": "number"
+        },
+        "lead_months": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Lead Months",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "product",
+        "unit_cost"
+      ],
+      "title": "ProductionItem",
+      "type": "object"
+    },
     "ProjectProfile": {
       "additionalProperties": false,
       "properties": {
@@ -793,6 +847,9 @@
     },
     "opex": {
       "$ref": "#/$defs/Opex"
+    },
+    "production": {
+      "$ref": "#/$defs/Production"
     },
     "staff": {
       "$ref": "#/$defs/Staff"

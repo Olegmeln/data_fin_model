@@ -139,6 +139,20 @@ class Opex(Strict):
     items: list[OpexItem] = Field(default_factory=list)
 
 
+class ProductionItem(Strict):
+    """Себестоимость и закупки по продукту: производство/закупка, логистика, хранение."""
+
+    product: str                                    # имя продукта из products
+    unit_cost: float = Field(ge=0)                  # себестоимость/закупка за единицу
+    logistics_pct: float = Field(0, ge=0, le=100)   # логистика, % от закупок
+    storage_monthly: float = Field(0, ge=0)         # хранение, фикс в месяц
+    lead_months: int = Field(0, ge=0)               # закупка за N мес до продажи (запасы)
+
+
+class Production(Strict):
+    items: list[ProductionItem] = Field(default_factory=list)
+
+
 class StaffRole(Strict):
     """Роль в штатном расписании: оклад gross на человека."""
 
@@ -239,6 +253,7 @@ class AssumptionSet(Strict):
     products: list[Product] = Field(default_factory=list)
     capex: Capex = Field(default_factory=Capex)
     opex: Opex = Field(default_factory=Opex)
+    production: Production = Field(default_factory=Production)
     staff: Staff = Field(default_factory=Staff)
     milestones: list[Milestone] = Field(default_factory=list)
     financing: Financing = Field(default_factory=Financing)

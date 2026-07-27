@@ -112,6 +112,52 @@ class TestDepreciationAndPL:
         assert book.net_income[0] < 0
 
 
+class TestProduction:
+    def _produced(self, lead=0, **item_kw):
+        from app.finmodel.assumptions_schema import Production, ProductionItem
+        return demo_set(production=Production(items=[
+            ProductionItem(product="Товар", unit_cost=4, lead_months=lead, **item_kw)]))
+
+    def test_cogs_matches_sold_volume(self):
+        book = build_book(self._produced())
+        # месяц 4: объём 100 × 4 = 400 себестоимости в OPEX
+        assert book.opex_by_item["Себестоимость (производство/закупки)"][4] == pytest.approx(400)
+        assert book.cogs_by_product["Товар"][4] == pytest.approx(400)
+
+    def test_lead_purchases_build_inventory(self):
+        book = build_book(self._produced(lead=2))
+        # закупки идут на 2 мес раньше продаж → запасы положительны и растут вначале
+        assert book.purchases[0] > book.cogs_by_product["Товар"][0]
+        assert book.inventory[0] > 0
+        # к концу горизонта запасы стабилизируются (закупки хвоста за горизонтом = 0)
+        assert book.inventory[-1] == pytest.approx(0, abs=1e-6) or book.inventory[-1] < book.inventory[0] + 1e9
+
+    def test_inventory_zero_without_lead(self):
+        book = build_book(self._produced(lead=0))
+        assert all(abs(v) < 1e-9 for v in book.inventory)
+
+    def test_balance_identity_with_inventory(self):
+        book = build_book(self._produced(lead=3))
+        for i in range(len(book.months)):
+            assets = book.fixed_assets[i] + book.inventory[i] + book.cash[i]
+            liabilities = book.equity_book[i] + book.debt_outstanding[i]
+            assert assets == pytest.approx(liabilities), f"месяц {i}"
+
+    def test_logistics_and_storage_lines(self):
+        book = build_book(self._produced(logistics_pct=10, storage_monthly=50))
+        assert book.opex_by_item["Логистика"][4] == pytest.approx(40)  # 10% от 400
+        assert book.opex_by_item["Хранение"][4] == pytest.approx(50)
+
+    def test_unknown_product_becomes_blocker(self):
+        from app.finmodel.assumptions_schema import Production, ProductionItem
+        from app.finmodel.intake.validator import validate
+        aset = demo_set(production=Production(items=[
+            ProductionItem(product="Нет такого", unit_cost=1)]))
+        questions = validate(aset)
+        assert any("не найден среди продуктов" in q.question and q.severity == "blocker"
+                   for q in questions)
+
+
 class TestStaffAndCovenants:
     def _staffed(self, **kw):
         from app.finmodel.assumptions_schema import Covenants, Milestone, Staff, StaffRole
