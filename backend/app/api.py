@@ -77,45 +77,44 @@ def health() -> dict:
 
 @router.get("/model/export")
 def export_model(title: str = "Новый проект", db: Session = Depends(get_db)):
-    """Скачивание файла финансовой модели (.xlsx) с живыми формулами."""
+    """Скачивание финмодели (.xlsx): книга по реестру листов из слоя допущений.
+
+    Единая точка экспорта (слияние с legacy-движком завершено):
+    последний набор проекта «default» → иначе мост из опросника →
+    иначе auto-профиль по умолчанию. Созданный набор сохраняется версией.
+    """
     from urllib.parse import quote
 
     from fastapi.responses import Response
 
-    from .finmodel.excel_export import export_model_bytes
-    from .finmodel.industries import TAX_RATES
+    from .finmodel.assumptions_schema import default_assumption_set
+    from .finmodel.book import build_book
+    from .finmodel.book.excel import export_book_xlsx
+    from .finmodel.from_survey import assumption_set_from_survey
+    from .finmodel.intake.preferences import apply_preferences
+    from .finmodel.intake.validator import apply_validation
+    from .finmodel.assumptions_store import load_assumption_set, save_assumption_set
 
-    drivers: dict = {}
-    profile = db.query(models.BusinessProfile).first()
-    if profile is not None:
-        answers = json.loads(profile.answers_json or "{}")
+    title = title.strip() or "Новый проект"
+    loaded = load_assumption_set(db, "default")
+    if loaded is not None:
+        _, assumptions = loaded
+    else:
+        profile = db.query(models.BusinessProfile).first()
+        if profile is not None:
+            answers = json.loads(profile.answers_json or "{}")
+            assumptions = assumption_set_from_survey(answers, name=title)
+            comment = "из опросника (экспорт)"
+        else:
+            assumptions = default_assumption_set(title)
+            comment = "auto: стартовый профиль (экспорт)"
+        assumptions = apply_preferences(db, assumptions)
+        assumptions = apply_validation(assumptions)
+        save_assumption_set(db, "default", assumptions, comment=comment)
 
-        def num(key):
-            value = answers.get(key)
-            try:
-                return float(str(value).replace(" ", "").replace(",", ".")) if value not in (None, "") else None
-            except ValueError:
-                return None
-
-        mapping = {
-            "base_revenue": num("monthly_revenue"),
-            "payroll": num("payroll_monthly"),
-            "rent": num("rent_monthly"),
-            "capex_total": num("capex_total"),
-            "loan_amount": num("loan_amount"),
-        }
-        drivers = {key: value for key, value in mapping.items() if value}
-        if num("loan_rate"):
-            drivers["loan_rate"] = num("loan_rate") / 100
-        if num("discount_rate"):
-            drivers["discount_rate"] = num("discount_rate") / 100
-        if answers.get("tax_mode") in TAX_RATES:
-            drivers["tax_rate"] = TAX_RATES[answers["tax_mode"]][0]
-        if answers.get("business_age") == "new":
-            drivers["ramp_months"] = 4
-
-    content = export_model_bytes(title=title.strip() or "Новый проект", drivers=drivers)
-    filename = f"Финмодель_{title.strip() or 'проект'}.xlsx"
+    book = build_book(assumptions)
+    content = export_book_xlsx(assumptions, book)
+    filename = f"Финмодель_{title}.xlsx"
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
