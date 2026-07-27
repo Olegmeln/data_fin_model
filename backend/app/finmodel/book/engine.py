@@ -240,6 +240,28 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
     return book
 
 
+# ------------------------------------------------------- чувствительность
+
+def npv_sensitivity(aset: AssumptionSet,
+                    price_factors: list[float],
+                    volume_factors: list[float]) -> list[list[float]]:
+    """Матрица NPV: строки — множители цены, столбцы — множители объёма.
+    Сценарная механика движка (И-3): масштабируем драйверы, не копируем листы."""
+    matrix: list[list[float]] = []
+    for pf in price_factors:
+        row: list[float] = []
+        for vf in volume_factors:
+            scaled = aset.model_copy(deep=True)
+            for product in scaled.products:
+                if product.start_price is not None:
+                    product.start_price *= pf
+                if product.start_volume is not None:
+                    product.start_volume *= vf
+            row.append(build_book(scaled).metrics["npv"])
+        matrix.append(row)
+    return matrix
+
+
 # ------------------------------------------------------------- метрики
 
 def _npv(monthly_rate: float, flows: list[float]) -> float:

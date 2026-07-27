@@ -38,6 +38,7 @@ REGISTRY: tuple[SheetSpec, ...] = (
     SheetSpec("balance", "Балансы", "build_balance"),
     SheetSpec("credit", "Кредит", "build_credit"),
     SheetSpec("covenants", "Ковенанты", "build_covenants"),
+    SheetSpec("sensitivity", "Чувствительность", "build_sensitivity"),
     # будущие листы целевой архитектуры регистрируются здесь:
     # production (производство/закупки — потребует раздела схемы) ...
 )

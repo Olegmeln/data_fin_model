@@ -33,7 +33,8 @@ class TestRegistry:
     def test_default_composition_and_order(self):
         codes = [s.code for s in resolve_sheets()]
         assert codes == ["cover", "roadmap", "assumptions", "cf", "dashboard", "sales",
-                         "capex", "opex", "staff", "pl", "balance", "credit", "covenants"]
+                         "capex", "opex", "staff", "pl", "balance", "credit", "covenants",
+                         "sensitivity"]
 
     def test_registry_builders_exist(self):
         """Структурный контракт: каждый лист реестра имеет строителя в excel.py."""
@@ -64,7 +65,30 @@ class TestExcelBook:
         assert self._workbook().sheetnames == [
             "Обложка", "Дорожная карта", "Допущения", "CF", "Дашборд", "План продаж",
             "CAPEX и амортизация", "Опер. расходы", "ФОТ", "ПиУ", "Балансы",
-            "Кредит", "Ковенанты"]
+            "Кредит", "Ковенанты", "Чувствительность"]
+
+    def test_defined_names_contract(self):
+        """Именованные ячейки — контракт AFM&C для внешних агентов в Excel."""
+        wb = self._workbook()
+        names = set(wb.defined_names.keys())
+        for expected in ("RevenueRow", "OpexRow", "ProfitTaxRow", "NetCFRow",
+                         "NPV", "IRR", "DSCRmin"):
+            assert expected in names, expected
+        assert "CF" in wb.defined_names["RevenueRow"].attr_text
+
+    def test_sensitivity_center_is_base_npv(self):
+        from app.finmodel.book import build_book
+        aset = book_set()
+        base_npv = build_book(aset).metrics["npv"]
+        sheet = self._workbook()["Чувствительность"]
+        # матрица 5×5 начинается в B4; центр (1.0×1.0) — D6
+        assert sheet.cell(row=6, column=4).value == pytest.approx(base_npv)
+
+    def test_sensitivity_monotonic_in_price(self):
+        sheet = self._workbook()["Чувствительность"]
+        col = 4  # базовый объём
+        values = [sheet.cell(row=r, column=col).value for r in range(4, 9)]
+        assert values == sorted(values)  # больше цена — больше NPV
 
     def test_balance_check_is_formula(self):
         balance = self._workbook()["Балансы"]

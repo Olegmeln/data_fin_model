@@ -516,7 +516,9 @@ $('#gear').onclick=()=>{renderSettings();$('#ov').classList.add('open');};
 $('#closeSet').onclick=()=>$('#ov').classList.remove('open');
 $('#ov').onclick=e=>{if(e.target.id==='ov')$('#ov').classList.remove('open');};
 $('#fileInput').onchange=e=>upload(e.target.files);
-$('#exportBtn').onclick=()=>{const t=($('#ptitle').value||'Financial model').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
+$('#exportBtn').onclick=()=>{
+  if(state.aset){window.location.href='/api/book/'+encodeURIComponent(PROJECT())+'/export';return;}
+  const t=($('#ptitle').value||'Financial model').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
 $('#newProject').onclick=()=>toast('Multiple projects are on the roadmap (single workspace for now)');
 $('#ptitle').addEventListener('change',renderProjects);
 

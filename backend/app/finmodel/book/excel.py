@@ -11,11 +11,13 @@ from __future__ import annotations
 import io
 
 from openpyxl import Workbook
+from openpyxl.formatting.rule import ColorScaleRule
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from openpyxl.workbook.defined_name import DefinedName
 
 from ..assumptions_schema import AssumptionSet
-from .engine import BookData
+from .engine import BookData, npv_sensitivity
 from .registry import SheetSpec, resolve_sheets
 
 FONT = "Arial"
@@ -464,6 +466,62 @@ def build_covenants(ws, aset: AssumptionSet, book: BookData) -> None:
     ws.column_dimensions["A"].width = 26
 
 
+SENSITIVITY_FACTORS = [0.8, 0.9, 1.0, 1.1, 1.2]
+
+
+def build_sensitivity(ws, aset: AssumptionSet, book: BookData) -> None:
+    ws.cell(row=1, column=1, value="Чувствительность NPV: цена × объём продаж").font = TITLE
+    factors = SENSITIVITY_FACTORS
+    matrix = npv_sensitivity(aset, factors, factors)
+    ws.cell(row=3, column=1, value="Цена \\ Объём").font = HEADER
+    for j, vf in enumerate(factors):
+        cell = ws.cell(row=3, column=2 + j, value=vf - 1)
+        cell.font = HEADER
+        cell.number_format = "+0%;-0%;0%"
+    for i, pf in enumerate(factors):
+        cell = ws.cell(row=4 + i, column=1, value=pf - 1)
+        cell.font = HEADER
+        cell.number_format = "+0%;-0%;0%"
+        for j in range(len(factors)):
+            value = ws.cell(row=4 + i, column=2 + j, value=matrix[i][j])
+            value.font = FORMULA
+            value.number_format = MONEY
+    last_col = get_column_letter(1 + len(factors))
+    ws.conditional_formatting.add(
+        f"B4:{last_col}{3 + len(factors)}",
+        ColorScaleRule(start_type="min", start_color="F8696B",
+                       mid_type="num", mid_value=0, mid_color="FFEB84",
+                       end_type="max", end_color="63BE7B"))
+    ws.cell(row=5 + len(factors), column=1,
+            value="Центр матрицы — базовый сценарий; расчёт движка AFM&C по всем продуктам").font = NOTE
+    ws.column_dimensions["A"].width = 14
+
+
+# Контракт именованных ячеек для внешних агентов (ИИ-агент работает в Excel
+# по стабильным именам, а не по адресам). Часть стандарта AFM&C.
+_CF_NAMED_ROWS = [
+    ("RevenueRow", 3), ("OpexRow", 4), ("CapexRow", 5), ("DebtDrawRow", 6),
+    ("InterestRow", 7), ("PrincipalRow", 8), ("ProfitTaxRow", 9),
+    ("EbitdaRow", 10), ("NetCFRow", 11), ("CumCFRow", 12),
+]
+_DASHBOARD_NAMED_METRICS = [
+    ("NPV", 11), ("IRR", 12), ("MIRR", 13), ("PaybackMonths", 14), ("DSCRmin", 15),
+]
+
+
+def _add_defined_names(workbook: Workbook, specs: list[SheetSpec], n_months: int) -> None:
+    titles = {s.code: s.title for s in specs}
+    if "cf" in titles:
+        last = get_column_letter(1 + n_months)
+        for name, row in _CF_NAMED_ROWS:
+            workbook.defined_names.add(DefinedName(
+                name, attr_text=f"'{titles['cf']}'!$B${row}:${last}${row}"))
+    if "dashboard" in titles:
+        for name, row in _DASHBOARD_NAMED_METRICS:
+            workbook.defined_names.add(DefinedName(
+                name, attr_text=f"'{titles['dashboard']}'!$B${row}"))
+
+
 _BUILDERS = {
     "build_cover": build_cover,
     "build_roadmap": build_roadmap,
@@ -478,6 +536,7 @@ _BUILDERS = {
     "build_opex_sheet": build_opex_sheet,
     "build_pl": build_pl,
     "build_credit": build_credit,
+    "build_sensitivity": build_sensitivity,
 }
 
 
@@ -499,6 +558,7 @@ def export_book_xlsx(aset: AssumptionSet, book: BookData,
                                      size=cell.font.size if cell.font else 11,
                                      color=cell.font.color if cell.font else None)
         ws.sheet_view.showGridLines = False
+    _add_defined_names(workbook, specs, len(book.months))
     buffer = io.BytesIO()
     workbook.save(buffer)
     return buffer.getvalue()
