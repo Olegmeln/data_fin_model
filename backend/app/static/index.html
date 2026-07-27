@@ -95,6 +95,10 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
 .aset td,.aset th{text-align:left}
 .aset td input,.aset td select{width:100%;min-width:64px;border:1px solid var(--border);background:var(--surface-2);border-radius:6px;padding:4px 7px;color:var(--text);font:inherit;font-size:12.5px}
 .aset .icon{width:28px;height:28px;font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.stepc{border:1px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+.stepc b{font-size:13.5px}.stepc .note{margin:0}.stepc .btn{margin-top:auto}
 </style></head>
 <body>
 <div class="app">
@@ -112,6 +116,7 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
       <input class="ptitle" id="ptitle" value="Financial model"/>
       <span id="gchip" class="chip hidden"><span class="dot" id="gdot"></span><span id="gtext"></span></span>
       <div class="sp"></div>
+      <button class="btn" id="lang" title="Язык / Language">RU ⇄ EN</button>
       <button class="btn" id="theme">◐ Theme</button>
       <button class="btn" id="exportBtn">⬇ Export .xlsx</button>
       <button class="btn acc" id="gbtn" style="display:none"></button>
@@ -131,7 +136,7 @@ const $=s=>document.querySelector(s);
 const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const money=n=>(n==null||isNaN(n))?'—':'₽ '+nf.format(Math.round(n));
 const MON=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const KIND={income:'Income',expense:'Expenses',investing:'Investments',financing:'Financing'};
+const kindLabel=k=>t('kind_'+k)||k;
 const fmtMonth=m=>{const[y,mo]=m.split('-');return MON[+mo]+' '+y.slice(2);};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function parseAmount(s){if(s==null)return null;s=String(s).replace(/[₽\s ]/g,'').replace(',','.');if(s===''||s==='—')return 0;const v=parseFloat(s);return isNaN(v)?null:v;}
@@ -140,8 +145,54 @@ function toast(m,k){const t=document.createElement('div');t.className='toast '+(
 function loadTheme(){document.documentElement.dataset.theme=localStorage.getItem('dfm-theme')||'light';}
 function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('dfm-theme',t);}
 
+// ---- i18n (И-6): словарь строк RU/EN, переключатель в шапке ----
+let LANG=localStorage.getItem('dfm-lang')||'ru';
+const I18N={
+ ru:{tab_Overview:'Обзор',tab_Model:'Модель',tab_Assumptions:'Допущения',tab_Parameters:'Параметры',tab_Documents:'Документы',
+  export:'⬇ Экспорт .xlsx',theme:'◐ Тема',hero:'Что будем моделировать?',composer_ph:'Опишите бизнес или перетащите сюда банковскую выписку…',
+  step_title:'Путь к модели',step1:'1 · Профиль',step1d:'Опросник, документы или auto-профиль',step2:'2 · Допущения',step2d:'Проверьте и подтвердите книгу допущений',step3:'3 · Книга',step3d:'Скачайте Excel на 15 листов',
+  st_done:'готово',st_next:'следующий шаг',st_wait:'позже',go_survey:'Пройти опросник',go_aset:'К допущениям',go_book:'Скачать книгу',
+  summary:'Сводка проекта',ops:'операций разобрано',docs_loaded:'документ(ов) загружено',industry:'отрасль',edit_hint:'Допущения правятся во вкладке «Модель» и «Допущения».',
+  no_model:'Модели пока нет — загрузите выписку во вкладке «Обзор» или пройдите путь из трёх шагов.',
+  legend_fact:'факт из выписки (заблокирован)',legend_assume:'допущение — правится кликом',legend_empty:'пустые ячейки тоже редактируются',
+  line_item:'Статья',total:'Итого',kind_income:'Доходы',kind_expense:'Расходы',kind_investing:'Инвестиции',kind_financing:'Финансирование',
+  params_title:'Параметры модели (драйверы опросника)',rebuild:'Пересобрать модель',params_note:'Сохранение пересчитает допущения из этих драйверов. Ручные правки в сетке сохраняются. Полный слой допущений — во вкладке «Допущения».',
+  docs_title:'Документы',upload:'＋ Загрузить',flip_title:'Документы → модель',
+  flip_note:'Загрузите бизнес-план, финмодель или смету (PDF/DOCX/XLSX/CSV/TXT) — агент извлечёт допущения по схеме AFM&C, сверит их и составит открытые вопросы.',
+  extract:'⚡ Извлечь допущения',no_docs:'Документов пока нет — загрузите банковскую выписку.',connect:'Подключить источник данных',
+  conn_note:'Любой источник нормализуется в единую схему операций; модель обновляется автоматически.',
+  aset_title:'Книга допущений',aset_empty_note:'Единый слой допущений — источник истины книги модели. Режимы заполнения: <b>auto</b> — стартовый профиль (5 лет · 9% дисконт · 2 товара + 2 услуги) с памятью предпочтений; <b>AI</b> — агент извлекает из документов; <b>manual</b> — правка полей формы. Confirmed-версия пополняет память предпочтений.',
+  auto_btn:'⚙ Auto — стартовый профиль',ai_btn:'⚡ AI — из документов',survey_btn:'⧉ Из опросника',auto_short:'⚙ Auto',ai_short:'⚡ AI',survey_short:'⧉ Опросник',
+  draft:'💾 Черновик',confirm:'✓ Подтвердить',open_q:'Требуют уточнения',profile_val:'Профиль проекта и оценка',products:'Продуктовая линейка',
+  production:'Производство / закупки',opex_t:'Операционные расходы',staff_t:'ФОТ: штатное расписание',roadmap_t:'Дорожная карта проекта',
+  fin_t:'Финансирование',taxes_t:'Налоги',scen_t:'Сценарии и книга',base_scen:'База (без сценария)',metrics_btn:'Σ Метрики',book_btn:'⬇ Книга .xlsx',
+  saved_v:'Сохранён черновик v',confirmed_v:'Подтверждено v',memory_upd:' — память предпочтений обновлена',
+  settings:'Настройки',appearance:'Оформление',lang:'Язык / Language'},
+ en:{tab_Overview:'Overview',tab_Model:'Model',tab_Assumptions:'Assumptions',tab_Parameters:'Parameters',tab_Documents:'Documents',
+  export:'⬇ Export .xlsx',theme:'◐ Theme',hero:'What shall we model?',composer_ph:'Describe the business or drop a bank statement here…',
+  step_title:'Path to the model',step1:'1 · Profile',step1d:'Survey, documents or auto profile',step2:'2 · Assumptions',step2d:'Review and confirm the assumptions book',step3:'3 · Workbook',step3d:'Download the 15-sheet Excel',
+  st_done:'done',st_next:'next step',st_wait:'later',go_survey:'Take the survey',go_aset:'Open assumptions',go_book:'Download workbook',
+  summary:'Project summary',ops:'operations processed',docs_loaded:'document(s) loaded',industry:'industry',edit_hint:'Edit assumptions in the Model and Assumptions tabs.',
+  no_model:'No model yet — upload a bank statement in Overview or follow the three steps.',
+  legend_fact:'fact from statement (locked)',legend_assume:'assumption — click to edit',legend_empty:'empty cells are editable too',
+  line_item:'Line item',total:'Total',kind_income:'Income',kind_expense:'Expenses',kind_investing:'Investments',kind_financing:'Financing',
+  params_title:'Model parameters (survey drivers)',rebuild:'Rebuild model',params_note:'Saving recomputes assumptions from these drivers. Manual grid edits are preserved. The full assumptions layer lives in the Assumptions tab.',
+  docs_title:'Documents',upload:'＋ Upload',flip_title:'Flip documents into a model',
+  flip_note:'Upload a business plan, financial model or estimate (PDF/DOCX/XLSX/CSV/TXT) — the agent extracts assumptions into the AFM&C schema, cross-checks them and lists open questions.',
+  extract:'⚡ Extract assumptions',no_docs:'No documents yet — upload a bank statement.',connect:'Connect a data source',
+  conn_note:'Any source normalizes into a single operations schema; the model updates automatically.',
+  aset_title:'Assumptions book',aset_empty_note:'The single assumptions layer is the source of truth for the model book. Fill modes: <b>auto</b> — default profile (5y · 9% discount · 2 goods + 2 services) with preference memory; <b>AI</b> — extraction from documents; <b>manual</b> — form editing. A confirmed version feeds the preference memory.',
+  auto_btn:'⚙ Auto — default profile',ai_btn:'⚡ AI — from documents',survey_btn:'⧉ From survey',auto_short:'⚙ Auto',ai_short:'⚡ AI',survey_short:'⧉ Survey',
+  draft:'💾 Draft',confirm:'✓ Confirm',open_q:'Need clarification',profile_val:'Project profile & valuation',products:'Product line',
+  production:'Production / procurement',opex_t:'Operating expenses',staff_t:'Headcount & payroll',roadmap_t:'Project roadmap',
+  fin_t:'Financing',taxes_t:'Taxes',scen_t:'Scenarios & workbook',base_scen:'Base (no scenario)',metrics_btn:'Σ Metrics',book_btn:'⬇ Workbook .xlsx',
+  saved_v:'Draft saved v',confirmed_v:'Confirmed v',memory_upd:' — preference memory updated',
+  settings:'Settings',appearance:'Appearance',lang:'Язык / Language'}};
+const t=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ru[k]||k;
+function setLang(l){LANG=l;localStorage.setItem('dfm-lang',l);render();applyChrome();}
+
 const state={dash:null,imports:[],google:null,params:null,tab:'Overview',title:'Financial model',rec:null};
-const TABS=['Overview','Model','Assumptions','Parameters','CAPEX','Staff','Documents'];
+const TABS=['Overview','Model','Assumptions','Parameters','Documents'];
 
 function renderProjects(){
   const ind=state.dash&&state.dash.industry?state.dash.industry.name:'Not set';
@@ -151,8 +202,10 @@ function renderProjects(){
     <div class="pm"><span class="tag">${esc(ind)}</span><span>${status}</span></div></div>
     <div class="note" style="padding:8px 11px">Multiple projects are on the roadmap (backend is single-workspace for now).</div>`;
 }
-function renderTabs(){$('#tabs').innerHTML=TABS.map(t=>`<button class="tab ${t===state.tab?'active':''}" data-t="${t}">${t}</button>`).join('');
+function renderTabs(){$('#tabs').innerHTML=TABS.map(tb=>`<button class="tab ${tb===state.tab?'active':''}" data-t="${tb}">${t('tab_'+tb)}</button>`).join('');
   document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{state.tab=el.dataset.t;renderTabs();renderView();});}
+function applyChrome(){$('#theme').textContent=t('theme');$('#exportBtn').textContent=t('export');
+  $('#lang').textContent=LANG==='ru'?'RU ⇄ EN':'EN ⇄ RU';}
 
 function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
   const cards=[['Revenue (model)',money(k.revenue_total),''],['Expenses',money(k.expenses_total),''],
@@ -160,33 +213,44 @@ function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
     ['Cash balance',money(k.cash_balance),''],['NPV',inv.npv!=null?money(inv.npv):'—',inv.npv==null?'':(inv.npv>=0?'pos':'neg')]];
   return `<div class="kpis">${cards.map(([l,v,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div></div>`).join('')}</div>`;}
 
+function stepsHTML(){
+  const hasProfile=!!(state.params&&state.params.industry_code)||!!(state.dash&&state.dash.industry)||!!state.aset;
+  const hasAset=!!state.aset;const confirmed=hasAset&&state.aset.status==='confirmed';
+  const st=(done,next)=>done?`<span class="badge" style="color:var(--fact);background:var(--fact-bg)">${t('st_done')}</span>`
+    :(next?`<span class="badge">${t('st_next')}</span>`:`<span class="badge" style="opacity:.6">${t('st_wait')}</span>`);
+  return `<div class="card" style="margin-top:18px"><h3>${t('step_title')}</h3><div class="bd"><div class="steps">
+   <div class="stepc"><b>${t('step1')}</b>${st(hasProfile,!hasProfile)}<div class="note">${t('step1d')}</div><button class="btn" data-go="survey">${t('go_survey')}</button></div>
+   <div class="stepc"><b>${t('step2')}</b>${st(confirmed,hasProfile&&!confirmed)}<div class="note">${t('step2d')}</div><button class="btn" data-go="aset">${t('go_aset')}</button></div>
+   <div class="stepc"><b>${t('step3')}</b>${st(false,confirmed||hasAset)}<div class="note">${t('step3d')}</div><button class="btn acc" data-go="book">${t('go_book')}</button></div>
+  </div></div></div>`;}
 function overviewHTML(){
   const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
-  return `${has?'':'<div class="hero"><h1>What shall we model?</h1></div>'}
-   <div class="composer" id="composer"><textarea id="ta" placeholder="Describe the business or drop a bank statement here…"></textarea>
+  return `${has?'':'<div class="hero"><h1>'+t('hero')+'</h1></div>'}
+   <div class="composer" id="composer"><textarea id="ta" placeholder="${t('composer_ph')}"></textarea>
      <div class="crow"><button class="icon" id="attach" title="Attach">📎</button><button class="icon" id="mic" title="Voice">🎙</button>
        <div class="transcript" id="tr"></div><div class="sp" style="flex:1"></div><button class="send" id="send">→</button></div></div>
+   ${stepsHTML()}
    ${has?('<div style="height:18px"></div>'+kpisHTML()+summaryCard()):''}`;
 }
-function summaryCard(){const k=state.dash.kpi;return `<div class="card"><h3>Project summary</h3>
-  <div class="bd" style="color:var(--muted)">${k.operations_count} operations processed · ${state.imports.length} document(s) loaded${state.dash.industry?(' · industry: '+esc(state.dash.industry.name)):''}. Edit assumptions in the Model tab.</div></div>`;}
+function summaryCard(){const k=state.dash.kpi;return `<div class="card"><h3>${t('summary')}</h3>
+  <div class="bd" style="color:var(--muted)">${k.operations_count} ${t('ops')} · ${state.imports.length} ${t('docs_loaded')}${state.dash.industry?(' · '+t('industry')+': '+esc(state.dash.industry.name)):''}. ${t('edit_hint')}</div></div>`;}
 
 function gridHTML(){const g=state.dash&&state.dash.model_grid;
-  if(!g||!g.rows.length)return `<div class="card"><div class="bd" style="color:var(--muted)">No model yet — upload a bank statement in the Overview tab.</div></div>`;
+  if(!g||!g.rows.length)return `<div class="card"><div class="bd" style="color:var(--muted)">${t('no_model')}</div></div>`;
   const months=g.months;let b='',lk=null;
-  g.rows.forEach(r=>{if(r.kind!==lk){lk=r.kind;b+=`<tr class="grp"><td colspan="${months.length+2}">${KIND[r.kind]||r.kind}</td></tr>`;}
+  g.rows.forEach(r=>{if(r.kind!==lk){lk=r.kind;b+=`<tr class="grp"><td colspan="${months.length+2}">${kindLabel(r.kind)}</td></tr>`;}
     const cells=r.cells.map((c,i)=>{const ed=c.origin!=='fact';const cls=c.origin==='fact'?'f':(c.origin==='assumption'?'a':'e');
       return `<td class="cell ${cls}" data-code="${r.code}" data-month="${months[i]}" ${ed?'contenteditable="true"':''}>${c.v?money(c.v):'—'}</td>`;}).join('');
     b+=`<tr><td class="rowname" title="${esc(r.name)}">${esc(r.name)}</td>${cells}<td class="total">${money(r.value_total)}</td></tr>`;});
-  return `<div class="card"><div class="gridwrap"><table><thead><tr><th class="rowname">Line item</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${b}</tbody></table></div>
-   <div class="legend"><span><b style="background:var(--fact)"></b>fact from statement (locked)</span><span><b style="background:var(--assume)"></b>assumption — click to edit</span><span>empty cells are editable too</span></div></div>`;}
+  return `<div class="card"><div class="gridwrap"><table><thead><tr><th class="rowname">${t('line_item')}</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>${t('total')}</th></tr></thead><tbody>${b}</tbody></table></div>
+   <div class="legend"><span><b style="background:var(--fact)"></b>${t('legend_fact')}</span><span><b style="background:var(--assume)"></b>${t('legend_assume')}</span><span>${t('legend_empty')}</span></div></div>`;}
 
 function paramsHTML(){
   const a=(state.params&&state.params.answers)||{};
   const inds=(state.params&&state.params.industries)||[];
   const sel=(id,opts,val)=>`<select id="p_${id}">`+opts.map(o=>`<option value="${o.v}" ${String(val)===String(o.v)?'selected':''}>${o.l}</option>`).join('')+`</select>`;
   const num=(id,val,ph)=>`<input id="p_${id}" value="${val==null?'':esc(val)}" placeholder="${ph||''}"/>`;
-  return `<div class="card"><h3>Model parameters</h3><div class="bd"><div class="form">
+  return `<div class="card"><h3>${t('params_title')}</h3><div class="bd"><div class="form">
     <div class="fsec">Project</div>
     <div class="fg"><label>Industry</label>${sel('industry',inds.map(i=>({v:i.code,l:i.name})),a.industry)}</div>
     <div class="fg"><label>Business stage</label>${sel('business_age',[{v:'existing',l:'Operating'},{v:'new',l:'Launching'}],a.business_age)}</div>
@@ -203,37 +267,25 @@ function paramsHTML(){
     <div class="fg"><label>Loan amount</label>${num('loan_amount',a.loan_amount)}</div>
     <div class="fg"><label>Loan rate, %/yr</label>${num('loan_rate',a.loan_rate,'17')}</div>
   </div>
-  <div style="margin-top:16px"><button class="btn acc" id="rebuild">Rebuild model</button></div>
-  <p class="note">Saving recomputes model assumptions from these drivers. Your manual edits in the Model grid are preserved.</p></div></div>`;}
-
-function capexHTML(){const a=(state.params&&state.params.answers)||{};const cx=a.capex_total?money(parseAmount(a.capex_total)):money(0);
-  return `<div class="card"><h3>CAPEX &amp; estimate</h3><div class="bd">
-   <div class="kpis"><div class="kpi"><div class="l">Total start CAPEX (from Parameters)</div><div class="v">${cx}</div></div></div>
-   <p class="note">Set the total in the Parameters tab — it feeds the model as an investment outflow, and the Excel export builds a full CAPEX sheet with depreciation. A detailed line-item estimate table is on the roadmap.</p>
-   <button class="btn">＋ Add line item <span class="badge">soon</span></button></div></div>`;}
-
-function staffHTML(){const a=(state.params&&state.params.answers)||{};const pr=a.payroll_monthly?money(parseAmount(a.payroll_monthly)):money(0);const emp=(a.employees==null||a.employees==='')?'—':esc(a.employees);
-  return `<div class="card"><h3>Headcount &amp; payroll</h3><div class="bd">
-   <div class="kpis"><div class="kpi"><div class="l">Payroll / month (from Parameters)</div><div class="v">${pr}</div></div><div class="kpi"><div class="l">Team size</div><div class="v">${emp}</div></div></div>
-   <p class="note">Set payroll in the Parameters tab — it feeds the model as a monthly expense. A per-role headcount table is on the roadmap.</p>
-   <button class="btn">＋ Add role <span class="badge">soon</span></button></div></div>`;}
+  <div style="margin-top:16px"><button class="btn acc" id="rebuild">${t('rebuild')}</button></div>
+  <p class="note">${t('params_note')}</p></div></div>`;}
 
 function docsHTML(){const list=state.imports||[];const iq=state.intake;
-  return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">Documents</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">＋ Upload</button></div>
-   <div class="card" style="margin-bottom:16px"><h3>Flip documents into a model</h3><div class="bd">
-     <p class="note">Upload a business plan, financial model, or estimate (PDF/DOCX/XLSX/CSV/TXT) — the Modelling agent extracts assumptions into the AFM&C schema, cross-checks them and lists open questions.</p>
+  return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">${t('docs_title')}</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">${t('upload')}</button></div>
+   <div class="card" style="margin-bottom:16px"><h3>${t('flip_title')}</h3><div class="bd">
+     <p class="note">${t('flip_note')}</p>
      <input type="file" id="intakeFiles" multiple accept=".pdf,.docx,.xlsx,.xlsm,.csv,.txt,.md" style="margin:8px 0">
-     <button class="btn acc" id="intakeGo">⚡ Extract assumptions</button>
+     <button class="btn acc" id="intakeGo">${t('extract')}</button>
      ${iq?`<div style="margin-top:12px"><b>v${iq.version}</b> · ${esc(iq.status)} · ${esc(iq.comment||'')}
        ${iq.open_questions&&iq.open_questions.length?`<div style="margin-top:8px"><b>Open questions (${iq.open_questions.length})</b>${iq.open_questions.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':'⚠️'} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div>`:'<div class="note" style="margin-top:8px">✅ No open questions</div>'}</div>`:''}
    </div></div>
-   <div class="docgrid">${list.length?list.map(d=>`<div class="doc"><span class="fmt">${esc(d.format)}</span><div class="n">${esc(d.filename)}</div><div class="m">+${d.imported} rows · ${d.duplicates} dup</div></div>`).join(''):'<div class="note">No documents yet — upload a bank statement.</div>'}</div>
-   <div class="card" style="margin-top:16px"><h3>Connect a data source</h3><div class="bd"><div class="src">
-     <button class="srcbtn" id="up3">📄 Upload files (CSV/XLSX/PDF/ZIP)</button>
-     <button class="srcbtn">🧾 1C exchange / archive <span class="badge">soon</span></button>
-     <button class="srcbtn">🏭 ERP (1C:ERP, SAP) <span class="badge">soon</span></button>
-     <button class="srcbtn">🗄 SQL warehouse <span class="badge">soon</span></button>
-   </div><p class="note">Any source normalizes into a single operations schema; the model updates automatically.</p></div></div>`;}
+   <div class="docgrid">${list.length?list.map(d=>`<div class="doc"><span class="fmt">${esc(d.format)}</span><div class="n">${esc(d.filename)}</div><div class="m">+${d.imported} · ${d.duplicates} dup</div></div>`).join(''):`<div class="note">${t('no_docs')}</div>`}</div>
+   <div class="card" style="margin-top:16px"><h3>${t('connect')}</h3><div class="bd"><div class="src">
+     <button class="srcbtn" id="up3">📄 CSV / XLSX / PDF / ZIP</button>
+     <button class="srcbtn">🧾 1С <span class="badge">soon</span></button>
+     <button class="srcbtn">🏭 ERP <span class="badge">soon</span></button>
+     <button class="srcbtn">🗄 SQL <span class="badge">soon</span></button>
+   </div><p class="note">${t('conn_note')}</p></div></div>`;}
 
 // ---- Книга допущений (assumptions.v1) — форма workspace v2, критический путь п.4 ----
 const PROJECT=()=>(state.project&&state.project.slug)||'default';
@@ -307,11 +359,11 @@ function milestonesTable(){const list=state.doc.milestones||[];
   <td><button class="icon" data-del="milestones:${i}">✕</button></td></tr>`).join('')+
  `</tbody></table><button class="btn" data-add="milestones" style="margin-top:8px">＋ Веха</button>`;}
 function asetHTML(){
- if(!state.aset||!state.doc)return `<div class="card"><h3>Книга допущений <span class="badge">assumptions.v1</span></h3><div class="bd">
-   <p class="note">Единый слой допущений — источник истины книги модели. Режимы заполнения: <b>auto</b> — стартовый профиль (5 лет · 9% дисконт · 2 товара + 2 услуги) с памятью предпочтений; <b>AI</b> — агент извлекает из документов; <b>manual</b> — правка полей формы. Confirmed-версия пополняет память предпочтений.</p>
-   <div class="src"><button class="btn acc" id="asAuto">⚙ Auto — стартовый профиль</button>
-   <button class="btn" id="asAI">⚡ AI — из документов</button>
-   <button class="btn" id="asSurvey">⧉ Из опросника</button></div></div></div>`;
+ if(!state.aset||!state.doc)return `<div class="card"><h3>${t('aset_title')} <span class="badge">assumptions.v1</span></h3><div class="bd">
+   <p class="note">${t('aset_empty_note')}</p>
+   <div class="src"><button class="btn acc" id="asAuto">${t('auto_btn')}</button>
+   <button class="btn" id="asAI">${t('ai_btn')}</button>
+   <button class="btn" id="asSurvey">${t('survey_btn')}</button></div></div></div>`;
  const d=state.doc,rec=state.aset,p=d.profile||{},t=d.taxes||{},v=d.valuation||{},f=d.financing||{},cx=d.capex||{};
  const vers=(state.asetVersions||[]).map(x=>`<option value="${x.version}"${x.version===rec.version?' selected':''}>v${x.version} · ${x.status}</option>`).join('');
  const scen=(d.scenarios||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
@@ -321,17 +373,17 @@ function asetHTML(){
  const metHTML=met?`<div class="kpis" style="margin-top:12px">${[['NPV',money(met.npv)],['IRR',met.irr_pct!=null?met.irr_pct+'%':'—'],['MIRR',met.mirr_pct!=null?met.mirr_pct+'%':'—'],['Окупаемость',met.payback_months!=null?met.payback_months+' мес':'—'],['DSCR min',met.dscr_min!=null?met.dscr_min:'—']].map(([l,x])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${x}</div></div>`).join('')}</div>${(met.covenant_breaches&&met.covenant_breaches.length)?met.covenant_breaches.map(b=>`<div class="note" style="color:#c0392b;margin-top:6px">⛔ ${esc(b)}</div>`).join(''):''}`:'';
  return `<div class="aset">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-    <h3 style="margin:0;font-size:16px">Книга допущений <span class="badge">assumptions.v1</span></h3>
+    <h3 style="margin:0;font-size:16px">${t('aset_title')} <span class="badge">assumptions.v1</span></h3>
     <div class="sp" style="flex:1"></div>
     <select id="asVer" class="search" style="margin:0;height:34px">${vers}</select>
-    <button class="btn" id="asAuto" title="Новая версия из стартового профиля">⚙ Auto</button>
-    <button class="btn" id="asAI" title="Извлечь из документов">⚡ AI</button>
-    <button class="btn" id="asSurvey" title="Новая версия из ответов опросника">⧉ Опросник</button>
-    <button class="btn" id="asSaveDraft">💾 Черновик</button>
-    <button class="btn acc" id="asConfirm">✓ Подтвердить</button>
+    <button class="btn" id="asAuto">${t('auto_short')}</button>
+    <button class="btn" id="asAI">${t('ai_short')}</button>
+    <button class="btn" id="asSurvey">${t('survey_short')}</button>
+    <button class="btn" id="asSaveDraft">${t('draft')}</button>
+    <button class="btn acc" id="asConfirm">${t('confirm')}</button>
   </div>
-  ${oq.length?`<div class="card" style="margin-bottom:14px"><h3>Требуют уточнения (${oq.length})</h3><div class="bd">${oq.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':(q.severity==='info'?'ℹ️':'⚠️')} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div></div>`:''}
-  <div class="card" style="margin-bottom:14px"><h3>Профиль проекта и оценка</h3><div class="bd"><div class="form">
+  ${oq.length?`<div class="card" style="margin-bottom:14px"><h3>${t('open_q')} (${oq.length})</h3><div class="bd">${oq.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':(q.severity==='info'?'ℹ️':'⚠️')} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div></div>`:''}
+  <div class="card" style="margin-bottom:14px"><h3>${t('profile_val')}</h3><div class="bd"><div class="form">
     ${inp('Название','profile.name',p.name,'',1)}${inp('Отрасль','profile.industry',p.industry,'напр. производство',1)}
     ${inp('Тип проекта','profile.project_type',p.project_type,'',1)}${inp('Локация','profile.location',p.location,'',1)}
     ${inp('Валюта','profile.currency',p.currency||'RUB','',1)}${inp('Горизонт, лет','profile.horizon_years',p.horizon_years)}
@@ -339,14 +391,14 @@ function asetHTML(){
     ${inp('Ставка дисконтирования, %','valuation.discount_rate_pct',v.discount_rate_pct)}
     ${inp('ROA реинвестирования (MIRR), %','valuation.reinvest_roa_pct',v.reinvest_roa_pct)}
   </div></div></div>
-  <div class="card" style="margin-bottom:14px"><h3>Продуктовая линейка</h3><div class="bd">${productsTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('products')}</h3><div class="bd">${productsTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>CAPEX</h3><div class="bd">${capexTable()}
     <div class="form" style="margin-top:12px">${inp('Итог (если без разбивки)','capex.total_override',cx.total_override)}${inp('Амортизация, мес','capex.depreciation_months',cx.depreciation_months)}</div></div></div>
-  <div class="card" style="margin-bottom:14px"><h3>Производство / закупки</h3><div class="bd">${productionTable()}</div></div>
-  <div class="card" style="margin-bottom:14px"><h3>Операционные расходы</h3><div class="bd">${opexTable()}</div></div>
-  <div class="card" style="margin-bottom:14px"><h3>ФОТ: штатное расписание</h3><div class="bd">${staffTable()}</div></div>
-  <div class="card" style="margin-bottom:14px"><h3>Дорожная карта проекта</h3><div class="bd">${milestonesTable()}</div></div>
-  <div class="card" style="margin-bottom:14px"><h3>Финансирование <span class="badge" title="доля собственных/заёмных">${share}</span></h3><div class="bd">
+  <div class="card" style="margin-bottom:14px"><h3>${t('production')}</h3><div class="bd">${productionTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('opex_t')}</h3><div class="bd">${opexTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('staff_t')}</h3><div class="bd">${staffTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('roadmap_t')}</h3><div class="bd">${milestonesTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('fin_t')} <span class="badge" title="доля собственных/заёмных">${share}</span></h3><div class="bd">
     <div class="form">${inp('Собственные средства','financing.equity_amount',f.equity_amount)}</div>
     <div style="margin-top:10px">${facilitiesTable()}</div>
     <div class="form" style="margin-top:12px">
@@ -354,14 +406,14 @@ function asetHTML(){
       ${inp('Ковенант ICR ≥','financing.covenants.icr_min',(f.covenants||{}).icr_min)}
       ${inp('Долг/EBITDA ≤','financing.covenants.net_debt_to_ebitda_max',(f.covenants||{}).net_debt_to_ebitda_max,'напр. 3.5')}
     </div></div></div>
-  <div class="card" style="margin-bottom:14px"><h3>Налоги</h3><div class="bd"><div class="form">
+  <div class="card" style="margin-bottom:14px"><h3>${t('taxes_t')}</h3><div class="bd"><div class="form">
     ${inp('Режим','taxes.regime',t.regime,'ОСНО / УСН…',1)}${rateInp('Налог на прибыль, %','taxes.profit',t.profit)}
     ${rateInp('НДС, %','taxes.vat',t.vat)}${rateInp('Страховые взносы, %','taxes.payroll_contributions',t.payroll_contributions)}
     ${inp('Налог на имущество, %','taxes.property_pct',t.property_pct)}${inp('Земельный налог, %','taxes.land_pct',t.land_pct)}
   </div></div></div>
-  <div class="card"><h3>Сценарии и книга</h3><div class="bd">
-    <div class="crow" style="flex-wrap:wrap"><select id="asScen" class="search" style="margin:0;height:34px"><option value="">База (без сценария)</option>${scen}</select>
-    <button class="btn" id="asMetrics">Σ Метрики</button><button class="btn acc" id="asBook">⬇ Книга .xlsx</button></div>
+  <div class="card"><h3>${t('scen_t')}</h3><div class="bd">
+    <div class="crow" style="flex-wrap:wrap"><select id="asScen" class="search" style="margin:0;height:34px"><option value="">${t('base_scen')}</option>${scen}</select>
+    <button class="btn" id="asMetrics">${t('metrics_btn')}</button><button class="btn acc" id="asBook">${t('book_btn')}</button></div>
     ${metHTML}
     <p class="note">Книга собирается по sheet registry из этого набора. v${rec.version} · ${esc(rec.status)}${rec.comment?' · '+esc(rec.comment):''}</p>
   </div></div></div>`;}
@@ -386,7 +438,7 @@ async function saveAset(status){try{sanitizeDoc();
   const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT()),{method:'PUT',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({status,assumptions:state.doc,comment:null})});
   state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
-  toast(status==='confirmed'?('Подтверждено v'+r.version+' — память предпочтений обновлена'):('Сохранён черновик v'+r.version),'ok');
+  toast(status==='confirmed'?(t('confirmed_v')+r.version+t('memory_upd')):(t('saved_v')+r.version),'ok');
  }catch(e){toast('Ошибка: '+e.message,'err');}}
 async function loadMetrics(){try{const sc=$('#asScen')?$('#asScen').value:'';
   const m=await api('/book/'+encodeURIComponent(PROJECT())+'/metrics'+(sc?('?scenario='+encodeURIComponent(sc)):''));
@@ -422,7 +474,7 @@ function wireAset(){
 }
 
 function renderView(){
-  const map={Overview:overviewHTML,Model:gridHTML,Assumptions:asetHTML,Parameters:paramsHTML,CAPEX:capexHTML,Staff:staffHTML,Documents:docsHTML};
+  const map={Overview:overviewHTML,Model:gridHTML,Assumptions:asetHTML,Parameters:paramsHTML,Documents:docsHTML};
   $('#view').innerHTML=(map[state.tab]||overviewHTML)();
   if(state.tab==='Overview')wireComposer();
   if(state.tab==='Model')wireGrid();
@@ -457,6 +509,11 @@ async function saveParams(){
 }
 
 function wireComposer(){
+  document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
+    const go=b.dataset.go;
+    if(go==='survey'){state.tab='Parameters';renderTabs();renderView();}
+    else if(go==='aset'){state.tab='Assumptions';renderTabs();renderView();}
+    else if(go==='book'){$('#exportBtn').click();}});
   const comp=$('#composer'),ta=$('#ta');if(!comp)return;
   $('#attach').onclick=()=>$('#fileInput').click();
   $('#send').onclick=send;$('#mic').onclick=toggleMic;
@@ -523,6 +580,7 @@ function renderSettings(){const g=state.google;
 }
 
 $('#theme').onclick=toggleTheme;
+$('#lang').onclick=()=>setLang(LANG==='ru'?'en':'ru');
 $('#gear').onclick=()=>{renderSettings();$('#ov').classList.add('open');};
 $('#closeSet').onclick=()=>$('#ov').classList.remove('open');
 $('#ov').onclick=e=>{if(e.target.id==='ov')$('#ov').classList.remove('open');};
@@ -533,7 +591,7 @@ $('#exportBtn').onclick=()=>{
 $('#newProject').onclick=()=>toast('Multiple projects are on the roadmap (single workspace for now)');
 $('#ptitle').addEventListener('change',renderProjects);
 
-loadTheme();renderProjects();renderTabs();renderView();refreshGoogle().then(refreshAll);
+loadTheme();applyChrome();renderProjects();renderTabs();renderView();refreshGoogle().then(refreshAll);
 </script>
 </body>
 </html>
