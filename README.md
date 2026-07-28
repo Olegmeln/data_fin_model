@@ -1,6 +1,10 @@
-# data_fin_model — Live Financial Model / Живая финансовая модель
+# Data Fin Model — Live Financial Model / Живая финансовая модель
 
 **[English](#english) | [Русский](#русский)**
+
+> © 2026 Oleg Melnikov. All rights reserved. Проприетарное ПО —
+> использование, копирование и распространение без письменного разрешения
+> запрещены, см. [LICENSE](LICENSE).
 
 ---
 

@@ -1,0 +1,81 @@
+PROPRIETARY SOFTWARE LICENSE / ЛИЦЕНЗИЯ НА ПРОПРИЕТАРНОЕ ПО
+
+Copyright (c) 2026 Oleg Melnikov / Олег Мельников. All rights reserved.
+Все права защищены.
+
+--------------------------------------------------------------------------
+ENGLISH
+--------------------------------------------------------------------------
+
+This software and all associated materials — including source code, database
+schemas, the `finmodel.assumptions` specification, documentation, design
+assets and financial model templates (together, the "Software") — are the
+proprietary and confidential property of the copyright holder.
+
+NO LICENSE IS GRANTED. No permission is given to any person to use, copy,
+modify, merge, publish, distribute, sublicense, sell, reverse engineer or
+create derivative works from the Software, in whole or in part, by any means,
+without the prior written permission of the copyright holder.
+
+Access to a copy of the Software — whether obtained from a source code
+repository, by transfer, or by any other means — does not grant any right to
+use it. Any person who has obtained a copy without written authorisation must
+delete it and notify the copyright holder.
+
+LIMITED EVALUATION. Where the copyright holder has granted written permission
+to review the Software (for example to an investor, partner or contractor),
+that permission is limited to viewing and evaluation for the stated purpose
+only. It does not include the right to run the Software in production, to
+disclose it to third parties, or to use its architecture, specifications or
+methodology in other products.
+
+THIRD-PARTY COMPONENTS. The Software depends on third-party open-source
+packages, each governed by its own licence. Those licences apply to their
+respective components only and grant no rights to the Software itself.
+
+NO WARRANTY. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED. THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE. Financial
+models produced by the Software are calculations based on user-supplied
+assumptions and do not constitute investment, tax or legal advice.
+
+LICENSING ENQUIRIES: alikmeln@gmail.com
+
+--------------------------------------------------------------------------
+РУССКИЙ
+--------------------------------------------------------------------------
+
+Настоящее программное обеспечение и все связанные материалы — исходный код,
+схемы данных, спецификация `finmodel.assumptions`, документация, элементы
+дизайна и шаблоны финансовых моделей (далее — «Программа») — являются
+проприетарной и конфиденциальной собственностью правообладателя.
+
+ЛИЦЕНЗИЯ НЕ ПРЕДОСТАВЛЯЕТСЯ. Никому не разрешается использовать, копировать,
+изменять, объединять, публиковать, распространять, сублицензировать,
+продавать, декомпилировать Программу или создавать на её основе производные
+произведения — полностью или частично, любым способом — без предварительного
+письменного разрешения правообладателя.
+
+Получение копии Программы — из репозитория исходного кода, путём передачи или
+любым иным способом — само по себе не даёт права на её использование. Лицо,
+получившее копию без письменного разрешения, обязано удалить её и уведомить
+правообладателя.
+
+ОГРАНИЧЕННОЕ ОЗНАКОМЛЕНИЕ. Если правообладатель письменно разрешил ознакомление
+с Программой (например, инвестору, партнёру или подрядчику), такое разрешение
+ограничено просмотром и оценкой для заявленной цели. Оно не включает право
+эксплуатировать Программу, раскрывать её третьим лицам либо использовать её
+архитектуру, спецификации или методологию в других продуктах.
+
+КОМПОНЕНТЫ ТРЕТЬИХ ЛИЦ. Программа использует сторонние библиотеки с открытым
+исходным кодом, каждая под собственной лицензией. Эти лицензии распространяются
+только на соответствующие компоненты и не дают никаких прав на саму Программу.
+
+ОТСУТСТВИЕ ГАРАНТИЙ. ПРОГРАММА ПРЕДОСТАВЛЯЕТСЯ «КАК ЕСТЬ», БЕЗ КАКИХ-ЛИБО
+ГАРАНТИЙ, ЯВНЫХ ИЛИ ПОДРАЗУМЕВАЕМЫХ. ПРАВООБЛАДАТЕЛЬ НЕ НЕСЁТ ОТВЕТСТВЕННОСТИ
+ПО КАКИМ-ЛИБО ТРЕБОВАНИЯМ, УБЫТКАМ ИЛИ ИНЫМ ОБЯЗАТЕЛЬСТВАМ, СВЯЗАННЫМ С
+ПРОГРАММОЙ ИЛИ ЕЁ ИСПОЛЬЗОВАНИЕМ. Финансовые модели, построенные Программой,
+представляют собой расчёты на основе допущений пользователя и не являются
+инвестиционной, налоговой или юридической консультацией.
+
+ПО ВОПРОСАМ ЛИЦЕНЗИРОВАНИЯ: alikmeln@gmail.com
