@@ -66,9 +66,12 @@ def _operation_to_dict(op: models.Operation) -> dict:
 def health() -> dict:
     from .db import check_db
 
+    from .llm import provider_info
+
     return {
         "status": "ok",
         "ai_enabled": settings.ai_enabled,
+        "llm": provider_info(),
         "db": settings.db_kind,
         "persistent": settings.db_persistent,
         "db_ok": check_db(),
@@ -120,6 +123,29 @@ def export_model(title: str = "Новый проект", db: Session = Depends(g
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=model.xlsx; filename*=UTF-8''{quote(filename)}"},
     )
+
+
+@router.get("/agents")
+def list_agents(goal: str | None = None) -> dict:
+    """Карта агентских навыков и план выполнения.
+
+    Без параметров — весь реестр с покрытием по ролям и этапам.
+    С `?goal=book` — упорядоченный план навыков для получения артефакта
+    при текущей конфигурации LLM (недоступные заменяются fallback'ами).
+    Это машиночитаемая часть контракта AFM&C: внешний агент видит,
+    что умеет модель и в каком порядке это выполняется.
+    """
+    from .agents import as_public, available, coverage, plan
+
+    payload = {
+        "llm_enabled": settings.ai_enabled,
+        "coverage": coverage(),
+        "skills": [as_public(s) for s in available(settings.ai_enabled)],
+    }
+    if goal:
+        payload["goal"] = goal
+        payload["plan"] = [as_public(s) for s in plan(goal, llm_enabled=settings.ai_enabled)]
+    return payload
 
 
 @router.get("/categories")

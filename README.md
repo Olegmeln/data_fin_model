@@ -211,8 +211,10 @@ curl -F "file=@../samples/statement_1c_demo.txt" localhost:8000/api/imports/uplo
 | Переменная | По умолчанию | Назначение |
 |---|---|---|
 | `DATABASE_URL` | `sqlite:///./finmodel.db` | Строка подключения SQLAlchemy; для продакшена — PostgreSQL |
+| `LLM_PROVIDER` | _(авто)_ | `anthropic` · `openai` · `none`. Пусто — определяется по заданным ключам |
 | `ANTHROPIC_API_KEY` | _(пусто)_ | Ключ Anthropic API. Без ключа ИИ-уровень отключён, работают правила и ключевые слова |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Модель для категоризации |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Модель Anthropic |
+| `LLM_API_KEY` / `LLM_MODEL` / `LLM_BASE_URL` | _(пусто)_ / `gpt-4o-mini` / `https://api.openai.com/v1` | Любой OpenAI-совместимый сервис: OpenAI, OpenRouter, DeepSeek, Together, Groq, Mistral, а также локальные Ollama / LM Studio / vLLM (ключ не нужен, укажите только `LLM_BASE_URL`) |
 | `AI_CONFIDENCE_THRESHOLD` | `0.8` | Порог уверенности: ниже — операция получает статус «требует подтверждения» |
 | `MAX_UPLOAD_MB` | `15` | Лимит размера загружаемого файла, МБ |
 | `MAX_STATEMENT_ROWS` | `20000` | Лимит числа операций в выписке |

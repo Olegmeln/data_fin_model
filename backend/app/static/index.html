@@ -203,7 +203,39 @@ const I18N={
   production:'Производство / закупки',opex_t:'Операционные расходы',staff_t:'ФОТ: штатное расписание',roadmap_t:'Дорожная карта проекта',
   fin_t:'Финансирование',taxes_t:'Налоги',scen_t:'Сценарии и книга',base_scen:'База (без сценария)',metrics_btn:'Σ Метрики',book_btn:'⬇ Книга .xlsx',
   saved_v:'Сохранён черновик v',confirmed_v:'Подтверждено v',memory_upd:' — память предпочтений обновлена',
-  settings:'Настройки',appearance:'Оформление',lang:'Язык / Language'},
+  settings:'Настройки',appearance:'Оформление',lang:'Язык / Language',
+  // поля формы допущений
+  f_name:'Название',f_industry:'Отрасль',f_ptype:'Тип проекта',f_location:'Локация',f_currency:'Валюта',
+  f_horizon:'Горизонт, лет',f_start:'Старт модели (ГГГГ-ММ-ДД)',f_disc:'Ставка дисконтирования, %',
+  f_roa:'ROA реинвестирования (MIRR), %',f_total_ovr:'Итог (если без разбивки)',f_dep:'Амортизация, мес',
+  f_equity:'Собственные средства',f_dscr:'Ковенант DSCR ≥',f_icr:'Ковенант ICR ≥',f_nde:'Долг/EBITDA ≤',
+  f_regime:'Режим',f_profit:'Налог на прибыль, %',f_vat:'НДС, %',f_contrib:'Страховые взносы, %',
+  f_property:'Налог на имущество, %',f_land:'Земельный налог, %',
+  // заголовки таблиц
+  th_product:'Продукт',th_kind:'Тип',th_unit:'Ед.',th_price:'Цена/ед',th_volume:'Объём/мес',th_ramp:'Разгон, мес',
+  th_item:'Позиция',th_amount:'Сумма',th_vat_in:'НДС внутри',th_from:'Мес. с',th_to:'по',
+  th_line:'Статья',th_fixed:'Фикс/мес',th_pct_rev:'% выручки',
+  th_credit:'Кредит',th_term:'Срок, мес',th_rate:'Ставка, %',th_grace:'Льгота, мес',
+  th_cost:'Себест./ед',th_logi:'Логистика, %',th_storage:'Хранение/мес',th_lead:'Закупка за, мес',
+  th_role:'Роль',th_count:'Чел.',th_salary:'Оклад/мес',th_start_m:'С мес',th_end_m:'По мес',
+  th_ms:'Веха',th_month:'Мес',th_note:'Заметка',
+  // кнопки добавления
+  add_product:'＋ Продукт',add_capex:'＋ Позиция CAPEX',add_opex:'＋ Статья расходов',add_credit:'＋ Кредит',
+  add_prod:'＋ Позиция производства',add_role:'＋ Роль',add_ms:'＋ Веха',
+  // значения селектов
+  v_goods:'товар',v_service:'услуга',v_inv:'инвестиционный',v_wc:'оборотный',
+  v_stage:'этап',v_capex:'CAPEX',v_launch:'запуск',v_finance:'финансы',
+  contrib_incl:'взносы уже в окладах',
+  // тосты и сообщения
+  msg_auto:'Собираю стартовый профиль…',msg_survey:'Конвертирую ответы опросника…',
+  msg_created:'Создана v',msg_from_auto:' из стартового профиля',msg_from_survey:' из опросника',
+  msg_error:'Ошибка: ',msg_metrics:'Метрики: ',msg_saved:'Сохранено · ',msg_nan:'Не число — правка отменена',
+  msg_pick_ind:'Сначала выберите отрасль',msg_rebuild:'Пересобираю модель…',msg_rebuilt:'Модель пересобрана · ',
+  msg_upload:'Загружаю: ',msg_imported:'Импортировано ',msg_dups:', дубликатов ',msg_errs:', ошибок ',
+  msg_choose:'Сначала выберите файлы',msg_extracting:'Извлекаю допущения…',msg_extracted:'Извлечено v',
+  msg_open_q:' · вопросов: ',msg_intake_fail:'Сбой интейка: ',msg_ai_hint:'Загрузите документы и нажмите «Извлечь допущения»',
+  msg_no_voice:'Голосовой ввод не поддерживается в этом браузере',msg_no_mic:'Микрофон недоступен',
+  ver_note:'Книга собирается по реестру листов из этого набора.'},
  en:{tab_Overview:'Overview',tab_Model:'Model',tab_Assumptions:'Assumptions',tab_Parameters:'Parameters',tab_Documents:'Documents',
   export:'Export XLSX',theme:'Theme',hero:'Build your financial model',
   composer_ph:'Describe the business, upload a file or pick an example.',
@@ -231,7 +263,34 @@ const I18N={
   production:'Production / procurement',opex_t:'Operating expenses',staff_t:'Headcount & payroll',roadmap_t:'Project roadmap',
   fin_t:'Financing',taxes_t:'Taxes',scen_t:'Scenarios & workbook',base_scen:'Base (no scenario)',metrics_btn:'Σ Metrics',book_btn:'⬇ Workbook .xlsx',
   saved_v:'Draft saved v',confirmed_v:'Confirmed v',memory_upd:' — preference memory updated',
-  settings:'Settings',appearance:'Appearance',lang:'Язык / Language'}};
+  settings:'Settings',appearance:'Appearance',lang:'Язык / Language',
+  f_name:'Name',f_industry:'Industry',f_ptype:'Project type',f_location:'Location',f_currency:'Currency',
+  f_horizon:'Horizon, years',f_start:'Model start (YYYY-MM-DD)',f_disc:'Discount rate, %',
+  f_roa:'Reinvestment ROA (MIRR), %',f_total_ovr:'Total (if no breakdown)',f_dep:'Depreciation, months',
+  f_equity:'Equity',f_dscr:'Covenant DSCR ≥',f_icr:'Covenant ICR ≥',f_nde:'Debt/EBITDA ≤',
+  f_regime:'Tax regime',f_profit:'Profit tax, %',f_vat:'VAT, %',f_contrib:'Payroll contributions, %',
+  f_property:'Property tax, %',f_land:'Land tax, %',
+  th_product:'Product',th_kind:'Type',th_unit:'Unit',th_price:'Price/unit',th_volume:'Volume/mo',th_ramp:'Ramp-up, mo',
+  th_item:'Item',th_amount:'Amount',th_vat_in:'VAT incl.',th_from:'Month from',th_to:'to',
+  th_line:'Line item',th_fixed:'Fixed/mo',th_pct_rev:'% of revenue',
+  th_credit:'Facility',th_term:'Term, mo',th_rate:'Rate, %',th_grace:'Grace, mo',
+  th_cost:'Cost/unit',th_logi:'Logistics, %',th_storage:'Storage/mo',th_lead:'Lead time, mo',
+  th_role:'Role',th_count:'People',th_salary:'Salary/mo',th_start_m:'From mo',th_end_m:'To mo',
+  th_ms:'Milestone',th_month:'Month',th_note:'Note',
+  add_product:'＋ Product',add_capex:'＋ CAPEX item',add_opex:'＋ Expense line',add_credit:'＋ Facility',
+  add_prod:'＋ Production item',add_role:'＋ Role',add_ms:'＋ Milestone',
+  v_goods:'goods',v_service:'service',v_inv:'investment',v_wc:'working capital',
+  v_stage:'stage',v_capex:'CAPEX',v_launch:'launch',v_finance:'financing',
+  contrib_incl:'contributions already in salaries',
+  msg_auto:'Building the default profile…',msg_survey:'Converting survey answers…',
+  msg_created:'Created v',msg_from_auto:' from the default profile',msg_from_survey:' from the survey',
+  msg_error:'Error: ',msg_metrics:'Metrics: ',msg_saved:'Saved · ',msg_nan:'Not a number — edit cancelled',
+  msg_pick_ind:'Pick an industry first',msg_rebuild:'Rebuilding the model…',msg_rebuilt:'Model rebuilt · ',
+  msg_upload:'Uploading: ',msg_imported:'Imported ',msg_dups:', duplicates ',msg_errs:', errors ',
+  msg_choose:'Choose files first',msg_extracting:'Extracting assumptions…',msg_extracted:'Extracted v',
+  msg_open_q:' · open questions: ',msg_intake_fail:'Intake failed: ',msg_ai_hint:'Upload documents and press “Extract assumptions”',
+  msg_no_voice:'Voice input is not supported in this browser',msg_no_mic:'Microphone unavailable',
+  ver_note:'The workbook is assembled from this set by the sheet registry.'}};
 const t=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ru[k]||k;
 function setLang(l){LANG=l;localStorage.setItem('dfm-lang',l);render();applyChrome();}
 
@@ -363,7 +422,7 @@ function docsHTML(){const list=state.imports||[];const iq=state.intake;
 // ---- Книга допущений (assumptions.v1) — форма workspace v2, критический путь п.4 ----
 const PROJECT=()=>(state.project&&state.project.slug)||'default';
 // бирюзовый = AI, синий = ручной ввод, серый = профиль/вычислено (дизайн-спека)
-const MB={extracted:['AI','ai'],user:['manual','assume'],default:['auto',''],derived:['опросник','']};
+const MB={extracted:['AI','ai'],user:['manual','assume'],default:['auto',''],derived:['survey','']};
 function srcOf(path){const s=state.doc&&state.doc.sources;if(!s)return null;if(s[path])return s[path];
   let best=null;for(const k in s){if(path===k||path.startsWith(k+'.')||path.startsWith(k+'['))if(!best||k.length>best.length)best=k;}
   return best?s[best]:null;}
@@ -379,66 +438,66 @@ function markManual(path){if(!state.doc.sources)state.doc.sources={};state.doc.s
 const rateVal=r=>(r&&r.points&&r.points.length)?r.points[0].value_pct:null;
 const rateMulti=r=>r&&r.points&&r.points.length>1;
 function inp(label,path,val,ph,str){return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input data-path="${path}"${str?' data-str="1"':''} value="${val==null?'':esc(val)}" placeholder="${ph||''}"/></div>`;}
-function rateInp(label,path,r){if(rateMulti(r))return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input value="${esc(r.points.map(pt=>(pt.effective_from?pt.effective_from+': ':'')+pt.value_pct+'%').join(' → '))}" disabled title="расписание во времени — несколько точек"/></div>`;
+function rateInp(label,path,r){if(rateMulti(r))return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input value="${esc(r.points.map(pt=>(pt.effective_from?pt.effective_from+': ':'')+pt.value_pct+'%').join(' → '))}" disabled/></div>`;
   return inp(label,path+'.points[0].value_pct',rateVal(r));}
 function tcell(path,val,str){return `<td><input data-path="${path}"${str?' data-str="1"':''} value="${val==null?'':esc(val)}"/></td>`;}
 function productsTable(){const list=state.doc.products||[];
- return `<table><thead><tr><th>Продукт ${srcBadge('products')}</th><th>Тип</th><th>Ед.</th><th>Цена/ед</th><th>Объём/мес</th><th>Разгон, мес</th><th></th></tr></thead><tbody>`+
+ return `<table><thead><tr><th>${t('th_product')} ${srcBadge('products')}</th><th>${t('th_kind')}</th><th>${t('th_unit')}</th><th>${t('th_price')}</th><th>${t('th_volume')}</th><th>${t('th_ramp')}</th><th></th></tr></thead><tbody>`+
  list.map((p,i)=>`<tr>${tcell(`products[${i}].name`,p.name,1)}
-  <td><select data-path="products[${i}].kind" data-str="1"><option value="goods"${p.kind!=='service'?' selected':''}>товар</option><option value="service"${p.kind==='service'?' selected':''}>услуга</option></select></td>
+  <td><select data-path="products[${i}].kind" data-str="1"><option value="goods"${p.kind!=='service'?' selected':''}>${t('v_goods')}</option><option value="service"${p.kind==='service'?' selected':''}>${t('v_service')}</option></select></td>
   ${tcell(`products[${i}].unit`,p.unit,1)}${tcell(`products[${i}].start_price`,p.start_price)}${tcell(`products[${i}].start_volume`,p.start_volume)}${tcell(`products[${i}].ramp_up_months`,p.ramp_up_months)}
   <td><button class="icon" data-del="products:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><button class="btn" data-add="products" style="margin-top:8px">＋ Продукт</button>`;}
+ `</tbody></table><button class="btn" data-add="products" style="margin-top:8px">${t('add_product')}</button>`;}
 function capexTable(){const list=(state.doc.capex&&state.doc.capex.items)||[];
- return `<table><thead><tr><th>Позиция ${srcBadge('capex')}</th><th>Сумма</th><th>НДС внутри</th><th>Мес. с</th><th>по</th><th></th></tr></thead><tbody>`+
+ return `<table><thead><tr><th>${t('th_item')} ${srcBadge('capex')}</th><th>${t('th_amount')}</th><th>${t('th_vat_in')}</th><th>${t('th_from')}</th><th>${t('th_to')}</th><th></th></tr></thead><tbody>`+
  list.map((c,i)=>`<tr>${tcell(`capex.items[${i}].name`,c.name,1)}${tcell(`capex.items[${i}].amount`,c.amount)}
   <td style="text-align:center"><input type="checkbox" data-path="capex.items[${i}].vat_included" data-bool="1"${c.vat_included?' checked':''}/></td>
   ${tcell(`capex.items[${i}].schedule_months[0]`,c.schedule_months?c.schedule_months[0]:null)}${tcell(`capex.items[${i}].schedule_months[1]`,c.schedule_months?c.schedule_months[1]:null)}
   <td><button class="icon" data-del="capex.items:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><button class="btn" data-add="capex.items" style="margin-top:8px">＋ Позиция CAPEX</button>`;}
+ `</tbody></table><button class="btn" data-add="capex.items" style="margin-top:8px">${t('add_capex')}</button>`;}
 function opexTable(){const list=(state.doc.opex&&state.doc.opex.items)||[];
- return `<table><thead><tr><th>Статья ${srcBadge('opex')}</th><th>Фикс/мес</th><th>% выручки</th><th></th></tr></thead><tbody>`+
+ return `<table><thead><tr><th>${t('th_line')} ${srcBadge('opex')}</th><th>${t('th_fixed')}</th><th>${t('th_pct_rev')}</th><th></th></tr></thead><tbody>`+
  list.map((o,i)=>`<tr>${tcell(`opex.items[${i}].name`,o.name,1)}${tcell(`opex.items[${i}].monthly_amount`,o.monthly_amount)}${tcell(`opex.items[${i}].pct_of_revenue`,o.pct_of_revenue)}
   <td><button class="icon" data-del="opex.items:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><button class="btn" data-add="opex.items" style="margin-top:8px">＋ Статья расходов</button>`;}
+ `</tbody></table><button class="btn" data-add="opex.items" style="margin-top:8px">${t('add_opex')}</button>`;}
 function facilitiesTable(){const list=(state.doc.financing&&state.doc.financing.facilities)||[];
- return `<table><thead><tr><th>Кредит ${srcBadge('financing')}</th><th>Тип</th><th>Сумма</th><th>Срок, мес</th><th>Ставка, %</th><th>Льгота, мес</th><th></th></tr></thead><tbody>`+
+ return `<table><thead><tr><th>${t('th_credit')} ${srcBadge('financing')}</th><th>${t('th_kind')}</th><th>${t('th_amount')}</th><th>${t('th_term')}</th><th>${t('th_rate')}</th><th>${t('th_grace')}</th><th></th></tr></thead><tbody>`+
  list.map((c,i)=>`<tr>${tcell(`financing.facilities[${i}].name`,c.name,1)}
-  <td><select data-path="financing.facilities[${i}].kind" data-str="1"><option value="investment"${c.kind!=='working_capital'?' selected':''}>инвестиционный</option><option value="working_capital"${c.kind==='working_capital'?' selected':''}>оборотный</option></select></td>
+  <td><select data-path="financing.facilities[${i}].kind" data-str="1"><option value="investment"${c.kind!=='working_capital'?' selected':''}>${t('v_inv')}</option><option value="working_capital"${c.kind==='working_capital'?' selected':''}>${t('v_wc')}</option></select></td>
   ${tcell(`financing.facilities[${i}].amount`,c.amount)}${tcell(`financing.facilities[${i}].term_months`,c.term_months)}
   ${rateMulti(c.rate)?`<td><input value="${esc(c.rate.points.map(pt=>pt.value_pct+'%').join(' → '))}" disabled/></td>`:tcell(`financing.facilities[${i}].rate.points[0].value_pct`,rateVal(c.rate))}
   ${tcell(`financing.facilities[${i}].grace_months`,c.grace_months)}
   <td><button class="icon" data-del="financing.facilities:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><button class="btn" data-add="financing.facilities" style="margin-top:8px">＋ Кредит</button>`;}
+ `</tbody></table><button class="btn" data-add="financing.facilities" style="margin-top:8px">${t('add_credit')}</button>`;}
 function productionTable(){const list=(state.doc.production&&state.doc.production.items)||[];
  const prods=(state.doc.products||[]).map(p=>p.name);
- return `<table><thead><tr><th>Продукт ${srcBadge('production')}</th><th>Себест./ед</th><th>Логистика, %</th><th>Хранение/мес</th><th>Закупка за, мес</th><th></th></tr></thead><tbody>`+
+ return `<table><thead><tr><th>${t('th_product')} ${srcBadge('production')}</th><th>${t('th_cost')}</th><th>${t('th_logi')}</th><th>${t('th_storage')}</th><th>${t('th_lead')}</th><th></th></tr></thead><tbody>`+
  list.map((p,i)=>`<tr>
   <td><select data-path="production.items[${i}].product" data-str="1">${prods.map(n=>`<option value="${esc(n)}"${p.product===n?' selected':''}>${esc(n)}</option>`).join('')}</select></td>
   ${tcell(`production.items[${i}].unit_cost`,p.unit_cost)}${tcell(`production.items[${i}].logistics_pct`,p.logistics_pct)}${tcell(`production.items[${i}].storage_monthly`,p.storage_monthly)}${tcell(`production.items[${i}].lead_months`,p.lead_months)}
   <td><button class="icon" data-del="production.items:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><button class="btn" data-add="production.items" style="margin-top:8px">＋ Позиция производства</button>`;}
+ `</tbody></table><button class="btn" data-add="production.items" style="margin-top:8px">${t('add_prod')}</button>`;}
 function staffTable(){const list=(state.doc.staff&&state.doc.staff.roles)||[];
- return `<table><thead><tr><th>Роль ${srcBadge('staff')}</th><th>Чел.</th><th>Оклад/мес</th><th>С мес</th><th>По мес</th><th></th></tr></thead><tbody>`+
+ return `<table><thead><tr><th>${t('th_role')} ${srcBadge('staff')}</th><th>${t('th_count')}</th><th>${t('th_salary')}</th><th>${t('th_start_m')}</th><th>${t('th_end_m')}</th><th></th></tr></thead><tbody>`+
  list.map((s,i)=>`<tr>${tcell(`staff.roles[${i}].name`,s.name,1)}${tcell(`staff.roles[${i}].count`,s.count)}${tcell(`staff.roles[${i}].monthly_salary`,s.monthly_salary)}${tcell(`staff.roles[${i}].start_month`,s.start_month)}${tcell(`staff.roles[${i}].end_month`,s.end_month)}
   <td><button class="icon" data-del="staff.roles:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><label class="note" style="display:inline-flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" data-path="staff.contributions_included" data-bool="1"${state.doc.staff&&state.doc.staff.contributions_included?' checked':''}/> взносы уже в окладах</label>
- <div><button class="btn" data-add="staff.roles" style="margin-top:8px">＋ Роль</button></div>`;}
+ `</tbody></table><label class="note" style="display:inline-flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" data-path="staff.contributions_included" data-bool="1"${state.doc.staff&&state.doc.staff.contributions_included?' checked':''}/> ${t('contrib_incl')}</label>
+ <div><button class="btn" data-add="staff.roles" style="margin-top:8px">${t('add_role')}</button></div>`;}
 function milestonesTable(){const list=state.doc.milestones||[];
- const kinds=[['stage','этап'],['capex','CAPEX'],['launch','запуск'],['finance','финансы']];
- return `<table><thead><tr><th>Веха ${srcBadge('milestones')}</th><th>Мес</th><th>Тип</th><th>Заметка</th><th></th></tr></thead><tbody>`+
+ const kinds=[['stage',t('v_stage')],['capex',t('v_capex')],['launch',t('v_launch')],['finance',t('v_finance')]];
+ return `<table><thead><tr><th>${t('th_ms')} ${srcBadge('milestones')}</th><th>${t('th_month')}</th><th>${t('th_kind')}</th><th>${t('th_note')}</th><th></th></tr></thead><tbody>`+
  list.map((m,i)=>`<tr>${tcell(`milestones[${i}].name`,m.name,1)}${tcell(`milestones[${i}].month`,m.month)}
   <td><select data-path="milestones[${i}].kind" data-str="1">${kinds.map(([v,l])=>`<option value="${v}"${m.kind===v?' selected':''}>${l}</option>`).join('')}</select></td>
   ${tcell(`milestones[${i}].note`,m.note,1)}
   <td><button class="icon" data-del="milestones:${i}">✕</button></td></tr>`).join('')+
- `</tbody></table><button class="btn" data-add="milestones" style="margin-top:8px">＋ Веха</button>`;}
+ `</tbody></table><button class="btn" data-add="milestones" style="margin-top:8px">${t('add_ms')}</button>`;}
 function asetHTML(){
  if(!state.aset||!state.doc)return `<div class="card"><h3>${t('aset_title')} <span class="badge">assumptions.v1</span></h3><div class="bd">
    <p class="note">${t('aset_empty_note')}</p>
    <div class="src"><button class="btn acc" id="asAuto">${t('auto_btn')}</button>
    <button class="btn" id="asAI">${t('ai_btn')}</button>
    <button class="btn" id="asSurvey">${t('survey_btn')}</button></div></div></div>`;
- const d=state.doc,rec=state.aset,p=d.profile||{},t=d.taxes||{},v=d.valuation||{},f=d.financing||{},cx=d.capex||{};
+ const d=state.doc,rec=state.aset,p=d.profile||{},tx=d.taxes||{},v=d.valuation||{},f=d.financing||{},cx=d.capex||{};
  const vers=(state.asetVersions||[]).map(x=>`<option value="${x.version}"${x.version===rec.version?' selected':''}>v${x.version} · ${x.status}</option>`).join('');
  const scen=(d.scenarios||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
  const oq=d.open_questions||[];const met=state.bookMetrics;
@@ -458,38 +517,38 @@ function asetHTML(){
   </div>
   ${oq.length?`<div class="card" style="margin-bottom:14px"><h3>${t('open_q')} (${oq.length})</h3><div class="bd">${oq.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':(q.severity==='info'?'ℹ️':'⚠️')} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div></div>`:''}
   <div class="card" style="margin-bottom:14px"><h3>${t('profile_val')}</h3><div class="bd"><div class="form">
-    ${inp('Название','profile.name',p.name,'',1)}${inp('Отрасль','profile.industry',p.industry,'напр. производство',1)}
-    ${inp('Тип проекта','profile.project_type',p.project_type,'',1)}${inp('Локация','profile.location',p.location,'',1)}
-    ${inp('Валюта','profile.currency',p.currency||'RUB','',1)}${inp('Горизонт, лет','profile.horizon_years',p.horizon_years)}
-    ${inp('Старт модели (ГГГГ-ММ-ДД)','profile.model_start',p.model_start,'2026-09-01',1)}
-    ${inp('Ставка дисконтирования, %','valuation.discount_rate_pct',v.discount_rate_pct)}
-    ${inp('ROA реинвестирования (MIRR), %','valuation.reinvest_roa_pct',v.reinvest_roa_pct)}
+    ${inp(t('f_name'),'profile.name',p.name,'',1)}${inp(t('f_industry'),'profile.industry',p.industry,'',1)}
+    ${inp(t('f_ptype'),'profile.project_type',p.project_type,'',1)}${inp(t('f_location'),'profile.location',p.location,'',1)}
+    ${inp(t('f_currency'),'profile.currency',p.currency||'RUB','',1)}${inp(t('f_horizon'),'profile.horizon_years',p.horizon_years)}
+    ${inp(t('f_start'),'profile.model_start',p.model_start,'2026-09-01',1)}
+    ${inp(t('f_disc'),'valuation.discount_rate_pct',v.discount_rate_pct)}
+    ${inp(t('f_roa'),'valuation.reinvest_roa_pct',v.reinvest_roa_pct)}
   </div></div></div>
   <div class="card" style="margin-bottom:14px"><h3>${t('products')}</h3><div class="bd">${productsTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>CAPEX</h3><div class="bd">${capexTable()}
-    <div class="form" style="margin-top:12px">${inp('Итог (если без разбивки)','capex.total_override',cx.total_override)}${inp('Амортизация, мес','capex.depreciation_months',cx.depreciation_months)}</div></div></div>
+    <div class="form" style="margin-top:12px">${inp(t('f_total_ovr'),'capex.total_override',cx.total_override)}${inp(t('f_dep'),'capex.depreciation_months',cx.depreciation_months)}</div></div></div>
   <div class="card" style="margin-bottom:14px"><h3>${t('production')}</h3><div class="bd">${productionTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>${t('opex_t')}</h3><div class="bd">${opexTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>${t('staff_t')}</h3><div class="bd">${staffTable()}</div></div>
   <div class="card" style="margin-bottom:14px"><h3>${t('roadmap_t')}</h3><div class="bd">${milestonesTable()}</div></div>
-  <div class="card" style="margin-bottom:14px"><h3>${t('fin_t')} <span class="badge" title="доля собственных/заёмных">${share}</span></h3><div class="bd">
-    <div class="form">${inp('Собственные средства','financing.equity_amount',f.equity_amount)}</div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('fin_t')} <span class="badge">${share}</span></h3><div class="bd">
+    <div class="form">${inp(t('f_equity'),'financing.equity_amount',f.equity_amount)}</div>
     <div style="margin-top:10px">${facilitiesTable()}</div>
     <div class="form" style="margin-top:12px">
-      ${inp('Ковенант DSCR ≥','financing.covenants.dscr_min',(f.covenants||{}).dscr_min,'напр. 1.2')}
-      ${inp('Ковенант ICR ≥','financing.covenants.icr_min',(f.covenants||{}).icr_min)}
-      ${inp('Долг/EBITDA ≤','financing.covenants.net_debt_to_ebitda_max',(f.covenants||{}).net_debt_to_ebitda_max,'напр. 3.5')}
+      ${inp(t('f_dscr'),'financing.covenants.dscr_min',(f.covenants||{}).dscr_min,'1.2')}
+      ${inp(t('f_icr'),'financing.covenants.icr_min',(f.covenants||{}).icr_min)}
+      ${inp(t('f_nde'),'financing.covenants.net_debt_to_ebitda_max',(f.covenants||{}).net_debt_to_ebitda_max,'3.5')}
     </div></div></div>
   <div class="card" style="margin-bottom:14px"><h3>${t('taxes_t')}</h3><div class="bd"><div class="form">
-    ${inp('Режим','taxes.regime',t.regime,'ОСНО / УСН…',1)}${rateInp('Налог на прибыль, %','taxes.profit',t.profit)}
-    ${rateInp('НДС, %','taxes.vat',t.vat)}${rateInp('Страховые взносы, %','taxes.payroll_contributions',t.payroll_contributions)}
-    ${inp('Налог на имущество, %','taxes.property_pct',t.property_pct)}${inp('Земельный налог, %','taxes.land_pct',t.land_pct)}
+    ${inp(t('f_regime'),'taxes.regime',tx.regime,'',1)}${rateInp(t('f_profit'),'taxes.profit',tx.profit)}
+    ${rateInp(t('f_vat'),'taxes.vat',tx.vat)}${rateInp(t('f_contrib'),'taxes.payroll_contributions',tx.payroll_contributions)}
+    ${inp(t('f_property'),'taxes.property_pct',tx.property_pct)}${inp(t('f_land'),'taxes.land_pct',tx.land_pct)}
   </div></div></div>
   <div class="card"><h3>${t('scen_t')}</h3><div class="bd">
     <div class="crow" style="flex-wrap:wrap"><select id="asScen" class="search" style="margin:0;height:34px"><option value="">${t('base_scen')}</option>${scen}</select>
     <button class="btn" id="asMetrics">${t('metrics_btn')}</button><button class="btn acc" id="asBook">${t('book_btn')}</button></div>
     ${metHTML}
-    <p class="note">Книга собирается по sheet registry из этого набора. v${rec.version} · ${esc(rec.status)}${rec.comment?' · '+esc(rec.comment):''}</p>
+    <p class="note">${t('ver_note')} v${rec.version} · ${esc(rec.status)}${rec.comment?' · '+esc(rec.comment):''}</p>
   </div></div></div>`;}
 function sanitizeDoc(){const d=state.doc;if(!d)return;
  ((d.capex&&d.capex.items)||[]).forEach(it=>{const sm=it.schedule_months;
@@ -504,23 +563,23 @@ function sanitizeDoc(){const d=state.doc;if(!d)return;
 async function loadAset(version){try{state.aset=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+(version?('?version='+version):''));
   state.doc=JSON.parse(JSON.stringify(state.aset.assumptions));state.bookMetrics=null;}catch(e){state.aset=null;state.doc=null;}}
 async function loadVersions(){try{state.asetVersions=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/versions');}catch(e){state.asetVersions=[];}}
-async function autoSet(){try{toast('Auto: собираю стартовый профиль…');
+async function autoSet(){try{toast(t('msg_auto'));
   const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/auto',{method:'POST'});
   state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
-  toast('Создана v'+r.version+' из стартового профиля','ok');}catch(e){toast('Ошибка: '+e.message,'err');}}
+  toast(t('msg_created')+r.version+t('msg_from_auto'),'ok');}catch(e){toast(t('msg_error')+e.message,'err');}}
 async function saveAset(status){try{sanitizeDoc();
   const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT()),{method:'PUT',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({status,assumptions:state.doc,comment:null})});
   state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
   toast(status==='confirmed'?(t('confirmed_v')+r.version+t('memory_upd')):(t('saved_v')+r.version),'ok');
- }catch(e){toast('Ошибка: '+e.message,'err');}}
+ }catch(e){toast(t('msg_error')+e.message,'err');}}
 async function loadMetrics(){try{const sc=$('#asScen')?$('#asScen').value:'';
   const m=await api('/book/'+encodeURIComponent(PROJECT())+'/metrics'+(sc?('?scenario='+encodeURIComponent(sc)):''));
-  state.bookMetrics=m.metrics;renderView();}catch(e){toast('Метрики: '+e.message,'err');}}
-const ROW_DEFAULTS={'products':{name:'Новый продукт',kind:'goods'},'capex.items':{name:'Позиция',amount:0},
- 'opex.items':{name:'Статья',monthly_amount:0},'financing.facilities':{name:'Кредит',kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0},
- 'staff.roles':{name:'Роль',count:1,monthly_salary:0,start_month:0},'milestones':{name:'Веха',month:0,kind:'stage'},
- 'production.items':{product:'',unit_cost:0,lead_months:0}};
+  state.bookMetrics=m.metrics;renderView();}catch(e){toast(t('msg_metrics')+e.message,'err');}}
+const rowDefaults=()=>({'products':{name:t('th_product'),kind:'goods'},'capex.items':{name:t('th_item'),amount:0},
+ 'opex.items':{name:t('th_line'),monthly_amount:0},'financing.facilities':{name:t('th_credit'),kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0},
+ 'staff.roles':{name:t('th_role'),count:1,monthly_salary:0,start_month:0},'milestones':{name:t('th_ms'),month:0,kind:'stage'},
+ 'production.items':{product:'',unit_cost:0,lead_months:0}});
 function arrAt(sec){const parts=sec.split('.');let o=state.doc;for(const k of parts.slice(0,-1)){o[k]=o[k]||{};o=o[k];}
  const last=parts[parts.length-1];o[last]=o[last]||[];return o[last];}
 function wireAset(){
@@ -530,16 +589,16 @@ function wireAset(){
      else{const n=Number(s.replace(/[\s ]/g,'').replace(',','.'));v=isNaN(n)?s:n;}}
    setPath(state.doc,el.dataset.path,v);markManual(el.dataset.path);};});
  document.querySelectorAll('#view [data-add]').forEach(b=>b.onclick=()=>{
-   arrAt(b.dataset.add).push(JSON.parse(JSON.stringify(ROW_DEFAULTS[b.dataset.add])));markManual(b.dataset.add);renderView();});
+   arrAt(b.dataset.add).push(JSON.parse(JSON.stringify(rowDefaults()[b.dataset.add])));markManual(b.dataset.add);renderView();});
  document.querySelectorAll('#view [data-del]').forEach(b=>b.onclick=()=>{
    const[sec,i]=b.dataset.del.split(':');arrAt(sec).splice(+i,1);markManual(sec);renderView();});
  const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
  on('#asAuto',autoSet);
- on('#asSurvey',async()=>{try{toast('Конвертирую ответы опросника…');
+ on('#asSurvey',async()=>{try{toast(t('msg_survey'));
    const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/from-survey',{method:'POST'});
    state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
-   toast('Создана v'+r.version+' из опросника','ok');}catch(e){toast('Ошибка: '+e.message,'err');}});
- on('#asAI',()=>{state.tab='Documents';renderTabs();renderView();toast('Загрузите документы и нажмите «Extract assumptions»');});
+   toast(t('msg_created')+r.version+t('msg_from_survey'),'ok');}catch(e){toast(t('msg_error')+e.message,'err');}});
+ on('#asAI',()=>{state.tab='Documents';renderTabs();renderView();toast(t('msg_ai_hint'));});
  on('#asSaveDraft',()=>saveAset('draft'));on('#asConfirm',()=>saveAset('confirmed'));
  on('#asMetrics',loadMetrics);
  on('#asBook',()=>{const sc=$('#asScen')?$('#asScen').value:'';
@@ -559,25 +618,25 @@ function renderView(){
 }
 async function runIntake(){
   const inp=$('#intakeFiles');
-  if(!inp||!inp.files.length){toast('Choose files first');return;}
+  if(!inp||!inp.files.length){toast(t('msg_choose'));return;}
   const fd=new FormData();
   for(const f of inp.files)fd.append('files',f);
   const project=(state.project&&state.project.slug)||'default';
   try{
-    toast('Extracting assumptions…');
+    toast(t('msg_extracting'));
     const r=await fetch(`/api/intake/extract?project=${encodeURIComponent(project)}`,{method:'POST',body:fd});
     const data=await r.json();
     if(!r.ok)throw new Error(data.detail&&data.detail.message||data.detail||r.statusText);
     state.intake=data;state.aset=data;state.doc=JSON.parse(JSON.stringify(data.assumptions));state.bookMetrics=null;loadVersions();renderView();
     toast(`Extracted v${data.version}: ${data.open_questions.length} open question(s) — см. вкладку Assumptions`);
-  }catch(e){toast('Intake failed: '+e.message);}
+  }catch(e){toast(t('msg_intake_fail')+e.message,'err');}
 }
 
 async function saveParams(){
   const ids=['industry','business_age','planning_horizon','tax_mode','monthly_revenue','payroll_monthly','rent_monthly','discount_rate','capex_total','funding_source','loan_amount','loan_rate'];
   const answers={};ids.forEach(id=>{const el=$('#p_'+id);if(el&&el.value!=='')answers[id]=el.value;});
-  if(!answers.industry){toast('Pick an industry first','err');return;}
-  try{toast('Rebuilding model…');const r=await api('/parameters',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
+  if(!answers.industry){toast(t('msg_pick_ind'),'err');return;}
+  try{toast(t('msg_rebuild'));const r=await api('/parameters',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
     toast('Model rebuilt · '+r.assumptions_created+' assumptions','ok');await refreshAll();state.tab='Model';renderTabs();renderView();}
   catch(e){toast('Error: '+e.message,'err');}
 }
@@ -605,15 +664,15 @@ function wireGrid(){
     td.addEventListener('blur',()=>saveCell(td));});
 }
 async function saveCell(td){const amount=parseAmount(td.textContent);
-  if(amount===null){toast('Not a number — edit cancelled','err');return refreshAll();}
+  if(amount===null){toast(t('msg_nan'),'err');return refreshAll();}
   try{await api('/assumptions',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:[{category_code:td.dataset.code,month:td.dataset.month,amount}]})});
-    toast('Saved · '+fmtMonth(td.dataset.month),'ok');await refreshAll();}catch(e){toast('Save error: '+e.message,'err');refreshAll();}}
+    toast(t('msg_saved')+fmtMonth(td.dataset.month),'ok');await refreshAll();}catch(e){toast(t('msg_error')+e.message,'err');refreshAll();}}
 
-async function upload(files){files=[...files];if(!files.length)return;toast('Uploading: '+files.map(f=>f.name).join(', '));
+async function upload(files){files=[...files];if(!files.length)return;toast(t('msg_upload')+files.map(f=>f.name).join(', '));
   let imp=0,dup=0,fail=0;
   for(const f of files){const fd=new FormData();fd.append('file',f);
     try{const r=await api('/imports/upload',{method:'POST',body:fd});imp+=r.imported;dup+=r.duplicates;}catch(e){fail++;toast(f.name+': '+e.message,'err');}}
-  toast(`Imported ${imp}, duplicates ${dup}`+(fail?`, errors ${fail}`:''),fail?'err':'ok');await refreshAll();}
+  toast(t('msg_imported')+imp+t('msg_dups')+dup+(fail?t('msg_errs')+fail:''),fail?'err':'ok');await refreshAll();}
 
 function send(){
   // «Сформировать модель»: ведём по пути — профиль → допущения → книга
@@ -635,11 +694,11 @@ function renderGoogleChip(){const g=state.google,chip=$('#gchip'),btn=$('#gbtn')
   if(!g.connected){btn.style.display='';btn.textContent='Connect Google';btn.onclick=()=>location.href='/api/google/auth';}else btn.style.display='none';}
 
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function toggleMic(){if(!SR){toast('Voice input not supported in this browser','err');return;}
+function toggleMic(){if(!SR){toast(t('msg_no_voice'),'err');return;}
   if(state.rec){state.rec.stop();return;}const rec=new SR();rec.lang='en-US';rec.interimResults=true;rec.continuous=false;
   state.rec=rec;const mic=$('#mic');if(mic)mic.classList.add('rec');const ta=$('#ta'),base=ta?ta.value:'';
   rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;const tr=$('#tr');if(tr)tr.textContent=s;if(ta)ta.value=(base?base+' ':'')+s;};
-  rec.onerror=()=>{toast('Microphone unavailable','err');stopMic();};rec.onend=stopMic;rec.start();}
+  rec.onerror=()=>{toast(t('msg_no_mic'),'err');stopMic();};rec.onend=stopMic;rec.start();}
 function stopMic(){if(state.rec){try{state.rec.stop()}catch(e){}}state.rec=null;const mic=$('#mic');if(mic)mic.classList.remove('rec');const tr=$('#tr');if(tr)tr.textContent='';}
 
 function renderSettings(){const g=state.google;

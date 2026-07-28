@@ -1,4 +1,4 @@
-"""ИИ-сборка модели: Claude уточняет допущения по профилю бизнеса.
+"""ИИ-сборка модели: языковая модель уточняет допущения по профилю бизнеса.
 
 На вход — ответы опросника и черновик допущений по отраслевым правилам,
 на выход — уточнённые помесячные ряды (сезонность, реалистичные доли,
@@ -8,9 +8,9 @@
 import json
 import logging
 
-import httpx
-
 from ..config import settings
+from ..llm import LLMError
+from ..llm import complete as llm_complete
 
 logger = logging.getLogger("app.ai.builder")
 
@@ -50,38 +50,12 @@ def ai_build_assumptions(
     }
 
     try:
-        response = httpx.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": settings.ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": settings.ANTHROPIC_MODEL,
-                "max_tokens": 4000,
-                "system": _SYSTEM,
-                "messages": [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-            },
-            timeout=90.0,
-        )
-        response.raise_for_status()
-        text = "".join(
-            block.get("text", "")
-            for block in response.json().get("content", [])
-            if block.get("type") == "text"
-        ).strip()
+        text = llm_complete(_SYSTEM, json.dumps(payload, ensure_ascii=False), max_tokens=4000).strip()
         if text.startswith("```"):
             text = text.strip("`")
             text = text[text.find("{"):]
         data = json.loads(text[text.find("{"): text.rfind("}") + 1])
-    except httpx.HTTPStatusError as exc:
-        logger.warning(
-            "ai_build_assumptions: HTTP %s от API, industry=%s, horizon=%s",
-            exc.response.status_code, industry.get("code"), horizon,
-        )
-        return None
-    except (httpx.HTTPError, json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
+    except (LLMError, json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
         logger.warning(
             "ai_build_assumptions: %s (%s), industry=%s, horizon=%s",
             type(exc).__name__, exc, industry.get("code"), horizon,
