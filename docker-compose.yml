@@ -1,0 +1,89 @@
+# Data Fin Model — локальный/серверный запуск в Docker.
+#
+# Быстрый старт (без домена, только приложение + Postgres):
+#   cp .env.docker.example .env.docker
+#   docker compose --env-file .env.docker up -d --build
+#   curl http://localhost:8000/api/health
+#
+# Первая инициализация схемы БД (один раз, для новой базы):
+#   docker compose --env-file .env.docker exec app python -m app.db
+#
+# С доменом и авто-TLS (когда сервер и DNS готовы):
+#   DOMAIN=dfinmodel.online docker compose --env-file .env.docker --profile domain up -d --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: finmodel
+      POSTGRES_USER: finmodel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finmodel_change_me}
+    volumes:
+      - dfm_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finmodel -d finmodel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://finmodel:${POSTGRES_PASSWORD:-finmodel_change_me}@db:5432/finmodel
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      AI_CONFIDENCE_THRESHOLD: ${AI_CONFIDENCE_THRESHOLD:-0.8}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-15}
+      MAX_STATEMENT_ROWS: ${MAX_STATEMENT_ROWS:-20000}
+      MAX_INTAKE_FILES: ${MAX_INTAKE_FILES:-10}
+      DB_AUTO_INIT: "0"  # схему создаём явно (см. команду выше) — как на Vercel, не на каждом старте
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    volumes:
+      - ./backend/app/static:/app/backend/app/static:ro
+    expose:
+      - "8000"
+    ports:
+      # Без домена (Этап 1, локальная проверка) — приложение доступно на :8000 напрямую.
+      # Когда поднимается caddy (profile "domain"), эту строку можно закомментировать,
+      # чтобы наружу торчал только 80/443 через reverse-proxy.
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # --- Этап 2: домен + TLS. Запускается только с флагом --profile domain,
+  # когда сервер и DNS (A-запись dfinmodel.online -> IP сервера) уже готовы.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["domain"]
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:-dfinmodel.online}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  dfm_db_data:
+  caddy_data:
+  caddy_config:
