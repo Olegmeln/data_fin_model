@@ -36,12 +36,30 @@ def validate(aset: AssumptionSet) -> list[OpenQuestion]:
     """Проверки согласованности одного набора допущений."""
     issues: list[OpenQuestion] = []
     issues += _check_products(aset)
+    issues += _check_production(aset)
     issues += _check_capex(aset)
     issues += _check_financing(aset)
     issues += _check_taxes(aset)
     issues += _check_valuation(aset)
+    issues += _check_covenants(aset)
     issues += _check_confidence(aset)
     return issues
+
+
+def _check_covenants(aset: AssumptionSet) -> list[OpenQuestion]:
+    """Если пороги ковенант заданы — прогоняем движок и превращаем
+    нарушения в открытые вопросы (ядро проверки «под банк»)."""
+    cov = aset.financing.covenants
+    if all(v is None for v in (cov.dscr_min, cov.icr_min, cov.net_debt_to_ebitda_max)):
+        return []
+    try:
+        from ..book import build_book
+        breaches = build_book(aset).metrics.get("covenant_breaches", [])
+    except Exception:
+        return []  # набор ещё не считаем (нет продуктов и т.п.) — свои вопросы уже есть
+    return [_q(f"Ковенант не выполняется: {breach}", "financing.covenants",
+               variants=["пересмотреть допущения", "согласовать порог с банком"])
+            for breach in breaches]
 
 
 def _check_products(aset: AssumptionSet) -> list[OpenQuestion]:
@@ -54,6 +72,16 @@ def _check_products(aset: AssumptionSet) -> list[OpenQuestion]:
             issues.append(_q(f"Для продукта {product.name!r} не задана стартовая цена",
                              f"products.{i}.start_price"))
     return issues
+
+
+def _check_production(aset: AssumptionSet) -> list[OpenQuestion]:
+    names = {p.name for p in aset.products}
+    return [
+        _q(f"Производство: продукт {item.product!r} не найден среди продуктов модели",
+           f"production.items.{i}.product", severity="blocker",
+           variants=sorted(names))
+        for i, item in enumerate(aset.production.items) if item.product not in names
+    ]
 
 
 def _check_capex(aset: AssumptionSet) -> list[OpenQuestion]:

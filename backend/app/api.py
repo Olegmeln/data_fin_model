@@ -3,7 +3,8 @@ import hashlib
 import json
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models
@@ -16,14 +17,33 @@ from .finmodel.builder import build_dashboard
 from .finmodel.industries import INDUSTRIES, get_industry, industry_public
 from .finmodel.survey import build_survey, compute_rule_series, horizon_from, save_assumptions
 from .parsers import ParserError, parse_statement
-from .schemas import AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, SurveyAnswersIn
+from .schemas import (
+    AssumptionSetPutIn, AssumptionUpsertIn, ConfirmCategoryIn, PlanUpsertIn, SurveyAnswersIn,
+)
 
 router = APIRouter()
+
+
+def _check_upload_size(raw: bytes, filename: str | None) -> None:
+    """Единая проверка размера загружаемого файла."""
+    if not raw:
+        raise HTTPException(status_code=400, detail=f"Файл {filename or ''} пуст.".replace("  ", " "))
+    if len(raw) > settings.MAX_UPLOAD_BYTES:
+        limit_mb = settings.MAX_UPLOAD_BYTES // (1024 * 1024)
+        raise HTTPException(
+            status_code=413,
+            detail=f"Файл {filename or ''} слишком большой: лимит {limit_mb} МБ.".replace("  ", " "),
+        )
 
 
 def _operation_hash(op_date: date, amount, direction: str, counterparty: str, description: str) -> str:
     payload = f"{op_date.isoformat()}|{amount}|{direction}|{(counterparty or '')[:80]}|{(description or '')[:160]}"
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+
+def _hash_exists(db: Session, op_hash: str) -> bool:
+    """Проверка дубликата по source_hash (вынесена для тестируемости)."""
+    return db.query(models.Operation.id).filter(models.Operation.source_hash == op_hash).first() is not None
 
 
 def _operation_to_dict(op: models.Operation) -> dict:
@@ -44,60 +64,88 @@ def _operation_to_dict(op: models.Operation) -> dict:
 
 @router.get("/health")
 def health() -> dict:
+    from .db import check_db
+
+    from .llm import provider_info
+
     return {
         "status": "ok",
         "ai_enabled": settings.ai_enabled,
+        "llm": provider_info(),
         "db": settings.db_kind,
         "persistent": settings.db_persistent,
+        "db_ok": check_db(),
     }
 
 
 @router.get("/model/export")
 def export_model(title: str = "Новый проект", db: Session = Depends(get_db)):
-    """Скачивание файла финансовой модели (.xlsx) с живыми формулами."""
+    """Скачивание финмодели (.xlsx): книга по реестру листов из слоя допущений.
+
+    Единая точка экспорта (слияние с legacy-движком завершено):
+    последний набор проекта «default» → иначе мост из опросника →
+    иначе auto-профиль по умолчанию. Созданный набор сохраняется версией.
+    """
     from urllib.parse import quote
 
     from fastapi.responses import Response
 
-    from .finmodel.excel_export import export_model_bytes
-    from .finmodel.industries import TAX_RATES
+    from .finmodel.assumptions_schema import default_assumption_set
+    from .finmodel.book import build_book
+    from .finmodel.book.excel import export_book_xlsx
+    from .finmodel.from_survey import assumption_set_from_survey
+    from .finmodel.intake.preferences import apply_preferences
+    from .finmodel.intake.validator import apply_validation
+    from .finmodel.assumptions_store import load_assumption_set, save_assumption_set
 
-    drivers: dict = {}
-    profile = db.query(models.BusinessProfile).first()
-    if profile is not None:
-        answers = json.loads(profile.answers_json or "{}")
+    title = title.strip() or "Новый проект"
+    loaded = load_assumption_set(db, "default")
+    if loaded is not None:
+        _, assumptions = loaded
+    else:
+        profile = db.query(models.BusinessProfile).first()
+        if profile is not None:
+            answers = json.loads(profile.answers_json or "{}")
+            assumptions = assumption_set_from_survey(answers, name=title)
+            comment = "из опросника (экспорт)"
+        else:
+            assumptions = default_assumption_set(title)
+            comment = "auto: стартовый профиль (экспорт)"
+        assumptions = apply_preferences(db, assumptions)
+        assumptions = apply_validation(assumptions)
+        save_assumption_set(db, "default", assumptions, comment=comment)
 
-        def num(key):
-            value = answers.get(key)
-            try:
-                return float(str(value).replace(" ", "").replace(",", ".")) if value not in (None, "") else None
-            except ValueError:
-                return None
-
-        mapping = {
-            "base_revenue": num("monthly_revenue"),
-            "payroll": num("payroll_monthly"),
-            "rent": num("rent_monthly"),
-            "capex_total": num("capex_total"),
-            "loan_amount": num("loan_amount"),
-        }
-        drivers = {key: value for key, value in mapping.items() if value}
-        if num("loan_rate"):
-            drivers["loan_rate"] = num("loan_rate") / 100
-        if num("discount_rate"):
-            drivers["discount_rate"] = num("discount_rate") / 100
-        if answers.get("tax_mode") in TAX_RATES:
-            drivers["tax_rate"] = TAX_RATES[answers["tax_mode"]][0]
-        if answers.get("business_age") == "new":
-            drivers["ramp_months"] = 4
-
-    content = export_model_bytes(title=title.strip() or "Новый проект", drivers=drivers)
-    filename = f"Финмодель_{title.strip() or 'проект'}.xlsx"
+    book = build_book(assumptions)
+    content = export_book_xlsx(assumptions, book)
+    filename = f"Финмодель_{title}.xlsx"
     return Response(
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=model.xlsx; filename*=UTF-8''{quote(filename)}"},
     )
+
+
+@router.get("/agents")
+def list_agents(goal: str | None = None) -> dict:
+    """Карта агентских навыков и план выполнения.
+
+    Без параметров — весь реестр с покрытием по ролям и этапам.
+    С `?goal=book` — упорядоченный план навыков для получения артефакта
+    при текущей конфигурации LLM (недоступные заменяются fallback'ами).
+    Это машиночитаемая часть контракта AFM&C: внешний агент видит,
+    что умеет модель и в каком порядке это выполняется.
+    """
+    from .agents import as_public, available, coverage, plan
+
+    payload = {
+        "llm_enabled": settings.ai_enabled,
+        "coverage": coverage(),
+        "skills": [as_public(s) for s in available(settings.ai_enabled)],
+    }
+    if goal:
+        payload["goal"] = goal
+        payload["plan"] = [as_public(s) for s in plan(goal, llm_enabled=settings.ai_enabled)]
+    return payload
 
 
 @router.get("/categories")
@@ -228,7 +276,7 @@ def upsert_assumptions(body: AssumptionUpsertIn, db: Session = Depends(get_db)) 
 
 @router.delete("/assumptions/{assumption_id}")
 def delete_assumption(assumption_id: int, db: Session = Depends(get_db)) -> dict:
-    assumption = db.query(models.Assumption).get(assumption_id)
+    assumption = db.get(models.Assumption, assumption_id)
     if assumption is None:
         raise HTTPException(status_code=404, detail="Допущение не найдено.")
     db.delete(assumption)
@@ -242,13 +290,19 @@ def delete_assumption(assumption_id: int, db: Session = Depends(get_db)) -> dict
 async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> dict:
     """Загрузка выписки: парсинг → дедупликация → категоризация (правила + ИИ)."""
     raw = await file.read()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Файл пуст.")
+    _check_upload_size(raw, file.filename)
 
     try:
         fmt, parsed = parse_statement(file.filename, raw)
     except ParserError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if len(parsed) > settings.MAX_STATEMENT_ROWS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"В выписке {len(parsed)} операций — лимит {settings.MAX_STATEMENT_ROWS}. "
+                   "Разбейте файл на части.",
+        )
 
     log = models.ImportLog(filename=file.filename or "statement", fmt=fmt, total_rows=len(parsed))
     db.add(log)
@@ -268,7 +322,7 @@ async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> d
             duplicates += 1
             continue
         seen_hashes.add(op_hash)
-        if db.query(models.Operation.id).filter(models.Operation.source_hash == op_hash).first():
+        if _hash_exists(db, op_hash):
             duplicates += 1
             continue
 
@@ -315,10 +369,22 @@ async def upload_statement(file: UploadFile, db: Session = Depends(get_db)) -> d
             if confidence >= settings.CONFIDENCE_THRESHOLD:
                 operation.status = "auto"
 
-    db.add_all(new_operations)
-    log.imported = len(new_operations)
+    # Вставка построчно через savepoint: при гонке двух одновременных импортов
+    # дубликат по source_hash (unique) не откатывает весь импорт, а считается duplicates.
+    imported: list[models.Operation] = []
+    for operation in new_operations:
+        savepoint = db.begin_nested()
+        try:
+            db.add(operation)
+            db.flush()
+            imported.append(operation)
+        except IntegrityError:
+            savepoint.rollback()
+            duplicates += 1
+
+    log.imported = len(imported)
     log.duplicates = duplicates
-    log.needs_review = sum(1 for op in new_operations if op.status == "needs_review")
+    log.needs_review = sum(1 for op in imported if op.status == "needs_review")
     db.commit()
 
     return {
@@ -356,9 +422,9 @@ def list_operations(
     status: str | None = None,
     month: str | None = None,
     category: str | None = None,
-    q: str | None = None,
-    limit: int = 200,
-    offset: int = 0,
+    q: str | None = Query(None, max_length=200),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> dict:
     query = db.query(models.Operation)
@@ -396,7 +462,7 @@ def confirm_category(
     db: Session = Depends(get_db),
 ) -> dict:
     """Подтверждение/смена статьи. Создаёт правило и применяет его к похожим операциям."""
-    operation = db.query(models.Operation).get(operation_id)
+    operation = db.get(models.Operation, operation_id)
     if operation is None:
         raise HTTPException(status_code=404, detail="Операция не найдена.")
     category = db.query(models.Category).filter(models.Category.code == body.category_code).first()
@@ -564,9 +630,15 @@ async def intake_extract(
     db: Session = Depends(get_db),
 ) -> dict:
     """Документы → извлечение → память предпочтений → валидация → черновик набора."""
+    if len(files) > settings.MAX_INTAKE_FILES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Слишком много файлов: {len(files)} — лимит {settings.MAX_INTAKE_FILES}.",
+        )
     documents = []
     for upload in files:
         raw = await upload.read()
+        _check_upload_size(raw, upload.filename)
         try:
             documents.append(extract_text(upload.filename or "документ", raw))
         except IntakeError as exc:
@@ -583,6 +655,36 @@ async def intake_extract(
         db, project, assumptions,
         comment=f"извлечено из: {', '.join(d.filename for d in documents)}",
     )
+    return _record_out(record, assumptions)
+
+
+@router.post("/assumption-sets/{project}/auto")
+def auto_assumption_set(project: str, name: str | None = None, db: Session = Depends(get_db)) -> dict:
+    """Auto-режим формы допущений: стартовый профиль по умолчанию
+    (Архитектура_финмодели_v1) + память предпочтений + валидация → новая версия."""
+    from .finmodel.assumptions_schema import default_assumption_set
+
+    assumptions = default_assumption_set(name or project)
+    assumptions = apply_preferences(db, assumptions)
+    assumptions = apply_validation(assumptions)
+    record = save_assumption_set(db, project, assumptions, comment="auto: стартовый профиль")
+    return _record_out(record, assumptions)
+
+
+@router.post("/assumption-sets/{project}/from-survey")
+def assumption_set_from_survey_endpoint(project: str, db: Session = Depends(get_db)) -> dict:
+    """Мост «опросник → assumptions.v1»: профиль бизнеса конвертируется
+    в набор допущений публичной схемы (источники method=derived)."""
+    from .finmodel.from_survey import assumption_set_from_survey
+
+    profile = db.query(models.BusinessProfile).first()
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Опросник ещё не пройден.")
+    answers = json.loads(profile.answers_json or "{}")
+    assumptions = assumption_set_from_survey(answers, name=project)
+    assumptions = apply_preferences(db, assumptions)
+    assumptions = apply_validation(assumptions)
+    record = save_assumption_set(db, project, assumptions, comment="из опросника")
     return _record_out(record, assumptions)
 
 
@@ -609,13 +711,11 @@ def get_assumption_versions(project: str, db: Session = Depends(get_db)) -> list
 
 
 @router.put("/assumption-sets/{project}")
-def put_assumption_set(project: str, body: dict, db: Session = Depends(get_db)) -> dict:
+def put_assumption_set(project: str, body: AssumptionSetPutIn, db: Session = Depends(get_db)) -> dict:
     """Сохранение правок пользователя новой версией; confirmed пополняет память."""
-    status = body.get("status", "draft")
-    if status not in ("draft", "confirmed"):
-        raise HTTPException(status_code=400, detail="status должен быть draft или confirmed")
+    status = body.status
     try:
-        assumptions = AssumptionSet.from_json(body.get("assumptions") or {})
+        assumptions = AssumptionSet.from_json(body.assumptions or {})
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Набор не прошёл схему: {exc}") from exc
     assumptions = apply_validation(assumptions)
@@ -626,7 +726,7 @@ def put_assumption_set(project: str, body: dict, db: Session = Depends(get_db)) 
             detail={"message": "Нельзя подтвердить набор с blocker-вопросами",
                     "open_questions": [q.model_dump(exclude_none=True) for q in blockers]},
         )
-    record = save_assumption_set(db, project, assumptions, status=status, comment=body.get("comment"))
+    record = save_assumption_set(db, project, assumptions, status=status, comment=body.comment)
     if status == "confirmed":
         store_preferences(db, assumptions)
     return _record_out(record, assumptions)

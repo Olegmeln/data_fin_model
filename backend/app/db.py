@@ -1,8 +1,12 @@
 """Подключение к базе данных и инициализация."""
-from sqlalchemy import create_engine
+import logging
+
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from .config import settings
+
+logger = logging.getLogger("app.db")
 
 
 class Base(DeclarativeBase):
@@ -25,6 +29,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def check_db() -> bool:
+    """Лёгкая проверка доступности БД (SELECT 1), схему не меняет."""
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return True
+    except Exception as exc:  # noqa: BLE001 — недоступность БД не должна ронять импорт приложения
+        logger.error("База данных недоступна: %s (%s)", type(exc).__name__, exc)
+        return False
 
 
 def init_db() -> None:
@@ -72,3 +87,10 @@ def _stamp_alembic_head() -> None:
         command.stamp(config, "head")
     except Exception:  # noqa: BLE001 — штамп не должен ронять запуск приложения
         pass
+
+
+if __name__ == "__main__":
+    # Инициализация новой БД вручную: python -m app.db
+    # (создание таблиц, штамп Alembic, сидирование справочника статей).
+    init_db()
+    print("init_db: ok")

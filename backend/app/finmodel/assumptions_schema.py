@@ -139,6 +139,52 @@ class Opex(Strict):
     items: list[OpexItem] = Field(default_factory=list)
 
 
+class ProductionItem(Strict):
+    """Себестоимость и закупки по продукту: производство/закупка, логистика, хранение."""
+
+    product: str                                    # имя продукта из products
+    unit_cost: float = Field(ge=0)                  # себестоимость/закупка за единицу
+    logistics_pct: float = Field(0, ge=0, le=100)   # логистика, % от закупок
+    storage_monthly: float = Field(0, ge=0)         # хранение, фикс в месяц
+    lead_months: int = Field(0, ge=0)               # закупка за N мес до продажи (запасы)
+
+
+class Production(Strict):
+    items: list[ProductionItem] = Field(default_factory=list)
+
+
+class StaffRole(Strict):
+    """Роль в штатном расписании: оклад gross на человека."""
+
+    name: str
+    count: float = Field(1, ge=0)
+    monthly_salary: float = Field(ge=0)
+    start_month: int = Field(0, ge=0)            # от старта модели
+    end_month: int | None = Field(None, ge=0)    # None = до конца горизонта
+
+
+class Staff(Strict):
+    roles: list[StaffRole] = Field(default_factory=list)
+    contributions_included: bool = False  # True = взносы уже в окладе
+
+
+class Milestone(Strict):
+    """Веха дорожной карты проекта."""
+
+    name: str
+    month: int = Field(ge=0)                     # от старта модели
+    kind: str = "stage"                          # stage | capex | launch | finance
+    note: str | None = None
+
+
+class Covenants(Strict):
+    """Ковенанты кредитного пакета: None = не задан."""
+
+    dscr_min: float | None = Field(None, ge=0)
+    icr_min: float | None = Field(None, ge=0)
+    net_debt_to_ebitda_max: float | None = Field(None, ge=0)
+
+
 class FacilityKind(str, Enum):
     investment = "investment"
     working_capital = "working_capital"
@@ -157,6 +203,7 @@ class CreditFacility(Strict):
 class Financing(Strict):
     equity_amount: float = Field(0, ge=0)
     facilities: list[CreditFacility] = Field(default_factory=list)
+    covenants: Covenants = Field(default_factory=Covenants)
 
     @property
     def debt_amount(self) -> float:
@@ -206,6 +253,9 @@ class AssumptionSet(Strict):
     products: list[Product] = Field(default_factory=list)
     capex: Capex = Field(default_factory=Capex)
     opex: Opex = Field(default_factory=Opex)
+    production: Production = Field(default_factory=Production)
+    staff: Staff = Field(default_factory=Staff)
+    milestones: list[Milestone] = Field(default_factory=list)
     financing: Financing = Field(default_factory=Financing)
     taxes: Taxes = Field(default_factory=Taxes)
     valuation: Valuation = Field(default_factory=Valuation)
@@ -235,6 +285,31 @@ class AssumptionSet(Strict):
         if isinstance(raw, dict):
             return cls.model_validate(raw)
         return cls.model_validate_json(raw)
+
+
+def default_assumption_set(name: str = "Новый проект") -> AssumptionSet:
+    """Стартовый профиль auto-режима (Архитектура_финмодели_v1, «Допущения по умолчанию»):
+    5 лет, 9% дисконтирования, 4 продукта = 2 товара + 2 услуги, три сценария."""
+    return AssumptionSet(
+        profile=ProjectProfile(
+            name=name,
+            project_type="строительство → производство → реализация",
+            horizon_years=5,
+        ),
+        products=[
+            Product(name="Товар 1"),
+            Product(name="Товар 2"),
+            Product(name="Услуга 1", kind=ProductKind.service),
+            Product(name="Услуга 2", kind=ProductKind.service),
+        ],
+        valuation=Valuation(discount_rate_pct=9.0),
+        scenarios=[
+            Scenario(name="Пессимистичный"),
+            Scenario(name="Базовый"),
+            Scenario(name="Оптимистичный"),
+        ],
+        sources={"profile": SourceRef(method=SourceMethod.default, note="стартовый профиль (auto)")},
+    )
 
 
 def export_json_schema() -> dict:

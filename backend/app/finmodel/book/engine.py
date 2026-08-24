@@ -75,6 +75,19 @@ class BookData:
     debt_outstanding: list[float]
     net_cf: list[float]
     cumulative_cf: list[float]
+    opex_by_item: dict[str, list[float]] = field(default_factory=dict)
+    payroll_by_role: dict[str, list[float]] = field(default_factory=dict)
+    fixed_assets: list[float] = field(default_factory=list)   # ОС по остаточной стоимости
+    cash: list[float] = field(default_factory=list)           # деньги (вкл. equity на старте)
+    equity_book: list[float] = field(default_factory=list)    # капитал: взнос + накопл. прибыль
+    inventory: list[float] = field(default_factory=list)      # запасы (закупки − себестоимость)
+    purchases: list[float] = field(default_factory=list)      # кассовые закупки
+    volumes_by_product: dict[str, list[float]] = field(default_factory=dict)
+    cogs_by_product: dict[str, list[float]] = field(default_factory=dict)
+    depreciation: list[float] = field(default_factory=list)
+    ebit: list[float] = field(default_factory=list)
+    tax: list[float] = field(default_factory=list)
+    net_income: list[float] = field(default_factory=list)
     metrics: dict = field(default_factory=dict)
 
 
@@ -85,22 +98,89 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
     months = [_add_months(start, i) for i in range(horizon)]
 
     revenue_by_product: dict[str, list[float]] = {}
+    volumes_by_product: dict[str, list[float]] = {}
     for product in aset.products:
         price = product.start_price or 0.0
         volume_full = product.start_volume or 0.0
         ramp = product.ramp_up_months or 0
         series = []
+        volumes = []
         for i in range(horizon):
             share = 1.0 if ramp == 0 else min(1.0, (i + 1) / ramp)
+            volumes.append(volume_full * share)
             series.append(price * volume_full * share)
         revenue_by_product[product.name] = series
+        volumes_by_product[product.name] = volumes
     revenue = [sum(values) for values in zip(*revenue_by_product.values())] if revenue_by_product else [0.0] * horizon
 
-    opex = []
-    for i in range(horizon):
-        fixed = sum(item.monthly_amount for item in aset.opex.items)
-        variable = sum(revenue[i] * item.pct_of_revenue / 100 for item in aset.opex.items)
-        opex.append(fixed + variable)
+    opex_by_item: dict[str, list[float]] = {}
+    for item in aset.opex.items:
+        name = item.name
+        while name in opex_by_item:  # дубликаты имён не теряем
+            name += " ·"
+        opex_by_item[name] = [
+            item.monthly_amount + revenue[i] * item.pct_of_revenue / 100 for i in range(horizon)
+        ]
+    # производство/закупки: себестоимость соответствует проданному объёму (P&L),
+    # закупки могут идти с опережением lead_months — разница копится в запасах
+    cogs_by_product: dict[str, list[float]] = {}
+    purchases = [0.0] * horizon
+    production_extra: dict[str, list[float]] = {}
+    for item in aset.production.items:
+        volumes = volumes_by_product.get(item.product)
+        if volumes is None:
+            continue  # валидатор подсветит несуществующий продукт
+        cogs_series = [volumes[i] * item.unit_cost for i in range(horizon)]
+        cogs_by_product[item.product] = cogs_series
+        for i in range(horizon):
+            buy_month = i - item.lead_months
+            # закупка под объём месяца i происходит в buy_month
+            if 0 <= buy_month < horizon:
+                purchases[buy_month] += cogs_series[i]
+            elif buy_month < 0:
+                purchases[0] += cogs_series[i]  # стартовые закупки — в месяц 0
+        if item.logistics_pct:
+            production_extra.setdefault("Логистика", [0.0] * horizon)
+            for i in range(horizon):
+                production_extra["Логистика"][i] += cogs_series[i] * item.logistics_pct / 100
+        if item.storage_monthly:
+            production_extra.setdefault("Хранение", [0.0] * horizon)
+            for i in range(horizon):
+                production_extra["Хранение"][i] += item.storage_monthly
+    if cogs_by_product:
+        opex_by_item["Себестоимость (производство/закупки)"] = [
+            sum(series[i] for series in cogs_by_product.values()) for i in range(horizon)
+        ]
+    for name, series in production_extra.items():
+        opex_by_item[name] = series
+
+    # ФОТ из штатного расписания: попадает в OPEX как две статьи, поэтому
+    # EBITDA/налоги/CF учитывают персонал автоматически; детализация — на листе ФОТ
+    payroll_by_role: dict[str, list[float]] = {}
+    for role in aset.staff.roles:
+        series = []
+        for i in range(horizon):
+            active = role.start_month <= i and (role.end_month is None or i <= role.end_month)
+            series.append(role.count * role.monthly_salary if active else 0.0)
+        name = role.name
+        while name in payroll_by_role:
+            name += " ·"
+        payroll_by_role[name] = series
+    payroll_total = ([sum(v) for v in zip(*payroll_by_role.values())]
+                     if payroll_by_role else [0.0] * horizon)
+    contributions = [0.0] * horizon
+    if any(payroll_total) and not aset.staff.contributions_included:
+        contributions = [
+            payroll_total[i] * aset.taxes.payroll_contributions.value_at(months[i]) / 100
+            for i in range(horizon)
+        ]
+    if any(payroll_total):
+        opex_by_item["ФОТ (штат)"] = payroll_total
+        if any(contributions):
+            opex_by_item["Страховые взносы"] = contributions
+
+    opex = ([sum(values) for values in zip(*opex_by_item.values())]
+            if opex_by_item else [0.0] * horizon)
 
     ebitda = [revenue[i] - opex[i] for i in range(horizon)]
 
@@ -113,6 +193,22 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
             capex[i] += item.amount / span
     if not aset.capex.items and aset.capex.total_override:
         capex[0] = aset.capex.total_override
+
+    # амортизация: линейная, позиция начинает амортизироваться со следующего
+    # месяца после завершения графика ввода (или с месяца 1 для итога без разбивки)
+    depreciation = [0.0] * horizon
+    dep_months = aset.capex.depreciation_months
+    if dep_months:
+        starts: list[tuple[int, float]] = []
+        for item in aset.capex.items:
+            first, last = item.schedule_months or (0, 0)
+            starts.append((min(horizon - 1, max(first, last)) + 1, item.amount))
+        if not aset.capex.items and aset.capex.total_override:
+            starts.append((1, aset.capex.total_override))
+        for start_month, amount in starts:
+            monthly = amount / dep_months
+            for i in range(start_month, min(horizon, start_month + dep_months)):
+                depreciation[i] += monthly
 
     debt_draw = [0.0] * horizon
     interest = [0.0] * horizon
@@ -134,8 +230,23 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
                 outstanding -= payment
             debt_outstanding[i] += outstanding
 
+    # P&L: EBIT, налог на прибыль (ставка — расписание во времени), чистая прибыль
+    ebit = [ebitda[i] - depreciation[i] for i in range(horizon)]
+    tax = [0.0] * horizon
+    net_income = [0.0] * horizon
+    for i in range(horizon):
+        taxable = ebit[i] - interest[i]
+        rate_pct = aset.taxes.profit.value_at(months[i])
+        tax[i] = max(0.0, taxable * rate_pct / 100)
+        net_income[i] = taxable - tax[i]
+
+    # чистый поток — после налога; кассово закупки могут опережать себестоимость
+    # (Δзапасов вычитается из потока и оседает в балансе строкой «Запасы»)
+    cogs_total = opex_by_item.get("Себестоимость (производство/закупки)", [0.0] * horizon)
+    inventory_delta = [purchases[i] - cogs_total[i] for i in range(horizon)]
     net_cf = [
-        ebitda[i] - capex[i] + debt_draw[i] - interest[i] - principal[i]
+        ebitda[i] - tax[i] - capex[i] + debt_draw[i] - interest[i] - principal[i]
+        - inventory_delta[i]
         for i in range(horizon)
     ]
     cumulative = []
@@ -144,14 +255,61 @@ def build_book(aset: AssumptionSet, scenario: str | None = None) -> BookData:
         running += value
         cumulative.append(running)
 
+    # прогнозный баланс (упрощённый): Активы (ОС + деньги) = Капитал + Долг.
+    # Тождество выполняется алгебраически: деньги включают взнос собственного
+    # капитала на старте, капитал прирастает чистой прибылью.
+    fixed_assets = []
+    cash = []
+    equity_book = []
+    inventory = []
+    capex_cum = dep_cum = ni_cum = inv_cum = 0.0
+    equity0 = aset.financing.equity_amount
+    for i in range(horizon):
+        capex_cum += capex[i]
+        dep_cum += depreciation[i]
+        ni_cum += net_income[i]
+        inv_cum += inventory_delta[i]
+        fixed_assets.append(capex_cum - dep_cum)
+        inventory.append(inv_cum)
+        cash.append(equity0 + cumulative[i])
+        equity_book.append(equity0 + ni_cum)
+
     book = BookData(
         months=months, revenue=revenue, revenue_by_product=revenue_by_product,
         opex=opex, ebitda=ebitda, capex=capex, debt_draw=debt_draw,
         interest=interest, principal=principal, debt_outstanding=debt_outstanding,
         net_cf=net_cf, cumulative_cf=cumulative,
+        opex_by_item=opex_by_item, payroll_by_role=payroll_by_role,
+        depreciation=depreciation,
+        ebit=ebit, tax=tax, net_income=net_income,
+        fixed_assets=fixed_assets, cash=cash, equity_book=equity_book,
+        inventory=inventory, purchases=purchases,
+        volumes_by_product=volumes_by_product, cogs_by_product=cogs_by_product,
     )
     book.metrics = _metrics(aset, book)
     return book
+
+
+# ------------------------------------------------------- чувствительность
+
+def npv_sensitivity(aset: AssumptionSet,
+                    price_factors: list[float],
+                    volume_factors: list[float]) -> list[list[float]]:
+    """Матрица NPV: строки — множители цены, столбцы — множители объёма.
+    Сценарная механика движка (И-3): масштабируем драйверы, не копируем листы."""
+    matrix: list[list[float]] = []
+    for pf in price_factors:
+        row: list[float] = []
+        for vf in volume_factors:
+            scaled = aset.model_copy(deep=True)
+            for product in scaled.products:
+                if product.start_price is not None:
+                    product.start_price *= pf
+                if product.start_volume is not None:
+                    product.start_volume *= vf
+            row.append(build_book(scaled).metrics["npv"])
+        matrix.append(row)
+    return matrix
 
 
 # ------------------------------------------------------------- метрики
@@ -188,9 +346,9 @@ def _mirr_yearly(flows: list[float], finance_rate_pct: float, reinvest_rate_pct:
 
 
 def _metrics(aset: AssumptionSet, book: BookData) -> dict:
-    # проектные потоки: без кредитных движений (FCFF-подход)
+    # проектные потоки: без кредитных движений, после налога (FCFF-подход)
     project_flows = [
-        book.ebitda[i] - book.capex[i] for i in range(len(book.months))
+        book.ebitda[i] - book.tax[i] - book.capex[i] for i in range(len(book.months))
     ]
     monthly_discount = (1 + aset.valuation.discount_rate_pct / 100) ** (1 / 12) - 1
     npv = _npv(monthly_discount, project_flows)
@@ -212,13 +370,35 @@ def _metrics(aset: AssumptionSet, book: BookData) -> dict:
     debt_service = [book.interest[i] + book.principal[i] for i in range(len(book.months))]
     years = len(book.months) // 12
     dscr_by_year = []
+    icr_by_year = []
+    net_debt_to_ebitda_by_year = []
     for y in range(years):
         service = sum(debt_service[y * 12:(y + 1) * 12])
+        interest_y = sum(book.interest[y * 12:(y + 1) * 12])
         cash = sum(book.ebitda[y * 12:(y + 1) * 12])
         if service > 0:
             dscr_by_year.append(round(cash / service, 2))
+        if interest_y > 0:
+            icr_by_year.append(round(cash / interest_y, 2))
+        debt_eoy = book.debt_outstanding[y * 12 + 11]
+        if debt_eoy > 0 and cash > 0:
+            net_debt_to_ebitda_by_year.append(round(debt_eoy / cash, 2))
     if dscr_by_year:
         dscr_min = min(dscr_by_year)
+
+    # проверка ковенант (заданных в financing.covenants)
+    cov = aset.financing.covenants
+    covenant_breaches: list[str] = []
+    if cov.dscr_min is not None and dscr_by_year and min(dscr_by_year) < cov.dscr_min:
+        covenant_breaches.append(
+            f"DSCR {min(dscr_by_year)} < {cov.dscr_min} (порог)")
+    if cov.icr_min is not None and icr_by_year and min(icr_by_year) < cov.icr_min:
+        covenant_breaches.append(
+            f"ICR {min(icr_by_year)} < {cov.icr_min} (порог)")
+    if (cov.net_debt_to_ebitda_max is not None and net_debt_to_ebitda_by_year
+            and max(net_debt_to_ebitda_by_year) > cov.net_debt_to_ebitda_max):
+        covenant_breaches.append(
+            f"Долг/EBITDA {max(net_debt_to_ebitda_by_year)} > {cov.net_debt_to_ebitda_max} (порог)")
 
     return {
         "npv": round(npv, 2),
@@ -228,6 +408,9 @@ def _metrics(aset: AssumptionSet, book: BookData) -> dict:
         "discount_rate_pct": aset.valuation.discount_rate_pct,
         "dscr_by_year": dscr_by_year,
         "dscr_min": dscr_min,
+        "icr_by_year": icr_by_year,
+        "net_debt_to_ebitda_by_year": net_debt_to_ebitda_by_year,
+        "covenant_breaches": covenant_breaches,
         "revenue_total": round(sum(book.revenue), 2),
         "capex_total": round(sum(book.capex), 2),
     }

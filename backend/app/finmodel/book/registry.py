@@ -26,12 +26,21 @@ class SheetSpec:
 
 REGISTRY: tuple[SheetSpec, ...] = (
     SheetSpec("cover", "Обложка", "build_cover"),
+    SheetSpec("roadmap", "Дорожная карта", "build_roadmap"),
     SheetSpec("assumptions", "Допущения", "build_assumptions"),
     SheetSpec("cf", "CF", "build_cf"),
     SheetSpec("dashboard", "Дашборд", "build_dashboard"),
+    SheetSpec("sales", "План продаж", "build_sales"),
+    SheetSpec("production", "Производство", "build_production"),
+    SheetSpec("capex", "CAPEX и амортизация", "build_capex_sheet"),
+    SheetSpec("opex", "Опер. расходы", "build_opex_sheet"),
+    SheetSpec("staff", "ФОТ", "build_staff"),
+    SheetSpec("pl", "ПиУ", "build_pl"),
+    SheetSpec("balance", "Балансы", "build_balance"),
     SheetSpec("credit", "Кредит", "build_credit"),
-    # будущие листы целевой архитектуры регистрируются здесь:
-    # sales, production, admin, capex, staff, statements, covenants ...
+    SheetSpec("covenants", "Ковенанты", "build_covenants"),
+    SheetSpec("sensitivity", "Чувствительность", "build_sensitivity"),
+    # целевая архитектура v1 покрыта полностью; новые листы — через реестр
 )
 
 

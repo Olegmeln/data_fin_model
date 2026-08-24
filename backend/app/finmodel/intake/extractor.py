@@ -1,7 +1,7 @@
 """Экстрактор допущений: текст документов → AssumptionSet (строго по схеме).
 
 LLM-клиент инъектируется (callable system, user -> str), поэтому модуль
-тестируется без сети; боевой клиент — Anthropic API из настроек.
+тестируется без сети; боевой клиент — слой app.llm (провайдер задаётся настройками).
 """
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ import json
 import re
 from typing import Callable
 
-import httpx
-
 from ...config import settings
+from ...llm import LLMError
+from ...llm import complete as llm_complete
 from ..assumptions_schema import SCHEMA_ID, AssumptionSet, export_json_schema
 from .errors import IntakeError
 from .textract import ExtractedDoc
@@ -36,30 +36,16 @@ _SYSTEM_TEMPLATE = (
 )
 
 
-def _anthropic_llm(system: str, user: str) -> str:
-    """Боевой клиент Anthropic API (используется, если llm не инъектирован)."""
+def _default_llm(system: str, user: str) -> str:
+    """Боевой клиент через слой провайдеров (используется, если llm не инъектирован)."""
     if not settings.ai_enabled:
-        raise IntakeError("ИИ-извлечение недоступно: не задан ANTHROPIC_API_KEY")
-    try:
-        response = httpx.post(
-            settings.ANTHROPIC_API_URL,
-            headers={
-                "x-api-key": settings.ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": settings.ANTHROPIC_MODEL,
-                "max_tokens": 8000,
-                "system": system,
-                "messages": [{"role": "user", "content": user}],
-            },
-            timeout=120,
+        raise IntakeError(
+            "ИИ-извлечение недоступно: не задан ключ модели "
+            "(LLM_API_KEY / ANTHROPIC_API_KEY) или LLM_BASE_URL для локальной модели"
         )
-        response.raise_for_status()
-        blocks = response.json().get("content", [])
-        return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
-    except httpx.HTTPError as exc:
+    try:
+        return llm_complete(system, user, max_tokens=8000)
+    except LLMError as exc:
         raise IntakeError(f"сбой обращения к ИИ: {exc}") from exc
 
 
@@ -91,7 +77,7 @@ def extract_assumptions(
     if not documents:
         raise IntakeError("не передано ни одного документа")
     system, user = build_prompt(documents)
-    raw = (llm or _anthropic_llm)(system, user)
+    raw = (llm or _default_llm)(system, user)
 
     payload = _strip_fences(raw)
     try:

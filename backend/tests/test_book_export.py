@@ -32,7 +32,15 @@ def book_set() -> AssumptionSet:
 class TestRegistry:
     def test_default_composition_and_order(self):
         codes = [s.code for s in resolve_sheets()]
-        assert codes == ["cover", "assumptions", "cf", "dashboard", "credit"]
+        assert codes == ["cover", "roadmap", "assumptions", "cf", "dashboard", "sales",
+                         "production", "capex", "opex", "staff", "pl", "balance",
+                         "credit", "covenants", "sensitivity"]
+
+    def test_registry_builders_exist(self):
+        """Структурный контракт: каждый лист реестра имеет строителя в excel.py."""
+        from app.finmodel.book.excel import _BUILDERS
+        for spec in REGISTRY:
+            assert spec.builder_name in _BUILDERS, spec.code
 
     def test_subset_keeps_requested_order(self):
         codes = [s.code for s in resolve_sheets(["dashboard", "cf"])]
@@ -54,16 +62,57 @@ class TestExcelBook:
         return load_workbook(io.BytesIO(payload))
 
     def test_all_sheets_present(self):
-        assert self._workbook().sheetnames == ["Обложка", "Допущения", "CF", "Дашборд", "Кредит"]
+        assert self._workbook().sheetnames == [
+            "Обложка", "Дорожная карта", "Допущения", "CF", "Дашборд", "План продаж",
+            "Производство", "CAPEX и амортизация", "Опер. расходы", "ФОТ", "ПиУ",
+            "Балансы", "Кредит", "Ковенанты", "Чувствительность"]
+
+    def test_defined_names_contract(self):
+        """Именованные ячейки — контракт AFM&C для внешних агентов в Excel."""
+        wb = self._workbook()
+        names = set(wb.defined_names.keys())
+        for expected in ("RevenueRow", "OpexRow", "ProfitTaxRow", "NetCFRow",
+                         "NPV", "IRR", "DSCRmin"):
+            assert expected in names, expected
+        assert "CF" in wb.defined_names["RevenueRow"].attr_text
+
+    def test_sensitivity_center_is_base_npv(self):
+        from app.finmodel.book import build_book
+        aset = book_set()
+        base_npv = build_book(aset).metrics["npv"]
+        sheet = self._workbook()["Чувствительность"]
+        # матрица 5×5 начинается в B4; центр (1.0×1.0) — D6
+        assert sheet.cell(row=6, column=4).value == pytest.approx(base_npv)
+
+    def test_sensitivity_monotonic_in_price(self):
+        sheet = self._workbook()["Чувствительность"]
+        col = 4  # базовый объём
+        values = [sheet.cell(row=r, column=col).value for r in range(4, 9)]
+        assert values == sorted(values)  # больше цена — больше NPV
+
+    def test_balance_check_is_formula(self):
+        balance = self._workbook()["Балансы"]
+        assert str(balance.cell(row=6, column=2).value).startswith("=")   # активы
+        assert str(balance.cell(row=10, column=2).value).startswith("=")  # проверка А−П
+
+    def test_sales_total_is_formula(self):
+        sales = self._workbook()["План продаж"]
+        assert str(sales.cell(row=4, column=2).value).startswith("=SUM(")
+
+    def test_pl_net_income_is_formula(self):
+        pl = self._workbook()["ПиУ"]
+        assert str(pl.cell(row=5, column=2).value).startswith("=")   # EBITDA
+        assert str(pl.cell(row=10, column=2).value).startswith("=")  # чистая прибыль
 
     def test_subset_export(self):
         assert self._workbook(["cf", "dashboard"]).sheetnames == ["CF", "Дашборд"]
 
     def test_cf_totals_are_formulas_not_values(self):
         cf = self._workbook()["CF"]
-        assert str(cf.cell(row=9, column=2).value).startswith("=")   # EBITDA
-        assert str(cf.cell(row=10, column=2).value).startswith("=")  # чистый поток
-        assert str(cf.cell(row=11, column=3).value).startswith("=B11")  # кумулятив тянет предыдущий
+        assert cf.cell(row=9, column=1).value == "Налог на прибыль"
+        assert str(cf.cell(row=10, column=2).value).startswith("=")  # EBITDA
+        assert str(cf.cell(row=11, column=2).value).startswith("=")  # чистый поток после налога
+        assert str(cf.cell(row=12, column=3).value).startswith("=B12")  # кумулятив тянет предыдущий
 
     def test_dashboard_links_cf_by_formula(self):
         dash = self._workbook()["Дашборд"]

@@ -63,3 +63,15 @@ def test_excel_export_is_valid_workbook(client, sample_csv):
     assert response.status_code == 200
     workbook = openpyxl.load_workbook(io.BytesIO(response.content))
     assert len(workbook.sheetnames) >= 1
+
+
+def test_model_export_serves_registry_book(client):
+    """Слияние экспортов: /api/model/export отдаёт книгу по реестру
+    и сохраняет созданный набор версией проекта default."""
+    response = client.get("/api/model/export", params={"title": "Слияние"})
+    assert response.status_code == 200
+    workbook = openpyxl.load_workbook(io.BytesIO(response.content))
+    assert "Ковенанты" in workbook.sheetnames          # лист книги, не legacy
+    assert "RevenueRow" in workbook.defined_names       # контракт имён
+    versions = client.get("/api/assumption-sets/default/versions")
+    assert versions.status_code == 200 and len(versions.json()) >= 1

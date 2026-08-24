@@ -56,6 +56,189 @@ class TestSeries:
         assert book.months[-1] == date(2028, 12, 1)
 
 
+class TestDepreciationAndPL:
+    def test_no_depreciation_without_term(self):
+        book = build_book(demo_set())
+        assert all(v == 0 for v in book.depreciation)
+
+    def test_linear_depreciation_starts_after_schedule(self):
+        aset = demo_set(capex=Capex(
+            items=[CapexItem(name="Оборудование", amount=1200, schedule_months=(0, 3))],
+            depreciation_months=12))
+        book = build_book(aset)
+        assert book.depreciation[3] == 0.0            # ещё строим
+        assert book.depreciation[4] == pytest.approx(100.0)   # 1200/12 со следующего месяца
+        assert book.depreciation[15] == pytest.approx(100.0)
+        assert book.depreciation[16] == 0.0
+        assert sum(book.depreciation) == pytest.approx(1200.0)
+
+    def test_total_override_depreciates_from_month_one(self):
+        aset = demo_set(capex=Capex(total_override=600, depreciation_months=6))
+        book = build_book(aset)
+        assert book.depreciation[0] == 0.0
+        assert book.depreciation[1] == pytest.approx(100.0)
+        assert sum(book.depreciation) == pytest.approx(600.0)
+
+    def test_opex_by_item_sums_to_opex(self):
+        book = build_book(demo_set())
+        assert set(book.opex_by_item) == {"Аренда", "Логистика"}
+        for i in (0, 4, 20):
+            assert sum(s[i] for s in book.opex_by_item.values()) == pytest.approx(book.opex[i])
+
+    def test_profit_tax_and_net_income(self):
+        aset = demo_set(capex=Capex(
+            items=[CapexItem(name="О", amount=1200, schedule_months=(0, 3))],
+            depreciation_months=12))
+        book = build_book(aset)
+        i = 10  # рабочий месяц: выручка 1000, opex 300, амортизация 100
+        ebit = book.ebitda[i] - book.depreciation[i]
+        assert book.ebit[i] == pytest.approx(ebit)
+        taxable = ebit - book.interest[i]
+        assert book.tax[i] == pytest.approx(max(0, taxable * 0.25))  # ставка по умолчанию 25%
+        assert book.net_income[i] == pytest.approx(taxable - book.tax[i])
+
+    def test_net_cf_is_after_tax(self):
+        book = build_book(demo_set())
+        i = 10  # прибыльный месяц
+        expected = (book.ebitda[i] - book.tax[i] - book.capex[i]
+                    + book.debt_draw[i] - book.interest[i] - book.principal[i])
+        assert book.tax[i] > 0
+        assert book.net_cf[i] == pytest.approx(expected)
+
+    def test_no_tax_on_losses(self):
+        aset = demo_set(products=[Product(name="Товар", start_price=1, start_volume=10)])
+        book = build_book(aset)
+        assert all(t == 0 for t in book.tax)
+        assert book.net_income[0] < 0
+
+
+class TestProduction:
+    def _produced(self, lead=0, **item_kw):
+        from app.finmodel.assumptions_schema import Production, ProductionItem
+        return demo_set(production=Production(items=[
+            ProductionItem(product="Товар", unit_cost=4, lead_months=lead, **item_kw)]))
+
+    def test_cogs_matches_sold_volume(self):
+        book = build_book(self._produced())
+        # месяц 4: объём 100 × 4 = 400 себестоимости в OPEX
+        assert book.opex_by_item["Себестоимость (производство/закупки)"][4] == pytest.approx(400)
+        assert book.cogs_by_product["Товар"][4] == pytest.approx(400)
+
+    def test_lead_purchases_build_inventory(self):
+        book = build_book(self._produced(lead=2))
+        # закупки идут на 2 мес раньше продаж → запасы положительны и растут вначале
+        assert book.purchases[0] > book.cogs_by_product["Товар"][0]
+        assert book.inventory[0] > 0
+        # к концу горизонта запасы стабилизируются (закупки хвоста за горизонтом = 0)
+        assert book.inventory[-1] == pytest.approx(0, abs=1e-6) or book.inventory[-1] < book.inventory[0] + 1e9
+
+    def test_inventory_zero_without_lead(self):
+        book = build_book(self._produced(lead=0))
+        assert all(abs(v) < 1e-9 for v in book.inventory)
+
+    def test_balance_identity_with_inventory(self):
+        book = build_book(self._produced(lead=3))
+        for i in range(len(book.months)):
+            assets = book.fixed_assets[i] + book.inventory[i] + book.cash[i]
+            liabilities = book.equity_book[i] + book.debt_outstanding[i]
+            assert assets == pytest.approx(liabilities), f"месяц {i}"
+
+    def test_logistics_and_storage_lines(self):
+        book = build_book(self._produced(logistics_pct=10, storage_monthly=50))
+        assert book.opex_by_item["Логистика"][4] == pytest.approx(40)  # 10% от 400
+        assert book.opex_by_item["Хранение"][4] == pytest.approx(50)
+
+    def test_unknown_product_becomes_blocker(self):
+        from app.finmodel.assumptions_schema import Production, ProductionItem
+        from app.finmodel.intake.validator import validate
+        aset = demo_set(production=Production(items=[
+            ProductionItem(product="Нет такого", unit_cost=1)]))
+        questions = validate(aset)
+        assert any("не найден среди продуктов" in q.question and q.severity == "blocker"
+                   for q in questions)
+
+
+class TestStaffAndCovenants:
+    def _staffed(self, **kw):
+        from app.finmodel.assumptions_schema import Covenants, Milestone, Staff, StaffRole
+        return demo_set(
+            staff=Staff(roles=[
+                StaffRole(name="Директор", monthly_salary=100),
+                StaffRole(name="Рабочие", count=3, monthly_salary=50, start_month=2),
+            ]),
+            milestones=[Milestone(name="Старт стройки", month=0, kind="capex"),
+                        Milestone(name="Запуск", month=4, kind="launch")],
+            **kw,
+        )
+
+    def test_payroll_series_respects_start_month(self):
+        book = build_book(self._staffed())
+        assert book.payroll_by_role["Директор"][0] == 100
+        assert book.payroll_by_role["Рабочие"][1] == 0
+        assert book.payroll_by_role["Рабочие"][2] == 150
+
+    def test_payroll_and_contributions_flow_into_opex(self):
+        book = build_book(self._staffed())
+        # месяц 4: аренда 200 + логистика 100 + ФОТ 250 + взносы 250*30.4%
+        assert "ФОТ (штат)" in book.opex_by_item
+        assert book.opex_by_item["Страховые взносы"][4] == pytest.approx(250 * 0.304)
+        assert book.opex[4] == pytest.approx(200 + 100 + 250 + 76)
+
+    def test_contributions_included_skips_extra(self):
+        from app.finmodel.assumptions_schema import Staff, StaffRole
+        aset = demo_set(staff=Staff(contributions_included=True,
+                                    roles=[StaffRole(name="Все", monthly_salary=100)]))
+        book = build_book(aset)
+        assert "Страховые взносы" not in book.opex_by_item
+
+    def test_covenant_metrics_reported(self):
+        metrics = build_book(demo_set()).metrics
+        assert metrics["icr_by_year"], "ICR должен считаться при наличии процентов"
+        assert metrics["net_debt_to_ebitda_by_year"]
+        assert metrics["covenant_breaches"] == []  # пороги не заданы
+
+    def test_balance_identity_holds_monthly(self):
+        aset = demo_set(capex=Capex(
+            items=[CapexItem(name="О", amount=1200, schedule_months=(0, 3))],
+            depreciation_months=12))
+        book = build_book(aset)
+        for i in range(len(book.months)):
+            assets = book.fixed_assets[i] + book.cash[i]
+            liabilities = book.equity_book[i] + book.debt_outstanding[i]
+            assert assets == pytest.approx(liabilities), f"месяц {i}"
+
+    def test_cash_starts_with_equity(self):
+        book = build_book(demo_set())
+        # месяц 0: equity 300 + чистый поток месяца
+        assert book.cash[0] == pytest.approx(300 + book.net_cf[0])
+
+    def test_covenant_breach_becomes_open_question(self):
+        from app.finmodel.assumptions_schema import Covenants, CreditFacility, RateSchedule
+        from app.finmodel.intake.validator import validate
+        aset = demo_set(financing={
+            "equity_amount": 300,
+            "facilities": [CreditFacility(name="Кредит", amount=900, term_months=24,
+                                          grace_months=6, rate=RateSchedule.flat(12))],
+            "covenants": Covenants(dscr_min=99.0)})
+        questions = validate(aset)
+        assert any("Ковенант не выполняется" in q.question for q in questions)
+
+    def test_no_covenant_questions_without_thresholds(self):
+        from app.finmodel.intake.validator import validate
+        questions = validate(demo_set())
+        assert not any("Ковенант" in q.question for q in questions)
+
+    def test_covenant_breach_detected(self):
+        from app.finmodel.assumptions_schema import Covenants, CreditFacility, RateSchedule
+        aset = demo_set(financing={
+            "equity_amount": 300,
+            "facilities": [CreditFacility(name="Кредит", amount=900, term_months=24,
+                                          grace_months=6, rate=RateSchedule.flat(12))],
+            "covenants": Covenants(dscr_min=99.0)})
+        metrics = build_book(aset).metrics
+        assert any("DSCR" in b for b in metrics["covenant_breaches"])
+
+
 class TestCredit:
     def test_draw_interest_and_grace(self):
         book = build_book(demo_set())

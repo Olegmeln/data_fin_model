@@ -5,21 +5,34 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>data_fin_model — financial workspace</title>
 <style>
-:root{--bg:#f7f6f3;--surface:#fff;--surface-2:#f2f0ec;--text:#201e1b;--muted:#6d675f;--border:#e7e2da;
- --accent:#c96442;--accent-ink:#fff;--accent-soft:#f4e7e0;--fact:#2f855a;--fact-bg:#eaf5ee;--assume:#2b6cb0;--assume-bg:#e9f0fb;
- --shadow:0 1px 2px rgba(30,25,20,.06),0 10px 30px rgba(30,25,20,.06);--r:14px;--r2:9px}
-html[data-theme="dark"]{--bg:#171614;--surface:#211f1d;--surface-2:#2a2825;--text:#eceae7;--muted:#a29c94;--border:#332f2a;
- --accent:#e08a68;--accent-ink:#171614;--accent-soft:#3a2b23;--fact:#68d391;--fact-bg:#22332a;--assume:#7cb0f0;--assume-bg:#232f40;
- --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.4)}
+/* Design tokens — дизайн-спека v1 (Data Fin Model, Clean Financial Workspace).
+   Синий = действие, бирюзовый = AI/инсайты, тёмно-синий = доверие,
+   оранжевый = внимание/черновик (никогда не primary CTA). */
+:root{--navy:#0F172A;--action:#2563EB;--ai:#14B8A6;--canvas:#F6F8FC;--surface-w:#FFFFFF;
+ --border-t:#E2E8F0;--muted-t:#64748B;--success:#16A34A;--warning:#F59E0B;--danger:#DC2626;
+ --radius-control:10px;--radius-card:16px;--radius-hero:24px;
+ --shadow-float:0 12px 32px rgba(15,23,42,.08);--focus-ring:0 0 0 3px rgba(37,99,235,.22);
+ /* семантические алиасы приложения */
+ --bg:var(--canvas);--surface:var(--surface-w);--surface-2:#EEF2F8;--text:var(--navy);--muted:var(--muted-t);--border:var(--border-t);
+ --accent:var(--action);--accent-ink:#fff;--accent-soft:#E7EEFE;
+ --fact:var(--success);--fact-bg:#E8F6EC;--assume:var(--action);--assume-bg:#E7EEFE;
+ --ai-bg:#E0F5F2;--warn-bg:#FEF3E2;
+ --shadow:0 1px 2px rgba(15,23,42,.04),var(--shadow-float);--r:var(--radius-card);--r2:var(--radius-control)}
+html[data-theme="dark"]{--bg:#0B1220;--surface:#121A2B;--surface-2:#1B2536;--text:#E8EDF6;--muted:#94A3B8;--border:#243044;
+ --accent:#5B8DEF;--accent-ink:#0B1220;--accent-soft:#1C2A45;
+ --fact:#4ADE80;--fact-bg:#15291F;--assume:#7CB0F0;--assume-bg:#1C2A45;--ai:#2DD4BF;--ai-bg:#12302D;--warn-bg:#332616;
+ --shadow:0 1px 2px rgba(0,0,0,.5),0 12px 34px rgba(0,0,0,.45)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:14.5px/1.55 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
 button{font:inherit;cursor:pointer}.hidden{display:none!important}
+:focus-visible{outline:none;box-shadow:var(--focus-ring);border-radius:6px}
 .app{display:grid;grid-template-columns:250px 1fr;height:100vh}
 .side{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
 .side-top{display:flex;align-items:center;gap:10px;padding:14px 16px}
-.logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#e8a37f);display:grid;place-items:center;color:#fff;font-weight:800}
-.brand b{font-weight:650}.brand small{display:block;color:var(--muted);font-size:11px}
-.newbtn{margin:4px 12px 8px;height:38px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.logo{width:30px;height:30px;display:grid;place-items:center}
+.brand b{font-weight:650;letter-spacing:-.01em}.brand small{display:block;color:var(--muted);font-size:11px}
+.newbtn{margin:4px 12px 8px;height:38px;border:1px solid var(--border);border-radius:var(--r2);background:var(--surface);color:var(--text);font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px}
+.newbtn:hover{border-color:var(--accent);color:var(--accent)}
 .search{margin:0 12px 8px;height:34px;border:1px solid var(--border);background:var(--surface-2);border-radius:9px;color:var(--text);padding:0 11px;font:inherit}
 .plabel{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 18px 4px}
 .projects{flex:1;overflow:auto;padding:0 8px}
@@ -38,16 +51,17 @@ button{font:inherit;cursor:pointer}.hidden{display:none!important}
 .btn:hover{border-color:var(--accent);color:var(--accent)}.btn.acc{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .chip{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}.dot.on{background:var(--fact)}
-.tabs{display:flex;gap:4px;padding:8px 16px 0;border-bottom:1px solid var(--border);overflow-x:auto}
-.tab{padding:8px 14px;border-radius:9px 9px 0 0;color:var(--muted);border:1px solid transparent;border-bottom:0;white-space:nowrap;background:transparent}
-.tab:hover{color:var(--text)}.tab.active{color:var(--accent);background:var(--surface);border-color:var(--border)}
+.tabs{display:flex;gap:6px;padding:9px 16px;border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:5}
+.tab{padding:7px 14px;border-radius:8px;color:var(--muted);border:1px solid transparent;white-space:nowrap;background:transparent;font-weight:500}
+.tab:hover{color:var(--text);background:var(--surface-2)}
+.tab.active{color:var(--accent);background:var(--accent-soft);font-weight:600}
 .content{flex:1;overflow:auto;padding:20px}.wrap{max-width:1060px;margin:0 auto}
 .composer{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;max-width:720px;margin:0 auto}
 .composer.drag{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 .composer textarea{width:100%;border:0;outline:0;resize:none;background:transparent;color:var(--text);font:inherit;font-size:16px;min-height:44px}
 .crow{display:flex;gap:8px;align-items:center}.icon{width:36px;height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
 .icon.rec{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.send{width:40px;height:40px;border-radius:11px;border:0;background:var(--accent);color:var(--accent-ink);font-size:17px}
+#send{height:40px;padding:0 18px;border-radius:var(--r2);font-weight:600}
 .hero h1{font-size:26px;text-align:center;margin:6px 0 20px;letter-spacing:-.02em}
 .transcript{min-height:16px;color:var(--accent);font-size:13px;padding:0 6px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
@@ -79,7 +93,7 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
 .src{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .srcbtn{border:1px dashed var(--border);background:transparent;color:var(--muted);border-radius:9px;padding:9px 13px}.srcbtn:hover{border-color:var(--accent);color:var(--accent)}
 .note{font-size:12.5px;color:var(--muted);margin-top:10px}
-.badge{font-size:10.5px;background:var(--accent-soft);color:var(--accent);border-radius:5px;padding:2px 7px;margin-left:8px}
+.badge{font-size:10.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:3px 8px;margin-left:8px;display:inline-block}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;z-index:40}.ov.open{display:block}
 .panel{position:fixed;top:0;right:0;height:100%;width:400px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);transform:translateX(100%);transition:.22s;display:flex;flex-direction:column}
 .ov.open .panel{transform:none}
@@ -92,23 +106,45 @@ thead th.rowname{z-index:2;background:var(--surface-2)}
 #toasts{position:fixed;top:16px;right:16px;z-index:60;display:flex;flex-direction:column;gap:8px}
 .toast{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:10px;padding:11px 14px;box-shadow:var(--shadow);max-width:340px;font-size:13.5px}
 .toast.ok{border-left-color:var(--fact)}.toast.err{border-left-color:#c0392b}
+.aset td,.aset th{text-align:left}
+.aset td input,.aset td select{width:100%;min-width:64px;border:1px solid var(--border);background:var(--surface-2);border-radius:6px;padding:4px 7px;color:var(--text);font:inherit;font-size:12.5px}
+.aset .icon{width:28px;height:28px;font-size:13px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.stepc{border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;display:flex;flex-direction:column;gap:7px;align-items:flex-start;background:var(--surface)}
+.stepc.on{border-color:var(--accent);background:var(--accent-soft)}
+.stepc b{font-size:13.5px}.stepc .note{margin:0}.stepc .btn{margin-top:auto}
+.stepc .btn[disabled]{cursor:not-allowed}
 </style></head>
 <body>
 <div class="app">
   <aside class="side">
-    <div class="side-top"><div class="logo">₽</div><div class="brand"><b>data_fin_model</b><small>financial workspace</small></div></div>
-    <button class="newbtn" id="newProject">＋ New project</button>
-    <input class="search" placeholder="Search projects…"/>
-    <div class="plabel">Projects</div>
+    <div class="side-top"><div class="logo">
+      <!-- DFM Grid Arrow: сетка данных (Navy/Action Blue) + линия роста (AI Teal) -->
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-label="Data Fin Model">
+        <rect x="2" y="2" width="12" height="12" rx="3" fill="var(--navy)"/>
+        <rect x="18" y="2" width="12" height="12" rx="3" fill="var(--action)" opacity=".28"/>
+        <rect x="2" y="18" width="12" height="12" rx="3" fill="var(--action)" opacity=".55"/>
+        <rect x="18" y="18" width="12" height="12" rx="3" fill="var(--action)"/>
+        <path d="M6 25 L14 17 L20 21 L27 11" stroke="var(--ai)" stroke-width="2.6"
+              stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M22 10.4 L27.4 10.2 L27.2 15.6" stroke="var(--ai)" stroke-width="2.6"
+              stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg></div><div class="brand"><b>Data Fin Model</b><small id="brandSub">AI financial workspace</small></div></div>
+    <button class="newbtn" id="newProject"></button>
+    <input class="search" id="projSearch"/>
+    <div class="plabel" id="plabel"></div>
     <div class="projects" id="projects"></div>
     <div class="side-foot"><div class="ava">ME</div><div style="font-size:13px">You<div class="note" style="margin:0">Workspace</div></div>
       <button class="gear" id="gear" title="Settings">⚙</button></div>
   </aside>
   <main class="main">
     <div class="topbar">
-      <input class="ptitle" id="ptitle" value="Financial model"/>
+      <input class="ptitle" id="ptitle" value=""/>
+      <span id="pstatus" class="badge"></span>
       <span id="gchip" class="chip hidden"><span class="dot" id="gdot"></span><span id="gtext"></span></span>
       <div class="sp"></div>
+      <button class="btn" id="lang" title="Язык / Language">RU ⇄ EN</button>
       <button class="btn" id="theme">◐ Theme</button>
       <button class="btn" id="exportBtn">⬇ Export .xlsx</button>
       <button class="btn acc" id="gbtn" style="display:none"></button>
@@ -128,28 +164,156 @@ const $=s=>document.querySelector(s);
 const nf=new Intl.NumberFormat('en-US',{maximumFractionDigits:0});
 const money=n=>(n==null||isNaN(n))?'—':'₽ '+nf.format(Math.round(n));
 const MON=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const KIND={income:'Income',expense:'Expenses',investing:'Investments',financing:'Financing'};
+const kindLabel=k=>t('kind_'+k)||k;
 const fmtMonth=m=>{const[y,mo]=m.split('-');return MON[+mo]+' '+y.slice(2);};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function parseAmount(s){if(s==null)return null;s=String(s).replace(/[₽\s ]/g,'').replace(',','.');if(s===''||s==='—')return 0;const v=parseFloat(s);return isNaN(v)?null:v;}
-async function api(path,opts){const r=await fetch('/api'+path,opts);if(!r.ok){let d='';try{d=(await r.json()).detail||''}catch(e){}throw new Error(d||('HTTP '+r.status));}const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text();}
+async function api(path,opts){const r=await fetch('/api'+path,opts);if(!r.ok){let d='';try{d=(await r.json()).detail||'';if(typeof d==='object')d=d.message||JSON.stringify(d);}catch(e){}throw new Error(d||('HTTP '+r.status));}const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text();}
 function toast(m,k){const t=document.createElement('div');t.className='toast '+(k||'');t.textContent=m;$('#toasts').appendChild(t);setTimeout(()=>t.remove(),4200);}
 function loadTheme(){document.documentElement.dataset.theme=localStorage.getItem('dfm-theme')||'light';}
 function toggleTheme(){const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('dfm-theme',t);}
 
-const state={dash:null,imports:[],google:null,params:null,tab:'Overview',title:'Financial model',rec:null};
-const TABS=['Overview','Model','Parameters','CAPEX','Staff','Documents'];
+// ---- i18n (И-6): словарь строк RU/EN, переключатель в шапке ----
+let LANG=localStorage.getItem('dfm-lang')||'ru';
+const I18N={
+ ru:{tab_Overview:'Обзор',tab_Model:'Модель',tab_Assumptions:'Допущения',tab_Parameters:'Параметры',tab_Documents:'Документы',
+  export:'Экспортировать XLSX',theme:'Тема',hero:'Создайте финансовую модель',
+  composer_ph:'Опишите бизнес, загрузите файл или выберите пример.',
+  run:'Сформировать модель',brand_sub:'AI-конструктор финансовых моделей',new_project:'＋ Новый проект',
+  search_ph:'Поиск проектов…',projects:'Проекты',project_title:'Финансовая модель',
+  step_title:'Путь к готовой модели',step1:'Профиль бизнеса',step1d:'Опросник, документы или профиль по умолчанию',
+  step2:'Допущения',step2d:'Проверьте и подтвердите книгу допущений',step3:'Книга модели',step3d:'15 листов Excel с живыми формулами',
+  st_done:'Готово',st_active:'Активный шаг',st_draft:'Черновик',st_check:'Нужно проверить',
+  st_lock1:'Заблокировано до заполнения профиля',st_lock2:'Заблокировано до подтверждения допущений',
+  go_survey:'Заполнить профиль',go_aset:'Проверить допущения',go_book:'Экспортировать XLSX',
+  ex_title:'Примеры для быстрого старта',ex_hint:'Нажмите пример — подставим описание в поле',
+  ex1:'Кофейня, 2 точки, аренда и фудкост',ex2:'IT-агентство на 8 человек, проектная выручка',ex3:'Производство: линия за 5 млн, кредит 17%',
+  summary:'Сводка проекта',ops:'операций разобрано',docs_loaded:'документ(ов) загружено',industry:'отрасль',edit_hint:'Допущения правятся во вкладке «Модель» и «Допущения».',
+  no_model:'Модели пока нет — загрузите выписку во вкладке «Обзор» или пройдите путь из трёх шагов.',
+  legend_fact:'факт из выписки (заблокирован)',legend_assume:'допущение — правится кликом',legend_empty:'пустые ячейки тоже редактируются',
+  line_item:'Статья',total:'Итого',kind_income:'Доходы',kind_expense:'Расходы',kind_investing:'Инвестиции',kind_financing:'Финансирование',
+  params_title:'Параметры модели (драйверы опросника)',rebuild:'Пересобрать модель',params_note:'Сохранение пересчитает допущения из этих драйверов. Ручные правки в сетке сохраняются. Полный слой допущений — во вкладке «Допущения».',
+  docs_title:'Документы',upload:'＋ Загрузить',flip_title:'Документы → модель',
+  flip_note:'Загрузите бизнес-план, финмодель или смету (PDF/DOCX/XLSX/CSV/TXT) — агент извлечёт допущения по схеме AFM&C, сверит их и составит открытые вопросы.',
+  extract:'⚡ Извлечь допущения',no_docs:'Документов пока нет — загрузите банковскую выписку.',connect:'Подключить источник данных',
+  conn_note:'Любой источник нормализуется в единую схему операций; модель обновляется автоматически.',
+  aset_title:'Книга допущений',aset_empty_note:'Единый слой допущений — источник истины книги модели. Режимы заполнения: <b>auto</b> — стартовый профиль (5 лет · 9% дисконт · 2 товара + 2 услуги) с памятью предпочтений; <b>AI</b> — агент извлекает из документов; <b>manual</b> — правка полей формы. Confirmed-версия пополняет память предпочтений.',
+  auto_btn:'⚙ Auto — стартовый профиль',ai_btn:'⚡ AI — из документов',survey_btn:'⧉ Из опросника',auto_short:'⚙ Auto',ai_short:'⚡ AI',survey_short:'⧉ Опросник',
+  draft:'💾 Черновик',confirm:'✓ Подтвердить',open_q:'Требуют уточнения',profile_val:'Профиль проекта и оценка',products:'Продуктовая линейка',
+  production:'Производство / закупки',opex_t:'Операционные расходы',staff_t:'ФОТ: штатное расписание',roadmap_t:'Дорожная карта проекта',
+  fin_t:'Финансирование',taxes_t:'Налоги',scen_t:'Сценарии и книга',base_scen:'База (без сценария)',metrics_btn:'Σ Метрики',book_btn:'⬇ Книга .xlsx',
+  saved_v:'Сохранён черновик v',confirmed_v:'Подтверждено v',memory_upd:' — память предпочтений обновлена',
+  settings:'Настройки',appearance:'Оформление',lang:'Язык / Language',
+  // поля формы допущений
+  f_name:'Название',f_industry:'Отрасль',f_ptype:'Тип проекта',f_location:'Локация',f_currency:'Валюта',
+  f_horizon:'Горизонт, лет',f_start:'Старт модели (ГГГГ-ММ-ДД)',f_disc:'Ставка дисконтирования, %',
+  f_roa:'ROA реинвестирования (MIRR), %',f_total_ovr:'Итог (если без разбивки)',f_dep:'Амортизация, мес',
+  f_equity:'Собственные средства',f_dscr:'Ковенант DSCR ≥',f_icr:'Ковенант ICR ≥',f_nde:'Долг/EBITDA ≤',
+  f_regime:'Режим',f_profit:'Налог на прибыль, %',f_vat:'НДС, %',f_contrib:'Страховые взносы, %',
+  f_property:'Налог на имущество, %',f_land:'Земельный налог, %',
+  // заголовки таблиц
+  th_product:'Продукт',th_kind:'Тип',th_unit:'Ед.',th_price:'Цена/ед',th_volume:'Объём/мес',th_ramp:'Разгон, мес',
+  th_item:'Позиция',th_amount:'Сумма',th_vat_in:'НДС внутри',th_from:'Мес. с',th_to:'по',
+  th_line:'Статья',th_fixed:'Фикс/мес',th_pct_rev:'% выручки',
+  th_credit:'Кредит',th_term:'Срок, мес',th_rate:'Ставка, %',th_grace:'Льгота, мес',
+  th_cost:'Себест./ед',th_logi:'Логистика, %',th_storage:'Хранение/мес',th_lead:'Закупка за, мес',
+  th_role:'Роль',th_count:'Чел.',th_salary:'Оклад/мес',th_start_m:'С мес',th_end_m:'По мес',
+  th_ms:'Веха',th_month:'Мес',th_note:'Заметка',
+  // кнопки добавления
+  add_product:'＋ Продукт',add_capex:'＋ Позиция CAPEX',add_opex:'＋ Статья расходов',add_credit:'＋ Кредит',
+  add_prod:'＋ Позиция производства',add_role:'＋ Роль',add_ms:'＋ Веха',
+  // значения селектов
+  v_goods:'товар',v_service:'услуга',v_inv:'инвестиционный',v_wc:'оборотный',
+  v_stage:'этап',v_capex:'CAPEX',v_launch:'запуск',v_finance:'финансы',
+  contrib_incl:'взносы уже в окладах',
+  // тосты и сообщения
+  msg_auto:'Собираю стартовый профиль…',msg_survey:'Конвертирую ответы опросника…',
+  msg_created:'Создана v',msg_from_auto:' из стартового профиля',msg_from_survey:' из опросника',
+  msg_error:'Ошибка: ',msg_metrics:'Метрики: ',msg_saved:'Сохранено · ',msg_nan:'Не число — правка отменена',
+  msg_pick_ind:'Сначала выберите отрасль',msg_rebuild:'Пересобираю модель…',msg_rebuilt:'Модель пересобрана · ',
+  msg_upload:'Загружаю: ',msg_imported:'Импортировано ',msg_dups:', дубликатов ',msg_errs:', ошибок ',
+  msg_choose:'Сначала выберите файлы',msg_extracting:'Извлекаю допущения…',msg_extracted:'Извлечено v',
+  msg_open_q:' · вопросов: ',msg_intake_fail:'Сбой интейка: ',msg_ai_hint:'Загрузите документы и нажмите «Извлечь допущения»',
+  msg_no_voice:'Голосовой ввод не поддерживается в этом браузере',msg_no_mic:'Микрофон недоступен',
+  ver_note:'Книга собирается по реестру листов из этого набора.'},
+ en:{tab_Overview:'Overview',tab_Model:'Model',tab_Assumptions:'Assumptions',tab_Parameters:'Parameters',tab_Documents:'Documents',
+  export:'Export XLSX',theme:'Theme',hero:'Build your financial model',
+  composer_ph:'Describe the business, upload a file or pick an example.',
+  run:'Build the model',brand_sub:'AI financial workspace',new_project:'＋ New project',
+  search_ph:'Search projects…',projects:'Projects',project_title:'Financial model',
+  step_title:'Path to a finished model',step1:'Business profile',step1d:'Survey, documents or the default profile',
+  step2:'Assumptions',step2d:'Review and confirm the assumptions book',step3:'Model workbook',step3d:'15 Excel sheets with live formulas',
+  st_done:'Done',st_active:'Active step',st_draft:'Draft',st_check:'Needs review',
+  st_lock1:'Locked until the profile is filled',st_lock2:'Locked until assumptions are confirmed',
+  go_survey:'Fill the profile',go_aset:'Review assumptions',go_book:'Export XLSX',
+  ex_title:'Quick-start examples',ex_hint:'Click an example — we will prefill the prompt',
+  ex1:'Coffee shop, 2 locations, rent and food cost',ex2:'IT agency of 8 people, project revenue',ex3:'Manufacturing: 5M line, 17% loan',
+  summary:'Project summary',ops:'operations processed',docs_loaded:'document(s) loaded',industry:'industry',edit_hint:'Edit assumptions in the Model and Assumptions tabs.',
+  no_model:'No model yet — upload a bank statement in Overview or follow the three steps.',
+  legend_fact:'fact from statement (locked)',legend_assume:'assumption — click to edit',legend_empty:'empty cells are editable too',
+  line_item:'Line item',total:'Total',kind_income:'Income',kind_expense:'Expenses',kind_investing:'Investments',kind_financing:'Financing',
+  params_title:'Model parameters (survey drivers)',rebuild:'Rebuild model',params_note:'Saving recomputes assumptions from these drivers. Manual grid edits are preserved. The full assumptions layer lives in the Assumptions tab.',
+  docs_title:'Documents',upload:'＋ Upload',flip_title:'Flip documents into a model',
+  flip_note:'Upload a business plan, financial model or estimate (PDF/DOCX/XLSX/CSV/TXT) — the agent extracts assumptions into the AFM&C schema, cross-checks them and lists open questions.',
+  extract:'⚡ Extract assumptions',no_docs:'No documents yet — upload a bank statement.',connect:'Connect a data source',
+  conn_note:'Any source normalizes into a single operations schema; the model updates automatically.',
+  aset_title:'Assumptions book',aset_empty_note:'The single assumptions layer is the source of truth for the model book. Fill modes: <b>auto</b> — default profile (5y · 9% discount · 2 goods + 2 services) with preference memory; <b>AI</b> — extraction from documents; <b>manual</b> — form editing. A confirmed version feeds the preference memory.',
+  auto_btn:'⚙ Auto — default profile',ai_btn:'⚡ AI — from documents',survey_btn:'⧉ From survey',auto_short:'⚙ Auto',ai_short:'⚡ AI',survey_short:'⧉ Survey',
+  draft:'💾 Draft',confirm:'✓ Confirm',open_q:'Need clarification',profile_val:'Project profile & valuation',products:'Product line',
+  production:'Production / procurement',opex_t:'Operating expenses',staff_t:'Headcount & payroll',roadmap_t:'Project roadmap',
+  fin_t:'Financing',taxes_t:'Taxes',scen_t:'Scenarios & workbook',base_scen:'Base (no scenario)',metrics_btn:'Σ Metrics',book_btn:'⬇ Workbook .xlsx',
+  saved_v:'Draft saved v',confirmed_v:'Confirmed v',memory_upd:' — preference memory updated',
+  settings:'Settings',appearance:'Appearance',lang:'Язык / Language',
+  f_name:'Name',f_industry:'Industry',f_ptype:'Project type',f_location:'Location',f_currency:'Currency',
+  f_horizon:'Horizon, years',f_start:'Model start (YYYY-MM-DD)',f_disc:'Discount rate, %',
+  f_roa:'Reinvestment ROA (MIRR), %',f_total_ovr:'Total (if no breakdown)',f_dep:'Depreciation, months',
+  f_equity:'Equity',f_dscr:'Covenant DSCR ≥',f_icr:'Covenant ICR ≥',f_nde:'Debt/EBITDA ≤',
+  f_regime:'Tax regime',f_profit:'Profit tax, %',f_vat:'VAT, %',f_contrib:'Payroll contributions, %',
+  f_property:'Property tax, %',f_land:'Land tax, %',
+  th_product:'Product',th_kind:'Type',th_unit:'Unit',th_price:'Price/unit',th_volume:'Volume/mo',th_ramp:'Ramp-up, mo',
+  th_item:'Item',th_amount:'Amount',th_vat_in:'VAT incl.',th_from:'Month from',th_to:'to',
+  th_line:'Line item',th_fixed:'Fixed/mo',th_pct_rev:'% of revenue',
+  th_credit:'Facility',th_term:'Term, mo',th_rate:'Rate, %',th_grace:'Grace, mo',
+  th_cost:'Cost/unit',th_logi:'Logistics, %',th_storage:'Storage/mo',th_lead:'Lead time, mo',
+  th_role:'Role',th_count:'People',th_salary:'Salary/mo',th_start_m:'From mo',th_end_m:'To mo',
+  th_ms:'Milestone',th_month:'Month',th_note:'Note',
+  add_product:'＋ Product',add_capex:'＋ CAPEX item',add_opex:'＋ Expense line',add_credit:'＋ Facility',
+  add_prod:'＋ Production item',add_role:'＋ Role',add_ms:'＋ Milestone',
+  v_goods:'goods',v_service:'service',v_inv:'investment',v_wc:'working capital',
+  v_stage:'stage',v_capex:'CAPEX',v_launch:'launch',v_finance:'financing',
+  contrib_incl:'contributions already in salaries',
+  msg_auto:'Building the default profile…',msg_survey:'Converting survey answers…',
+  msg_created:'Created v',msg_from_auto:' from the default profile',msg_from_survey:' from the survey',
+  msg_error:'Error: ',msg_metrics:'Metrics: ',msg_saved:'Saved · ',msg_nan:'Not a number — edit cancelled',
+  msg_pick_ind:'Pick an industry first',msg_rebuild:'Rebuilding the model…',msg_rebuilt:'Model rebuilt · ',
+  msg_upload:'Uploading: ',msg_imported:'Imported ',msg_dups:', duplicates ',msg_errs:', errors ',
+  msg_choose:'Choose files first',msg_extracting:'Extracting assumptions…',msg_extracted:'Extracted v',
+  msg_open_q:' · open questions: ',msg_intake_fail:'Intake failed: ',msg_ai_hint:'Upload documents and press “Extract assumptions”',
+  msg_no_voice:'Voice input is not supported in this browser',msg_no_mic:'Microphone unavailable',
+  ver_note:'The workbook is assembled from this set by the sheet registry.'}};
+const t=k=>(I18N[LANG]&&I18N[LANG][k])||I18N.ru[k]||k;
+function setLang(l){LANG=l;localStorage.setItem('dfm-lang',l);render();applyChrome();}
+
+const state={dash:null,imports:[],google:null,params:null,tab:'Overview',rec:null};
+const TABS=['Overview','Model','Assumptions','Parameters','Documents'];
 
 function renderProjects(){
-  const ind=state.dash&&state.dash.industry?state.dash.industry.name:'Not set';
+  const ind=state.dash&&state.dash.industry?state.dash.industry.name:'—';
   const ops=state.dash?state.dash.kpi.operations_count:0;
-  const status=ops>0?'facts loaded':'draft';
-  $('#projects').innerHTML=`<div class="proj active"><div class="pn">${esc($('#ptitle').value)}</div>
-    <div class="pm"><span class="tag">${esc(ind)}</span><span>${status}</span></div></div>
-    <div class="note" style="padding:8px 11px">Multiple projects are on the roadmap (backend is single-workspace for now).</div>`;
+  const status=state.aset&&state.aset.status==='confirmed'?t('st_done'):(ops>0?t('st_draft'):t('st_active'));
+  $('#projects').innerHTML=`<div class="proj active"><div class="pn">${esc($('#ptitle').value||t('project_title'))}</div>
+    <div class="pm"><span class="tag">${esc(ind)}</span><span>${status}</span></div></div>`;
 }
-function renderTabs(){$('#tabs').innerHTML=TABS.map(t=>`<button class="tab ${t===state.tab?'active':''}" data-t="${t}">${t}</button>`).join('');
+function renderTabs(){$('#tabs').innerHTML=TABS.map(tb=>`<button class="tab ${tb===state.tab?'active':''}" data-t="${tb}">${t('tab_'+tb)}</button>`).join('');
   document.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{state.tab=el.dataset.t;renderTabs();renderView();});}
+function applyChrome(){$('#theme').textContent='◐ '+t('theme');$('#exportBtn').textContent='⬇ '+t('export');
+  $('#lang').textContent=LANG==='ru'?'RU ⇄ EN':'EN ⇄ RU';
+  $('#brandSub').textContent=t('brand_sub');$('#newProject').textContent=t('new_project');
+  $('#projSearch').placeholder=t('search_ph');$('#plabel').textContent=t('projects');
+  const pt=$('#ptitle');if(pt&&(!pt.value||pt.value===I18N.ru.project_title||pt.value===I18N.en.project_title))pt.value=t('project_title');
+  const ps=$('#pstatus');if(ps){const confirmed=state.aset&&state.aset.status==='confirmed';
+    ps.textContent=confirmed?t('st_done'):t('st_draft');
+    ps.style.cssText=confirmed?'color:var(--success);background:var(--fact-bg)':'color:#B45309;background:var(--warn-bg)';}}
 
 function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
   const cards=[['Revenue (model)',money(k.revenue_total),''],['Expenses',money(k.expenses_total),''],
@@ -157,33 +321,68 @@ function kpisHTML(){const k=state.dash?state.dash.kpi:{},inv=(k&&k.invest)||{};
     ['Cash balance',money(k.cash_balance),''],['NPV',inv.npv!=null?money(inv.npv):'—',inv.npv==null?'':(inv.npv>=0?'pos':'neg')]];
   return `<div class="kpis">${cards.map(([l,v,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div></div>`).join('')}</div>`;}
 
+// Статус-бейджи фиксированного набора (дизайн-спека, раздел 6)
+function badge(kind,label){const map={done:['var(--success)','var(--fact-bg)'],active:['var(--action)','var(--accent-soft)'],
+  draft:['#B45309','var(--warn-bg)'],check:['#B45309','var(--warn-bg)'],lock:['var(--muted)','var(--surface-2)']};
+  const[c,b]=map[kind]||map.lock;
+  return `<span class="badge" style="color:${c};background:${b};margin:0">${kind==='done'?'✓ ':''}${label}</span>`;}
+function stepsHTML(){
+  const hasProfile=!!(state.params&&state.params.industry_code)||!!(state.dash&&state.dash.industry)||!!state.aset;
+  const hasAset=!!state.aset;const confirmed=hasAset&&state.aset.status==='confirmed';
+  const oq=(state.aset&&state.aset.open_questions)?state.aset.open_questions.length:0;
+  // прогресс-счётчики вместо абстрактных этапов
+  const nParams=state.params?Object.keys(state.params.answers||{}).length:0;
+  const d=state.doc||{};
+  const nAset=(d.products||[]).length+((d.opex&&d.opex.items)||[]).length+((d.capex&&d.capex.items)||[]).length
+    +((d.staff&&d.staff.roles)||[]).length+((d.financing&&d.financing.facilities)||[]).length;
+  const s1=hasProfile?badge('done',t('st_done')):badge('active',t('st_active'));
+  const s2=confirmed?badge('done',t('st_done')):(!hasProfile?badge('lock',t('st_lock1'))
+    :(oq?badge('check',t('st_check')):(hasAset?badge('draft',t('st_draft')):badge('active',t('st_active')))));
+  const s3=confirmed?badge('active',t('st_active')):(hasAset?badge('draft',t('st_draft')):badge('lock',t('st_lock2')));
+  const cnt=(n,total)=>`<span class="note" style="margin:0">${n}${total?'/'+total:''}</span>`;
+  return `<div class="card" style="margin-top:18px"><h3>${t('step_title')}</h3><div class="bd"><div class="steps">
+   <div class="stepc${hasProfile?'':' on'}"><b>${t('step1')}</b>${s1}<div class="note">${t('step1d')}</div>
+     ${cnt(nParams,12)} <button class="btn${hasProfile?'':' acc'}" data-go="survey">${t('go_survey')}</button></div>
+   <div class="stepc${hasProfile&&!confirmed?' on':''}"><b>${t('step2')}</b>${s2}<div class="note">${t('step2d')}</div>
+     ${cnt(nAset,0)} <button class="btn${hasProfile&&!confirmed?' acc':''}" data-go="aset" ${hasProfile?'':'disabled style="opacity:.5"'}>${t('go_aset')}</button></div>
+   <div class="stepc${confirmed?' on':''}"><b>${t('step3')}</b>${s3}<div class="note">${t('step3d')}</div>
+     ${cnt(15,0)} <button class="btn${confirmed?' acc':''}" data-go="book" ${hasAset?'':'disabled style="opacity:.5"'}>${t('go_book')}</button></div>
+  </div></div></div>`;}
+function examplesHTML(){
+  return `<div class="src" style="justify-content:center;margin-top:12px">
+    ${[1,2,3].map(i=>`<button class="srcbtn" data-ex="${t('ex'+i)}">${t('ex'+i)}</button>`).join('')}</div>
+    <div class="note" style="text-align:center">${t('ex_hint')}</div>`;}
 function overviewHTML(){
   const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
-  return `${has?'':'<div class="hero"><h1>What shall we model?</h1></div>'}
-   <div class="composer" id="composer"><textarea id="ta" placeholder="Describe the business or drop a bank statement here…"></textarea>
-     <div class="crow"><button class="icon" id="attach" title="Attach">📎</button><button class="icon" id="mic" title="Voice">🎙</button>
-       <div class="transcript" id="tr"></div><div class="sp" style="flex:1"></div><button class="send" id="send">→</button></div></div>
+  return `${has?'':'<div class="hero"><h1>'+t('hero')+'</h1></div>'}
+   <div class="composer" id="composer"><textarea id="ta" placeholder="${t('composer_ph')}"></textarea>
+     <div class="crow"><button class="icon" id="attach" title="${t('upload')}" aria-label="${t('upload')}">📎</button>
+       <button class="icon" id="mic" title="🎙" aria-label="voice">🎙</button>
+       <div class="transcript" id="tr"></div><div class="sp" style="flex:1"></div>
+       <button class="btn acc" id="send">${t('run')}</button></div></div>
+   ${has?'':examplesHTML()}
+   ${stepsHTML()}
    ${has?('<div style="height:18px"></div>'+kpisHTML()+summaryCard()):''}`;
 }
-function summaryCard(){const k=state.dash.kpi;return `<div class="card"><h3>Project summary</h3>
-  <div class="bd" style="color:var(--muted)">${k.operations_count} operations processed · ${state.imports.length} document(s) loaded${state.dash.industry?(' · industry: '+esc(state.dash.industry.name)):''}. Edit assumptions in the Model tab.</div></div>`;}
+function summaryCard(){const k=state.dash.kpi;return `<div class="card"><h3>${t('summary')}</h3>
+  <div class="bd" style="color:var(--muted)">${k.operations_count} ${t('ops')} · ${state.imports.length} ${t('docs_loaded')}${state.dash.industry?(' · '+t('industry')+': '+esc(state.dash.industry.name)):''}. ${t('edit_hint')}</div></div>`;}
 
 function gridHTML(){const g=state.dash&&state.dash.model_grid;
-  if(!g||!g.rows.length)return `<div class="card"><div class="bd" style="color:var(--muted)">No model yet — upload a bank statement in the Overview tab.</div></div>`;
+  if(!g||!g.rows.length)return `<div class="card"><div class="bd" style="color:var(--muted)">${t('no_model')}</div></div>`;
   const months=g.months;let b='',lk=null;
-  g.rows.forEach(r=>{if(r.kind!==lk){lk=r.kind;b+=`<tr class="grp"><td colspan="${months.length+2}">${KIND[r.kind]||r.kind}</td></tr>`;}
+  g.rows.forEach(r=>{if(r.kind!==lk){lk=r.kind;b+=`<tr class="grp"><td colspan="${months.length+2}">${kindLabel(r.kind)}</td></tr>`;}
     const cells=r.cells.map((c,i)=>{const ed=c.origin!=='fact';const cls=c.origin==='fact'?'f':(c.origin==='assumption'?'a':'e');
       return `<td class="cell ${cls}" data-code="${r.code}" data-month="${months[i]}" ${ed?'contenteditable="true"':''}>${c.v?money(c.v):'—'}</td>`;}).join('');
     b+=`<tr><td class="rowname" title="${esc(r.name)}">${esc(r.name)}</td>${cells}<td class="total">${money(r.value_total)}</td></tr>`;});
-  return `<div class="card"><div class="gridwrap"><table><thead><tr><th class="rowname">Line item</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${b}</tbody></table></div>
-   <div class="legend"><span><b style="background:var(--fact)"></b>fact from statement (locked)</span><span><b style="background:var(--assume)"></b>assumption — click to edit</span><span>empty cells are editable too</span></div></div>`;}
+  return `<div class="card"><div class="gridwrap"><table><thead><tr><th class="rowname">${t('line_item')}</th>${months.map(m=>`<th>${fmtMonth(m)}</th>`).join('')}<th>${t('total')}</th></tr></thead><tbody>${b}</tbody></table></div>
+   <div class="legend"><span><b style="background:var(--fact)"></b>${t('legend_fact')}</span><span><b style="background:var(--assume)"></b>${t('legend_assume')}</span><span>${t('legend_empty')}</span></div></div>`;}
 
 function paramsHTML(){
   const a=(state.params&&state.params.answers)||{};
   const inds=(state.params&&state.params.industries)||[];
   const sel=(id,opts,val)=>`<select id="p_${id}">`+opts.map(o=>`<option value="${o.v}" ${String(val)===String(o.v)?'selected':''}>${o.l}</option>`).join('')+`</select>`;
   const num=(id,val,ph)=>`<input id="p_${id}" value="${val==null?'':esc(val)}" placeholder="${ph||''}"/>`;
-  return `<div class="card"><h3>Model parameters</h3><div class="bd"><div class="form">
+  return `<div class="card"><h3>${t('params_title')}</h3><div class="bd"><div class="form">
     <div class="fsec">Project</div>
     <div class="fg"><label>Industry</label>${sel('industry',inds.map(i=>({v:i.code,l:i.name})),a.industry)}</div>
     <div class="fg"><label>Business stage</label>${sel('business_age',[{v:'existing',l:'Operating'},{v:'new',l:'Launching'}],a.business_age)}</div>
@@ -200,73 +399,257 @@ function paramsHTML(){
     <div class="fg"><label>Loan amount</label>${num('loan_amount',a.loan_amount)}</div>
     <div class="fg"><label>Loan rate, %/yr</label>${num('loan_rate',a.loan_rate,'17')}</div>
   </div>
-  <div style="margin-top:16px"><button class="btn acc" id="rebuild">Rebuild model</button></div>
-  <p class="note">Saving recomputes model assumptions from these drivers. Your manual edits in the Model grid are preserved.</p></div></div>`;}
-
-function capexHTML(){const a=(state.params&&state.params.answers)||{};const cx=a.capex_total?money(parseAmount(a.capex_total)):money(0);
-  return `<div class="card"><h3>CAPEX &amp; estimate</h3><div class="bd">
-   <div class="kpis"><div class="kpi"><div class="l">Total start CAPEX (from Parameters)</div><div class="v">${cx}</div></div></div>
-   <p class="note">Set the total in the Parameters tab — it feeds the model as an investment outflow, and the Excel export builds a full CAPEX sheet with depreciation. A detailed line-item estimate table is on the roadmap.</p>
-   <button class="btn">＋ Add line item <span class="badge">soon</span></button></div></div>`;}
-
-function staffHTML(){const a=(state.params&&state.params.answers)||{};const pr=a.payroll_monthly?money(parseAmount(a.payroll_monthly)):money(0);const emp=(a.employees==null||a.employees==='')?'—':esc(a.employees);
-  return `<div class="card"><h3>Headcount &amp; payroll</h3><div class="bd">
-   <div class="kpis"><div class="kpi"><div class="l">Payroll / month (from Parameters)</div><div class="v">${pr}</div></div><div class="kpi"><div class="l">Team size</div><div class="v">${emp}</div></div></div>
-   <p class="note">Set payroll in the Parameters tab — it feeds the model as a monthly expense. A per-role headcount table is on the roadmap.</p>
-   <button class="btn">＋ Add role <span class="badge">soon</span></button></div></div>`;}
+  <div style="margin-top:16px"><button class="btn acc" id="rebuild">${t('rebuild')}</button></div>
+  <p class="note">${t('params_note')}</p></div></div>`;}
 
 function docsHTML(){const list=state.imports||[];const iq=state.intake;
-  return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">Documents</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">＋ Upload</button></div>
-   <div class="card" style="margin-bottom:16px"><h3>Flip documents into a model</h3><div class="bd">
-     <p class="note">Upload a business plan, financial model, or estimate (PDF/DOCX/XLSX/CSV/TXT) — the Modelling agent extracts assumptions into the AFM&C schema, cross-checks them and lists open questions.</p>
+  return `<div style="display:flex;align-items:center;margin-bottom:14px"><h3 style="margin:0;font-size:16px">${t('docs_title')}</h3><div class="sp" style="flex:1"></div><button class="btn acc" id="up2">${t('upload')}</button></div>
+   <div class="card" style="margin-bottom:16px"><h3>${t('flip_title')}</h3><div class="bd">
+     <p class="note">${t('flip_note')}</p>
      <input type="file" id="intakeFiles" multiple accept=".pdf,.docx,.xlsx,.xlsm,.csv,.txt,.md" style="margin:8px 0">
-     <button class="btn acc" id="intakeGo">⚡ Extract assumptions</button>
+     <button class="btn acc" id="intakeGo">${t('extract')}</button>
      ${iq?`<div style="margin-top:12px"><b>v${iq.version}</b> · ${esc(iq.status)} · ${esc(iq.comment||'')}
        ${iq.open_questions&&iq.open_questions.length?`<div style="margin-top:8px"><b>Open questions (${iq.open_questions.length})</b>${iq.open_questions.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':'⚠️'} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div>`:'<div class="note" style="margin-top:8px">✅ No open questions</div>'}</div>`:''}
    </div></div>
-   <div class="docgrid">${list.length?list.map(d=>`<div class="doc"><span class="fmt">${esc(d.format)}</span><div class="n">${esc(d.filename)}</div><div class="m">+${d.imported} rows · ${d.duplicates} dup</div></div>`).join(''):'<div class="note">No documents yet — upload a bank statement.</div>'}</div>
-   <div class="card" style="margin-top:16px"><h3>Connect a data source</h3><div class="bd"><div class="src">
-     <button class="srcbtn" id="up3">📄 Upload files (CSV/XLSX/PDF/ZIP)</button>
-     <button class="srcbtn">🧾 1C exchange / archive <span class="badge">soon</span></button>
-     <button class="srcbtn">🏭 ERP (1C:ERP, SAP) <span class="badge">soon</span></button>
-     <button class="srcbtn">🗄 SQL warehouse <span class="badge">soon</span></button>
-   </div><p class="note">Any source normalizes into a single operations schema; the model updates automatically.</p></div></div>`;}
+   <div class="docgrid">${list.length?list.map(d=>`<div class="doc"><span class="fmt">${esc(d.format)}</span><div class="n">${esc(d.filename)}</div><div class="m">+${d.imported} · ${d.duplicates} dup</div></div>`).join(''):`<div class="note">${t('no_docs')}</div>`}</div>
+   <div class="card" style="margin-top:16px"><h3>${t('connect')}</h3><div class="bd"><div class="src">
+     <button class="srcbtn" id="up3">📄 CSV / XLSX / PDF / ZIP</button>
+     <button class="srcbtn">🧾 1С <span class="badge">soon</span></button>
+     <button class="srcbtn">🏭 ERP <span class="badge">soon</span></button>
+     <button class="srcbtn">🗄 SQL <span class="badge">soon</span></button>
+   </div><p class="note">${t('conn_note')}</p></div></div>`;}
+
+// ---- Книга допущений (assumptions.v1) — форма workspace v2, критический путь п.4 ----
+const PROJECT=()=>(state.project&&state.project.slug)||'default';
+// бирюзовый = AI, синий = ручной ввод, серый = профиль/вычислено (дизайн-спека)
+const MB={extracted:['AI','ai'],user:['manual','assume'],default:['auto',''],derived:['survey','']};
+function srcOf(path){const s=state.doc&&state.doc.sources;if(!s)return null;if(s[path])return s[path];
+  let best=null;for(const k in s){if(path===k||path.startsWith(k+'.')||path.startsWith(k+'['))if(!best||k.length>best.length)best=k;}
+  return best?s[best]:null;}
+function srcBadge(path){const s=srcOf(path);if(!s)return '<span class="badge" style="opacity:.5">manual</span>';
+  const m=MB[s.method]||[s.method,''];const tip=[s.document,s.locator,s.note,(s.confidence!=null&&s.confidence<1)?('confidence '+s.confidence):''].filter(Boolean).join(' · ');
+  return `<span class="badge" title="${esc(tip)}"${m[1]?` style="color:var(--${m[1]});background:var(--${m[1]}-bg)"`:''}>${m[0]}</span>`;}
+function setPath(obj,path,value){const parts=path.replace(/\[(\d+)\]/g,'.$1').split('.');let o=obj;
+  for(let i=0;i<parts.length-1;i++){const k=isNaN(+parts[i])?parts[i]:+parts[i];
+    if(o[k]==null)o[k]=isNaN(+parts[i+1])?{}:[];o=o[k];}
+  const last=parts[parts.length-1],k=isNaN(+last)?last:+last;
+  if(value===null)delete o[k];else o[k]=value;}
+function markManual(path){if(!state.doc.sources)state.doc.sources={};state.doc.sources[path]={method:'user'};}
+const rateVal=r=>(r&&r.points&&r.points.length)?r.points[0].value_pct:null;
+const rateMulti=r=>r&&r.points&&r.points.length>1;
+function inp(label,path,val,ph,str){return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input data-path="${path}"${str?' data-str="1"':''} value="${val==null?'':esc(val)}" placeholder="${ph||''}"/></div>`;}
+function rateInp(label,path,r){if(rateMulti(r))return `<div class="fg"><label>${label} ${srcBadge(path)}</label><input value="${esc(r.points.map(pt=>(pt.effective_from?pt.effective_from+': ':'')+pt.value_pct+'%').join(' → '))}" disabled/></div>`;
+  return inp(label,path+'.points[0].value_pct',rateVal(r));}
+function tcell(path,val,str){return `<td><input data-path="${path}"${str?' data-str="1"':''} value="${val==null?'':esc(val)}"/></td>`;}
+function productsTable(){const list=state.doc.products||[];
+ return `<table><thead><tr><th>${t('th_product')} ${srcBadge('products')}</th><th>${t('th_kind')}</th><th>${t('th_unit')}</th><th>${t('th_price')}</th><th>${t('th_volume')}</th><th>${t('th_ramp')}</th><th></th></tr></thead><tbody>`+
+ list.map((p,i)=>`<tr>${tcell(`products[${i}].name`,p.name,1)}
+  <td><select data-path="products[${i}].kind" data-str="1"><option value="goods"${p.kind!=='service'?' selected':''}>${t('v_goods')}</option><option value="service"${p.kind==='service'?' selected':''}>${t('v_service')}</option></select></td>
+  ${tcell(`products[${i}].unit`,p.unit,1)}${tcell(`products[${i}].start_price`,p.start_price)}${tcell(`products[${i}].start_volume`,p.start_volume)}${tcell(`products[${i}].ramp_up_months`,p.ramp_up_months)}
+  <td><button class="icon" data-del="products:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="products" style="margin-top:8px">${t('add_product')}</button>`;}
+function capexTable(){const list=(state.doc.capex&&state.doc.capex.items)||[];
+ return `<table><thead><tr><th>${t('th_item')} ${srcBadge('capex')}</th><th>${t('th_amount')}</th><th>${t('th_vat_in')}</th><th>${t('th_from')}</th><th>${t('th_to')}</th><th></th></tr></thead><tbody>`+
+ list.map((c,i)=>`<tr>${tcell(`capex.items[${i}].name`,c.name,1)}${tcell(`capex.items[${i}].amount`,c.amount)}
+  <td style="text-align:center"><input type="checkbox" data-path="capex.items[${i}].vat_included" data-bool="1"${c.vat_included?' checked':''}/></td>
+  ${tcell(`capex.items[${i}].schedule_months[0]`,c.schedule_months?c.schedule_months[0]:null)}${tcell(`capex.items[${i}].schedule_months[1]`,c.schedule_months?c.schedule_months[1]:null)}
+  <td><button class="icon" data-del="capex.items:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="capex.items" style="margin-top:8px">${t('add_capex')}</button>`;}
+function opexTable(){const list=(state.doc.opex&&state.doc.opex.items)||[];
+ return `<table><thead><tr><th>${t('th_line')} ${srcBadge('opex')}</th><th>${t('th_fixed')}</th><th>${t('th_pct_rev')}</th><th></th></tr></thead><tbody>`+
+ list.map((o,i)=>`<tr>${tcell(`opex.items[${i}].name`,o.name,1)}${tcell(`opex.items[${i}].monthly_amount`,o.monthly_amount)}${tcell(`opex.items[${i}].pct_of_revenue`,o.pct_of_revenue)}
+  <td><button class="icon" data-del="opex.items:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="opex.items" style="margin-top:8px">${t('add_opex')}</button>`;}
+function facilitiesTable(){const list=(state.doc.financing&&state.doc.financing.facilities)||[];
+ return `<table><thead><tr><th>${t('th_credit')} ${srcBadge('financing')}</th><th>${t('th_kind')}</th><th>${t('th_amount')}</th><th>${t('th_term')}</th><th>${t('th_rate')}</th><th>${t('th_grace')}</th><th></th></tr></thead><tbody>`+
+ list.map((c,i)=>`<tr>${tcell(`financing.facilities[${i}].name`,c.name,1)}
+  <td><select data-path="financing.facilities[${i}].kind" data-str="1"><option value="investment"${c.kind!=='working_capital'?' selected':''}>${t('v_inv')}</option><option value="working_capital"${c.kind==='working_capital'?' selected':''}>${t('v_wc')}</option></select></td>
+  ${tcell(`financing.facilities[${i}].amount`,c.amount)}${tcell(`financing.facilities[${i}].term_months`,c.term_months)}
+  ${rateMulti(c.rate)?`<td><input value="${esc(c.rate.points.map(pt=>pt.value_pct+'%').join(' → '))}" disabled/></td>`:tcell(`financing.facilities[${i}].rate.points[0].value_pct`,rateVal(c.rate))}
+  ${tcell(`financing.facilities[${i}].grace_months`,c.grace_months)}
+  <td><button class="icon" data-del="financing.facilities:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="financing.facilities" style="margin-top:8px">${t('add_credit')}</button>`;}
+function productionTable(){const list=(state.doc.production&&state.doc.production.items)||[];
+ const prods=(state.doc.products||[]).map(p=>p.name);
+ return `<table><thead><tr><th>${t('th_product')} ${srcBadge('production')}</th><th>${t('th_cost')}</th><th>${t('th_logi')}</th><th>${t('th_storage')}</th><th>${t('th_lead')}</th><th></th></tr></thead><tbody>`+
+ list.map((p,i)=>`<tr>
+  <td><select data-path="production.items[${i}].product" data-str="1">${prods.map(n=>`<option value="${esc(n)}"${p.product===n?' selected':''}>${esc(n)}</option>`).join('')}</select></td>
+  ${tcell(`production.items[${i}].unit_cost`,p.unit_cost)}${tcell(`production.items[${i}].logistics_pct`,p.logistics_pct)}${tcell(`production.items[${i}].storage_monthly`,p.storage_monthly)}${tcell(`production.items[${i}].lead_months`,p.lead_months)}
+  <td><button class="icon" data-del="production.items:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="production.items" style="margin-top:8px">${t('add_prod')}</button>`;}
+function staffTable(){const list=(state.doc.staff&&state.doc.staff.roles)||[];
+ return `<table><thead><tr><th>${t('th_role')} ${srcBadge('staff')}</th><th>${t('th_count')}</th><th>${t('th_salary')}</th><th>${t('th_start_m')}</th><th>${t('th_end_m')}</th><th></th></tr></thead><tbody>`+
+ list.map((s,i)=>`<tr>${tcell(`staff.roles[${i}].name`,s.name,1)}${tcell(`staff.roles[${i}].count`,s.count)}${tcell(`staff.roles[${i}].monthly_salary`,s.monthly_salary)}${tcell(`staff.roles[${i}].start_month`,s.start_month)}${tcell(`staff.roles[${i}].end_month`,s.end_month)}
+  <td><button class="icon" data-del="staff.roles:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><label class="note" style="display:inline-flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" data-path="staff.contributions_included" data-bool="1"${state.doc.staff&&state.doc.staff.contributions_included?' checked':''}/> ${t('contrib_incl')}</label>
+ <div><button class="btn" data-add="staff.roles" style="margin-top:8px">${t('add_role')}</button></div>`;}
+function milestonesTable(){const list=state.doc.milestones||[];
+ const kinds=[['stage',t('v_stage')],['capex',t('v_capex')],['launch',t('v_launch')],['finance',t('v_finance')]];
+ return `<table><thead><tr><th>${t('th_ms')} ${srcBadge('milestones')}</th><th>${t('th_month')}</th><th>${t('th_kind')}</th><th>${t('th_note')}</th><th></th></tr></thead><tbody>`+
+ list.map((m,i)=>`<tr>${tcell(`milestones[${i}].name`,m.name,1)}${tcell(`milestones[${i}].month`,m.month)}
+  <td><select data-path="milestones[${i}].kind" data-str="1">${kinds.map(([v,l])=>`<option value="${v}"${m.kind===v?' selected':''}>${l}</option>`).join('')}</select></td>
+  ${tcell(`milestones[${i}].note`,m.note,1)}
+  <td><button class="icon" data-del="milestones:${i}">✕</button></td></tr>`).join('')+
+ `</tbody></table><button class="btn" data-add="milestones" style="margin-top:8px">${t('add_ms')}</button>`;}
+function asetHTML(){
+ if(!state.aset||!state.doc)return `<div class="card"><h3>${t('aset_title')} <span class="badge">assumptions.v1</span></h3><div class="bd">
+   <p class="note">${t('aset_empty_note')}</p>
+   <div class="src"><button class="btn acc" id="asAuto">${t('auto_btn')}</button>
+   <button class="btn" id="asAI">${t('ai_btn')}</button>
+   <button class="btn" id="asSurvey">${t('survey_btn')}</button></div></div></div>`;
+ const d=state.doc,rec=state.aset,p=d.profile||{},tx=d.taxes||{},v=d.valuation||{},f=d.financing||{},cx=d.capex||{};
+ const vers=(state.asetVersions||[]).map(x=>`<option value="${x.version}"${x.version===rec.version?' selected':''}>v${x.version} · ${x.status}</option>`).join('');
+ const scen=(d.scenarios||[]).map(s=>`<option value="${esc(s.name)}">${esc(s.name)}</option>`).join('');
+ const oq=d.open_questions||[];const met=state.bookMetrics;
+ const debt=(f.facilities||[]).reduce((s,x)=>s+(+x.amount||0),0);const eq=+f.equity_amount||0;
+ const share=(eq+debt)>0?`${Math.round(eq/(eq+debt)*100)}/${Math.round(debt/(eq+debt)*100)}`:'—';
+ const metHTML=met?`<div class="kpis" style="margin-top:12px">${[['NPV',money(met.npv)],['IRR',met.irr_pct!=null?met.irr_pct+'%':'—'],['MIRR',met.mirr_pct!=null?met.mirr_pct+'%':'—'],['Окупаемость',met.payback_months!=null?met.payback_months+' мес':'—'],['DSCR min',met.dscr_min!=null?met.dscr_min:'—']].map(([l,x])=>`<div class="kpi"><div class="l">${l}</div><div class="v">${x}</div></div>`).join('')}</div>${(met.covenant_breaches&&met.covenant_breaches.length)?met.covenant_breaches.map(b=>`<div class="note" style="color:#c0392b;margin-top:6px">⛔ ${esc(b)}</div>`).join(''):''}`:'';
+ return `<div class="aset">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <h3 style="margin:0;font-size:16px">${t('aset_title')} <span class="badge">assumptions.v1</span></h3>
+    <div class="sp" style="flex:1"></div>
+    <select id="asVer" class="search" style="margin:0;height:34px">${vers}</select>
+    <button class="btn" id="asAuto">${t('auto_short')}</button>
+    <button class="btn" id="asAI">${t('ai_short')}</button>
+    <button class="btn" id="asSurvey">${t('survey_short')}</button>
+    <button class="btn" id="asSaveDraft">${t('draft')}</button>
+    <button class="btn acc" id="asConfirm">${t('confirm')}</button>
+  </div>
+  ${oq.length?`<div class="card" style="margin-bottom:14px"><h3>${t('open_q')} (${oq.length})</h3><div class="bd">${oq.map(q=>`<div class="note" style="margin-top:4px">${q.severity==='blocker'?'⛔':(q.severity==='info'?'ℹ️':'⚠️')} ${esc(q.question)}${q.variants&&q.variants.length?'<br>· '+q.variants.map(esc).join('<br>· '):''}</div>`).join('')}</div></div>`:''}
+  <div class="card" style="margin-bottom:14px"><h3>${t('profile_val')}</h3><div class="bd"><div class="form">
+    ${inp(t('f_name'),'profile.name',p.name,'',1)}${inp(t('f_industry'),'profile.industry',p.industry,'',1)}
+    ${inp(t('f_ptype'),'profile.project_type',p.project_type,'',1)}${inp(t('f_location'),'profile.location',p.location,'',1)}
+    ${inp(t('f_currency'),'profile.currency',p.currency||'RUB','',1)}${inp(t('f_horizon'),'profile.horizon_years',p.horizon_years)}
+    ${inp(t('f_start'),'profile.model_start',p.model_start,'2026-09-01',1)}
+    ${inp(t('f_disc'),'valuation.discount_rate_pct',v.discount_rate_pct)}
+    ${inp(t('f_roa'),'valuation.reinvest_roa_pct',v.reinvest_roa_pct)}
+  </div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('products')}</h3><div class="bd">${productsTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>CAPEX</h3><div class="bd">${capexTable()}
+    <div class="form" style="margin-top:12px">${inp(t('f_total_ovr'),'capex.total_override',cx.total_override)}${inp(t('f_dep'),'capex.depreciation_months',cx.depreciation_months)}</div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('production')}</h3><div class="bd">${productionTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('opex_t')}</h3><div class="bd">${opexTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('staff_t')}</h3><div class="bd">${staffTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('roadmap_t')}</h3><div class="bd">${milestonesTable()}</div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('fin_t')} <span class="badge">${share}</span></h3><div class="bd">
+    <div class="form">${inp(t('f_equity'),'financing.equity_amount',f.equity_amount)}</div>
+    <div style="margin-top:10px">${facilitiesTable()}</div>
+    <div class="form" style="margin-top:12px">
+      ${inp(t('f_dscr'),'financing.covenants.dscr_min',(f.covenants||{}).dscr_min,'1.2')}
+      ${inp(t('f_icr'),'financing.covenants.icr_min',(f.covenants||{}).icr_min)}
+      ${inp(t('f_nde'),'financing.covenants.net_debt_to_ebitda_max',(f.covenants||{}).net_debt_to_ebitda_max,'3.5')}
+    </div></div></div>
+  <div class="card" style="margin-bottom:14px"><h3>${t('taxes_t')}</h3><div class="bd"><div class="form">
+    ${inp(t('f_regime'),'taxes.regime',tx.regime,'',1)}${rateInp(t('f_profit'),'taxes.profit',tx.profit)}
+    ${rateInp(t('f_vat'),'taxes.vat',tx.vat)}${rateInp(t('f_contrib'),'taxes.payroll_contributions',tx.payroll_contributions)}
+    ${inp(t('f_property'),'taxes.property_pct',tx.property_pct)}${inp(t('f_land'),'taxes.land_pct',tx.land_pct)}
+  </div></div></div>
+  <div class="card"><h3>${t('scen_t')}</h3><div class="bd">
+    <div class="crow" style="flex-wrap:wrap"><select id="asScen" class="search" style="margin:0;height:34px"><option value="">${t('base_scen')}</option>${scen}</select>
+    <button class="btn" id="asMetrics">${t('metrics_btn')}</button><button class="btn acc" id="asBook">${t('book_btn')}</button></div>
+    ${metHTML}
+    <p class="note">${t('ver_note')} v${rec.version} · ${esc(rec.status)}${rec.comment?' · '+esc(rec.comment):''}</p>
+  </div></div></div>`;}
+function sanitizeDoc(){const d=state.doc;if(!d)return;
+ ((d.capex&&d.capex.items)||[]).forEach(it=>{const sm=it.schedule_months;
+   if(Array.isArray(sm)&&(sm.length<2||sm[0]==null||sm[1]==null))delete it.schedule_months;});
+ if(d.products)d.products=d.products.filter(x=>x&&x.name);
+ if(d.capex&&d.capex.items)d.capex.items=d.capex.items.filter(x=>x&&x.name);
+ if(d.opex&&d.opex.items)d.opex.items=d.opex.items.filter(x=>x&&x.name);
+ if(d.financing&&d.financing.facilities)d.financing.facilities=d.financing.facilities.filter(x=>x&&x.name);
+ if(d.staff&&d.staff.roles)d.staff.roles=d.staff.roles.filter(x=>x&&x.name);
+ if(d.production&&d.production.items)d.production.items=d.production.items.filter(x=>x&&x.product);
+ if(d.milestones)d.milestones=d.milestones.filter(x=>x&&x.name);}
+async function loadAset(version){try{state.aset=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+(version?('?version='+version):''));
+  state.doc=JSON.parse(JSON.stringify(state.aset.assumptions));state.bookMetrics=null;}catch(e){state.aset=null;state.doc=null;}}
+async function loadVersions(){try{state.asetVersions=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/versions');}catch(e){state.asetVersions=[];}}
+async function autoSet(){try{toast(t('msg_auto'));
+  const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/auto',{method:'POST'});
+  state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
+  toast(t('msg_created')+r.version+t('msg_from_auto'),'ok');}catch(e){toast(t('msg_error')+e.message,'err');}}
+async function saveAset(status){try{sanitizeDoc();
+  const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT()),{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status,assumptions:state.doc,comment:null})});
+  state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
+  toast(status==='confirmed'?(t('confirmed_v')+r.version+t('memory_upd')):(t('saved_v')+r.version),'ok');
+ }catch(e){toast(t('msg_error')+e.message,'err');}}
+async function loadMetrics(){try{const sc=$('#asScen')?$('#asScen').value:'';
+  const m=await api('/book/'+encodeURIComponent(PROJECT())+'/metrics'+(sc?('?scenario='+encodeURIComponent(sc)):''));
+  state.bookMetrics=m.metrics;renderView();}catch(e){toast(t('msg_metrics')+e.message,'err');}}
+const rowDefaults=()=>({'products':{name:t('th_product'),kind:'goods'},'capex.items':{name:t('th_item'),amount:0},
+ 'opex.items':{name:t('th_line'),monthly_amount:0},'financing.facilities':{name:t('th_credit'),kind:'investment',amount:0,term_months:60,rate:{points:[{value_pct:17}]},grace_months:0},
+ 'staff.roles':{name:t('th_role'),count:1,monthly_salary:0,start_month:0},'milestones':{name:t('th_ms'),month:0,kind:'stage'},
+ 'production.items':{product:'',unit_cost:0,lead_months:0}});
+function arrAt(sec){const parts=sec.split('.');let o=state.doc;for(const k of parts.slice(0,-1)){o[k]=o[k]||{};o=o[k];}
+ const last=parts[parts.length-1];o[last]=o[last]||[];return o[last];}
+function wireAset(){
+ document.querySelectorAll('#view [data-path]').forEach(el=>{el.onchange=()=>{let v;
+   if(el.dataset.bool)v=el.checked;
+   else{const s=el.value.trim();if(s==='')v=null;else if(el.dataset.str)v=s;
+     else{const n=Number(s.replace(/[\s ]/g,'').replace(',','.'));v=isNaN(n)?s:n;}}
+   setPath(state.doc,el.dataset.path,v);markManual(el.dataset.path);};});
+ document.querySelectorAll('#view [data-add]').forEach(b=>b.onclick=()=>{
+   arrAt(b.dataset.add).push(JSON.parse(JSON.stringify(rowDefaults()[b.dataset.add])));markManual(b.dataset.add);renderView();});
+ document.querySelectorAll('#view [data-del]').forEach(b=>b.onclick=()=>{
+   const[sec,i]=b.dataset.del.split(':');arrAt(sec).splice(+i,1);markManual(sec);renderView();});
+ const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
+ on('#asAuto',autoSet);
+ on('#asSurvey',async()=>{try{toast(t('msg_survey'));
+   const r=await api('/assumption-sets/'+encodeURIComponent(PROJECT())+'/from-survey',{method:'POST'});
+   state.aset=r;state.doc=JSON.parse(JSON.stringify(r.assumptions));state.bookMetrics=null;await loadVersions();renderView();
+   toast(t('msg_created')+r.version+t('msg_from_survey'),'ok');}catch(e){toast(t('msg_error')+e.message,'err');}});
+ on('#asAI',()=>{state.tab='Documents';renderTabs();renderView();toast(t('msg_ai_hint'));});
+ on('#asSaveDraft',()=>saveAset('draft'));on('#asConfirm',()=>saveAset('confirmed'));
+ on('#asMetrics',loadMetrics);
+ on('#asBook',()=>{const sc=$('#asScen')?$('#asScen').value:'';
+   window.location.href='/api/book/'+encodeURIComponent(PROJECT())+'/export'+(sc?('?scenario='+encodeURIComponent(sc)):'');});
+ const ver=$('#asVer');if(ver)ver.onchange=async e=>{await loadAset(+e.target.value);renderView();};
+}
 
 function renderView(){
-  const map={Overview:overviewHTML,Model:gridHTML,Parameters:paramsHTML,CAPEX:capexHTML,Staff:staffHTML,Documents:docsHTML};
+  const map={Overview:overviewHTML,Model:gridHTML,Assumptions:asetHTML,Parameters:paramsHTML,Documents:docsHTML};
   $('#view').innerHTML=(map[state.tab]||overviewHTML)();
   if(state.tab==='Overview')wireComposer();
   if(state.tab==='Model')wireGrid();
+  if(state.tab==='Assumptions')wireAset();
   if(state.tab==='Parameters'){const b=$('#rebuild');if(b)b.onclick=saveParams;}
   if(state.tab==='Documents'){const g=$('#intakeGo');if(g)g.onclick=runIntake;}
   if(state.tab==='Documents'){const u=()=>$('#fileInput').click();['#up2','#up3'].forEach(id=>{const el=$(id);if(el)el.onclick=u;});}
 }
 async function runIntake(){
   const inp=$('#intakeFiles');
-  if(!inp||!inp.files.length){toast('Choose files first');return;}
+  if(!inp||!inp.files.length){toast(t('msg_choose'));return;}
   const fd=new FormData();
   for(const f of inp.files)fd.append('files',f);
   const project=(state.project&&state.project.slug)||'default';
   try{
-    toast('Extracting assumptions…');
+    toast(t('msg_extracting'));
     const r=await fetch(`/api/intake/extract?project=${encodeURIComponent(project)}`,{method:'POST',body:fd});
     const data=await r.json();
     if(!r.ok)throw new Error(data.detail&&data.detail.message||data.detail||r.statusText);
-    state.intake=data;renderView();
-    toast(`Extracted v${data.version}: ${data.open_questions.length} open question(s)`);
-  }catch(e){toast('Intake failed: '+e.message);}
+    state.intake=data;state.aset=data;state.doc=JSON.parse(JSON.stringify(data.assumptions));state.bookMetrics=null;loadVersions();renderView();
+    toast(`Extracted v${data.version}: ${data.open_questions.length} open question(s) — см. вкладку Assumptions`);
+  }catch(e){toast(t('msg_intake_fail')+e.message,'err');}
 }
 
 async function saveParams(){
   const ids=['industry','business_age','planning_horizon','tax_mode','monthly_revenue','payroll_monthly','rent_monthly','discount_rate','capex_total','funding_source','loan_amount','loan_rate'];
   const answers={};ids.forEach(id=>{const el=$('#p_'+id);if(el&&el.value!=='')answers[id]=el.value;});
-  if(!answers.industry){toast('Pick an industry first','err');return;}
-  try{toast('Rebuilding model…');const r=await api('/parameters',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
+  if(!answers.industry){toast(t('msg_pick_ind'),'err');return;}
+  try{toast(t('msg_rebuild'));const r=await api('/parameters',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers})});
     toast('Model rebuilt · '+r.assumptions_created+' assumptions','ok');await refreshAll();state.tab='Model';renderTabs();renderView();}
   catch(e){toast('Error: '+e.message,'err');}
 }
 
 function wireComposer(){
+  document.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>{
+    const ta=$('#ta');if(ta){ta.value=b.dataset.ex;ta.focus();}});
+  document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{
+    if(b.hasAttribute('disabled'))return;
+    const go=b.dataset.go;
+    if(go==='survey'){state.tab='Parameters';renderTabs();renderView();}
+    else if(go==='aset'){state.tab='Assumptions';renderTabs();renderView();}
+    else if(go==='book'){$('#exportBtn').click();}});
   const comp=$('#composer'),ta=$('#ta');if(!comp)return;
   $('#attach').onclick=()=>$('#fileInput').click();
   $('#send').onclick=send;$('#mic').onclick=toggleMic;
@@ -281,25 +664,29 @@ function wireGrid(){
     td.addEventListener('blur',()=>saveCell(td));});
 }
 async function saveCell(td){const amount=parseAmount(td.textContent);
-  if(amount===null){toast('Not a number — edit cancelled','err');return refreshAll();}
+  if(amount===null){toast(t('msg_nan'),'err');return refreshAll();}
   try{await api('/assumptions',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:[{category_code:td.dataset.code,month:td.dataset.month,amount}]})});
-    toast('Saved · '+fmtMonth(td.dataset.month),'ok');await refreshAll();}catch(e){toast('Save error: '+e.message,'err');refreshAll();}}
+    toast(t('msg_saved')+fmtMonth(td.dataset.month),'ok');await refreshAll();}catch(e){toast(t('msg_error')+e.message,'err');refreshAll();}}
 
-async function upload(files){files=[...files];if(!files.length)return;toast('Uploading: '+files.map(f=>f.name).join(', '));
+async function upload(files){files=[...files];if(!files.length)return;toast(t('msg_upload')+files.map(f=>f.name).join(', '));
   let imp=0,dup=0,fail=0;
   for(const f of files){const fd=new FormData();fd.append('file',f);
     try{const r=await api('/imports/upload',{method:'POST',body:fd});imp+=r.imported;dup+=r.duplicates;}catch(e){fail++;toast(f.name+': '+e.message,'err');}}
-  toast(`Imported ${imp}, duplicates ${dup}`+(fail?`, errors ${fail}`:''),fail?'err':'ok');await refreshAll();}
+  toast(t('msg_imported')+imp+t('msg_dups')+dup+(fail?t('msg_errs')+fail:''),fail?'err':'ok');await refreshAll();}
 
-function send(){const has=state.dash&&state.dash.model_grid&&state.dash.model_grid.rows.length;
-  if(has){state.tab='Model';renderTabs();renderView();toast('Edit assumption cells directly in the table');}
-  else{toast('Attach a bank statement to build the model');$('#fileInput').click();}}
+function send(){
+  // «Сформировать модель»: ведём по пути — профиль → допущения → книга
+  const hasProfile=!!(state.params&&state.params.industry_code)||!!state.aset;
+  if(!hasProfile){state.tab='Parameters';renderTabs();renderView();toast(t('go_survey'));return;}
+  if(!state.aset){state.tab='Assumptions';renderTabs();renderView();toast(t('go_aset'));return;}
+  state.tab='Model';renderTabs();renderView();}
 
 async function refreshAll(){try{state.dash=await api('/dashboard');}catch(e){state.dash=null;}try{state.imports=await api('/imports');}catch(e){state.imports=[];}
   try{state.params=await api('/parameters');}catch(e){state.params=null;}
+  await loadAset();await loadVersions();
   renderProjects();render();}
 async function refreshGoogle(){try{state.google=await api('/google/status');}catch(e){state.google=null;}}
-function render(){renderTabs();renderView();renderGoogleChip();}
+function render(){applyChrome();renderTabs();renderView();renderGoogleChip();}
 
 function renderGoogleChip(){const g=state.google,chip=$('#gchip'),btn=$('#gbtn');
   if(!g||!g.configured){chip.classList.add('hidden');btn.style.display='none';return;}
@@ -307,11 +694,11 @@ function renderGoogleChip(){const g=state.google,chip=$('#gchip'),btn=$('#gbtn')
   if(!g.connected){btn.style.display='';btn.textContent='Connect Google';btn.onclick=()=>location.href='/api/google/auth';}else btn.style.display='none';}
 
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-function toggleMic(){if(!SR){toast('Voice input not supported in this browser','err');return;}
+function toggleMic(){if(!SR){toast(t('msg_no_voice'),'err');return;}
   if(state.rec){state.rec.stop();return;}const rec=new SR();rec.lang='en-US';rec.interimResults=true;rec.continuous=false;
   state.rec=rec;const mic=$('#mic');if(mic)mic.classList.add('rec');const ta=$('#ta'),base=ta?ta.value:'';
   rec.onresult=e=>{let s='';for(const r of e.results)s+=r[0].transcript;const tr=$('#tr');if(tr)tr.textContent=s;if(ta)ta.value=(base?base+' ':'')+s;};
-  rec.onerror=()=>{toast('Microphone unavailable','err');stopMic();};rec.onend=stopMic;rec.start();}
+  rec.onerror=()=>{toast(t('msg_no_mic'),'err');stopMic();};rec.onend=stopMic;rec.start();}
 function stopMic(){if(state.rec){try{state.rec.stop()}catch(e){}}state.rec=null;const mic=$('#mic');if(mic)mic.classList.remove('rec');const tr=$('#tr');if(tr)tr.textContent='';}
 
 function renderSettings(){const g=state.google;
@@ -332,15 +719,18 @@ function renderSettings(){const g=state.google;
 }
 
 $('#theme').onclick=toggleTheme;
+$('#lang').onclick=()=>setLang(LANG==='ru'?'en':'ru');
 $('#gear').onclick=()=>{renderSettings();$('#ov').classList.add('open');};
 $('#closeSet').onclick=()=>$('#ov').classList.remove('open');
 $('#ov').onclick=e=>{if(e.target.id==='ov')$('#ov').classList.remove('open');};
 $('#fileInput').onchange=e=>upload(e.target.files);
-$('#exportBtn').onclick=()=>{const t=($('#ptitle').value||'Financial model').trim();window.location.href='/api/model/export?title='+encodeURIComponent(t);};
+$('#exportBtn').onclick=()=>{
+  if(state.aset){window.location.href='/api/book/'+encodeURIComponent(PROJECT())+'/export';return;}
+  const name=($('#ptitle').value||t('project_title')).trim();window.location.href='/api/model/export?title='+encodeURIComponent(name);};
 $('#newProject').onclick=()=>toast('Multiple projects are on the roadmap (single workspace for now)');
 $('#ptitle').addEventListener('change',renderProjects);
 
-loadTheme();renderProjects();renderTabs();renderView();refreshGoogle().then(refreshAll);
+loadTheme();applyChrome();renderProjects();renderTabs();renderView();refreshGoogle().then(refreshAll);
 </script>
 </body>
 </html>
