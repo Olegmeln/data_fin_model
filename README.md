@@ -2,9 +2,17 @@
 
 **[English](#english) | [Русский](#русский)**
 
-> © 2026 Oleg Melnikov. All rights reserved. Проприетарное ПО —
-> использование, копирование и распространение без письменного разрешения
-> запрещены, см. [LICENSE](LICENSE).
+> © 2026 Oleg Melnikov. Лицензирование трёхслойное, карта — в
+> [LICENSING.md](LICENSING.md): спецификация `assumptions.v1` и профили
+> стандарта открыты (Apache-2.0 / CC BY 4.0), плагины открыты (Apache-2.0),
+> движок — под [Business Source License 1.1](LICENSE): использовать можно, в
+> том числе для своих клиентов; нельзя предлагать как размещённый сервис;
+> через четыре года каждая версия переходит под Apache-2.0.
+>
+> *Three-layer licensing, see [LICENSING.md](LICENSING.md): the AFM&C
+> specification and standard profiles are open (Apache-2.0 / CC BY 4.0), so
+> are the plugins; the engine is under Business Source License 1.1 and
+> converts to Apache-2.0 four years after each release.*
 
 ---
 

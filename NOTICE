@@ -1,0 +1,41 @@
+data_fin_model — AFM&C platform
+Copyright (c) 2026 Oleg Melnikov / Олег Мельников
+
+Licensing of this repository is split by layer; see LICENSING.md.
+
+-----------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS
+-----------------------------------------------------------------------------
+
+This product depends on third-party packages, each governed by its own
+licence. Those licences apply to their respective components only and grant
+no rights to the Licensed Work itself.
+
+Runtime dependencies (requirements.txt):
+
+  alembic              MIT
+  fastapi              MIT
+  httpx                BSD-3-Clause
+  openpyxl             MIT
+  pdfplumber           MIT
+  psycopg2-binary      LGPL-3.0-or-later  (see note below)
+  pydantic             MIT
+  python-docx          MIT
+  python-multipart     Apache-2.0
+  sqlalchemy           MIT
+  uvicorn[standard]    BSD-3-Clause
+
+External tools invoked as separate processes:
+
+  LibreOffice          MPL-2.0 — used only for formula recalculation,
+                       invoked as a separate executable; not linked into,
+                       distributed with, or derived from the Licensed Work.
+
+Note on psycopg2-binary: this is the only dependency with a copyleft licence
+(LGPL-3.0-or-later). It is used as a dynamically imported Python library and
+is neither modified nor redistributed as part of the Licensed Work. Should a
+fully permissive dependency set be required, asyncpg (Apache-2.0) is a
+drop-in-equivalent alternative for PostgreSQL access.
+
+Licence names above are recorded as published by each project at the time of
+writing and should be re-verified when dependencies are upgraded.
