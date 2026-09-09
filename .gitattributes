@@ -1,0 +1,22 @@
+# Нормализация переводов строк. Без этого файла на Windows git показывает
+# изменённым весь репозиторий, и настоящие правки тонут в шуме CRLF.
+* text=auto eol=lf
+
+# Windows-специфичные скрипты остаются с CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Бинарные форматы не нормализуем
+*.xlsx binary
+*.xlsb binary
+*.xls  binary
+*.docx binary
+*.pptx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
