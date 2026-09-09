@@ -1,0 +1,10 @@
+{
+  "name": "dfm-dev",
+  "description": "Рабочий контур разработки data_fin_model: протокол старта проекта, доставка изменений в репозиторий, сигналы конца блока, реестр инсайтов и профили стандарта финмодели.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Oleg Melnikov"
+  },
+  "homepage": "https://github.com/Olegmeln/data_fin_model",
+  "repository": "https://github.com/Olegmeln/data_fin_model"
+}
