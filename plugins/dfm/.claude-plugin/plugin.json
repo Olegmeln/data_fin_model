@@ -1,0 +1,19 @@
+{
+  "name": "dfm",
+  "description": "Стандарт финансового моделирования Data Fin Model: сборка книги в Excel по контракту AFM&C, дашборд, аудит модели и выбор профиля стандарта. Работает без сервера.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Oleg Melnikov"
+  },
+  "homepage": "https://github.com/Olegmeln/data_fin_model",
+  "repository": "https://github.com/Olegmeln/data_fin_model",
+  "license": "Apache-2.0",
+  "keywords": [
+    "financial-model",
+    "excel",
+    "afmc",
+    "audit",
+    "dscr",
+    "npv"
+  ]
+}
